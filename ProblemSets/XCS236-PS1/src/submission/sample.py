@@ -65,7 +65,7 @@ def sample(model, start_text, config, length, temperature=None, temperature_hori
     past = None
     output = [start_text]
     with torch.no_grad():
-        for _ in trange(length):
+        for i in trange(length):
             logits, new_past = model(current_text, past=past)
             # Input parameters:
             #     current_text: the encoded text token at t-1
@@ -89,9 +89,15 @@ def sample(model, start_text, config, length, temperature=None, temperature_hori
             ##
             ## Note: It is expected that the code will throw an error until you've filled out the code block below.
             ### START CODE HERE ###
+            output_dist = torch.softmax(logits, dim=-1)
+            new_token = torch.multinomial(output_dist, 1)
+            output[0] = torch.cat((output[0], new_token), dim=1)
+            current_text = torch.cat((current_text, new_token), dim=1)[:,1:]
             ### END CODE HERE ###
 
             past = new_past
+            if( i  % 100 == 0):
+                print("Last iteration")
 
         output = torch.cat(output, dim=1)
         return output
