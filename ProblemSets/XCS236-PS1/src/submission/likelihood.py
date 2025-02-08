@@ -28,7 +28,8 @@ def log_likelihood(model, text):
         logits, _ = model(text)
         output_dist = torch.softmax(logits, dim=-1)
         nll_loss = torch.nn.NLLLoss(reduction='sum')
-        log_likelihood = -nll_loss(torch.log(output_dist), text)
+        log_likelihood = nll_loss(torch.log(output_dist), text) * -1 
         return log_likelihood.item()
+
         ### END CODE HERE ###
         #raise NotImplementedError
