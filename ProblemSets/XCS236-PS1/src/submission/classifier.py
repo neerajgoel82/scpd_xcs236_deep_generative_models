@@ -17,5 +17,10 @@ def classification(model, text):
         ##       There should be NO model training involved.
 
         ### START CODE HERE ###
+        if log_likelihood(model, text) < -500:
+            return True
+        else:
+            return False 
+
         ### END CODE HERE ###
         raise NotImplementedError
