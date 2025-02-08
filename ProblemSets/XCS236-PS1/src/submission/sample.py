@@ -16,8 +16,9 @@ def temperature_scale(logits, model, new_past, config, temperature, temperature_
         ##TODO:
         ## Return logits scaled by the temperature parameter
         ### START CODE HERE ###
+        return logits / temperature
         ### END CODE HERE ###
-        raise NotImplementedError
+        #raise NotImplementedError
     # EXTRA CREDIT ONLY   
     elif temperature_horizon == 2:
         ## Compute the logits for all length-2 generations, and scale them by the temperature parameter
