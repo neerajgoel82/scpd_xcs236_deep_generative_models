@@ -18,7 +18,6 @@ def temperature_scale(logits, model, new_past, config, temperature, temperature_
         ### START CODE HERE ###
         return logits / temperature
         ### END CODE HERE ###
-        #raise NotImplementedError
     # EXTRA CREDIT ONLY   
     elif temperature_horizon == 2:
         ## Compute the logits for all length-2 generations, and scale them by the temperature parameter
@@ -90,15 +89,13 @@ def sample(model, start_text, config, length, temperature=None, temperature_hori
             ##
             ## Note: It is expected that the code will throw an error until you've filled out the code block below.
             ### START CODE HERE ###
-            output_dist = torch.softmax(logits, dim=-1)
+            output_dist = F.softmax(logits, dim=-1)
             new_token = torch.multinomial(output_dist, 1)
-            output[0] = torch.cat((output[0], new_token), dim=1)
-            current_text = torch.cat((current_text, new_token), dim=1)[:,1:]
+            current_text = new_token
+            output.append(new_token)
             ### END CODE HERE ###
 
             past = new_past
-            if( i  % 100 == 0):
-                print("Last iteration")
 
         output = torch.cat(output, dim=1)
         return output
