@@ -32,8 +32,14 @@ def log_likelihood(model, text):
 
         #computing the loss 
         loss_fn = nn.NLLLoss(reduction='sum')
+
+        #getting the predictions except for last token which is token[n+1]
         pred = log_softmax_values[0][:-1,:]
+
+        #ignoring the first element of input text 
         target = text[0][1:]
+        
+        
         nll_loss = loss_fn(pred, target )
         log_likelihood = nll_loss.item() * -1
         return log_likelihood
