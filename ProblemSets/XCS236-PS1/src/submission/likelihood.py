@@ -32,17 +32,21 @@ def log_likelihood(model, text):
 
         #computing the loss 
         loss_fn = nn.NLLLoss(reduction='sum')
+        ce_loss_fn = nn.CrossEntropyLoss(reduction='sum')
 
-        #getting the predictions except for last token which is token[n+1]
-        pred = log_softmax_values[0][:-1,:]
+        #getting the predictions except for last token which is for text[n+1]
+        pred = log_softmax_values[0][0:-1,:]
 
         #ignoring the first element of input text 
         target = text[0][1:]
         
-        
-        nll_loss = loss_fn(pred, target )
+        #computing the loss for the text[1:n], prediction[0:n-1]
+        nll_loss = loss_fn(pred, target)
         log_likelihood = nll_loss.item() * -1
-        return log_likelihood
+
+        ce_loss = ce_loss_fn(logits[0][0:-1,:], text[0][1:]) * -1
+        return ce_loss
+        #return log_likelihood
     
         ### END CODE HERE ###
         #raise NotImplementedError
