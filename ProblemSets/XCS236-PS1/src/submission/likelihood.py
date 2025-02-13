@@ -32,7 +32,9 @@ def log_likelihood(model, text):
 
         #computing the loss 
         loss_fn = nn.NLLLoss(reduction='sum')
-        nll_loss = loss_fn(log_softmax_values[0], text[0])
+        pred = log_softmax_values[0][:-1,:]
+        target = text[0][1:]
+        nll_loss = loss_fn(pred, target )
         log_likelihood = nll_loss.item() * -1
         return log_likelihood
     
