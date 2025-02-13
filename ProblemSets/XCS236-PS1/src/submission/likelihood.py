@@ -25,11 +25,16 @@ def log_likelihood(model, text):
         ## Hint: Implementation should only takes 3~7 lines of code.
         
         ### START CODE HERE ###
-        ### logits, _ = model(text)
-        ### output_dist = torch.softmax(logits, dim=-1)
-        ### nll_loss = torch.nn.NLLLoss(reduction='sum')
-        ### log_likelihood = nll_loss(torch.log(output_dist), text) * -1 
-        ### return log_likelihood.item()
+        # Getting the log(softmax(logits)) which can be compared against the text
+        logits, _ = model(text)
+        log_softmax = nn.LogSoftmax(dim=1)
+        log_softmax_values = log_softmax(logits)
 
+        #computing the loss 
+        loss_fn = nn.NLLLoss(reduction='sum')
+        nll_loss = loss_fn(log_softmax_values[0], text[0])
+        log_likelihood = nll_loss.item() * -1
+        return log_likelihood
+    
         ### END CODE HERE ###
-        raise NotImplementedError
+        #raise NotImplementedError
