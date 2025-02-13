@@ -44,7 +44,7 @@ def log_likelihood(model, text):
         nll_loss = loss_fn(pred, target)
         log_likelihood = nll_loss.item() * -1
 
-        ce_loss = ce_loss_fn(logits[0][0:-1,:], text[0][1:]) * -1
+        ce_loss = ce_loss_fn(logits[0][0:-1,:], target) * -1
         return ce_loss
         #return log_likelihood
     
