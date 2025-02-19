@@ -82,7 +82,7 @@ class Test_6d(GradedTestCase):
         self.threshold = 5
         self.abstract_length = 50
 
-    @graded()
+    @graded(timeout=30000)
     def test_0(self):
         """6d-0-basic:  ensure log_likelihood generates expected scalars""" 
         torch.manual_seed(SEED)
@@ -107,7 +107,7 @@ class Test_6e(GradedTestCase):
         self.indexes = [0,35,67,143,178,202,299]
         self.results = [False, False, False, False, False, False, True]
 
-    @graded()
+    @graded(timeout=30000)
     def test_0(self):
         """6e-0-basic: check if classification generates correct class for specific values of snippets.pkl"""
         with open(os.path.join('datasets', 'snippets.pkl'), 'rb') as f:

@@ -17,7 +17,8 @@ def classification(model, text):
         ##       There should be NO model training involved.
 
         ### START CODE HERE ###
-        if log_likelihood(model, text) < -500:
+        log_likelihood_value = log_likelihood(model, text)
+        if log_likelihood_value < -250:
             return True
         else:
             return False 
