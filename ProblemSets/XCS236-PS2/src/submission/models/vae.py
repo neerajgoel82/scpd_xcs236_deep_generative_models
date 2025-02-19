@@ -53,9 +53,19 @@ class VAE(nn.Module):
 
         #compute reconstruction loss
         q_phi = self.enc(x)
+        print("q_phi mean shape: [" + str(q_phi[0].shape) + "]")
+        print("q_phi variance shape: [" + str(q_phi[1].shape) + "]")
+
         z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
-        x_pred = self.sample_x_given(z_pred)
-        log_p_theta = ut.log_bernoulli_with_logits(x, x_pred)
+        print("z_pred shape: [" + str(z_pred.shape) + "]")
+        
+        
+        x_pred_logits = self.compute_sigmoid_given(z_pred)
+        print("x_pred_logits shape: [" + str(x_pred_logits.shape) + "]")
+
+        log_p_theta = ut.log_bernoulli_with_logits(x, x_pred_logits)
+        print("log_p_theta shape: [" + str(log_p_theta.shape) + "]")
+        
         rec = torch.mean(log_p_theta) * -1
 
         #compute kl divergence 
