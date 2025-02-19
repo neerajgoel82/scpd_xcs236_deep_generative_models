@@ -94,7 +94,7 @@ class Test_1c(GradedTestCase):
     
     @graded()
     def test_0(self):
-        """1b-0-basic: check VAE reported nelbo, kl, and rec values"""
+        """1c-0-basic: check VAE reported nelbo, kl, and rec values"""
         with open('./submission/VAE.pkl', 'rb') as f:
             metrics = pickle.load(f)
         nelbo, kl, rec = metrics.values()
