@@ -57,16 +57,37 @@ While all types of generative models ultimately aim to solve the same task, they
 2. Explicitly model a tractable approximation of the density function.
 3. Implicitly model the density function, through a stochastic process that directly generates data.
 
- ![Taxonomy of generative modelling approaches](./images/taxonomy_of_generative_modelling_approaches.png)
+ ![Taxonomy of generative modelling approaches](./images/TaxonomyOfGenerativeModellingApproaches.png)
 
-### Students Questions 
+
+### Details about some of the prominent models
 ---
+I have created a separate page for each kind of models. I'll be covering the following aspects for each of them:
+- Basic Intuition/Theory about them
+- What are there pros and cons
+- How they are trained and whether a latent representation is learnt
+- How sampling works for them
+- How to compute the probability of a new sample
+- Sample Code Link (if available)
+
+##### List of models
+- [Autoregressive Models](./models/AutoRegressiveModels.md)
+- [Variational Auto Encoders](./models/VAEs.md)
+- [Normalizing Flow Models](./models/NormalizingFlowModels.md)
+- [GANs](./models/GANs.md)
+- [Energy Based Models](./models/EnergyBasedModels.md)
+- [Score Based Models](./models/ScoreBasedModels.md)
+
 
 ### Useful Links 
 ---
 - [Course][XCS236](https://online.stanford.edu/courses/xcs236-deep-generative-models)
 - [Tutorial][Diffusion and Score Based Models Tutorial by Dr. Yang Song](https://www.youtube.com/watch?v=wMmqCMwuM2Q)
 - [Book][Generative Deep Learning](https://learning.oreilly.com/library/view/generative-deep-learning/9781098134174)
+- [Book][Build a Large Language Model (From Scratch)](https://learning.oreilly.com/library/view/build-a-large/9781633437166/)
+
+### Students Questions 
+---
 
 
 
