@@ -84,10 +84,12 @@ I have created a separate page for each kind of models. I'll be covering the fol
 
 ### Useful Links 
 ---
-- [Course][XCS236](https://online.stanford.edu/courses/xcs236-deep-generative-models)
-- [Tutorial][Diffusion and Score Based Models Tutorial by Dr. Yang Song](https://www.youtube.com/watch?v=wMmqCMwuM2Q)
-- [Book][Generative Deep Learning](https://learning.oreilly.com/library/view/generative-deep-learning/9781098134174)
-- [Book][Build a Large Language Model (From Scratch)](https://learning.oreilly.com/library/view/build-a-large/9781633437166/)
+- [Course] [XCS236](https://online.stanford.edu/courses/xcs236-deep-generative-models)
+- [Course Notes] [Course Notes from Dr. Stefano](https://deepgenerativemodels.github.io/notes/index.html)
+- [Tutorial] [Diffusion and Score Based Models Tutorial by Dr. Yang Song](https://www.youtube.com/watch?v=wMmqCMwuM2Q)
+- [Book] [Generative Deep Learning](https://learning.oreilly.com/library/view/generative-deep-learning/9781098134174)
+- [Book] [Build a Large Language Model (From Scratch)](https://learning.oreilly.com/library/view/build-a-large/9781633437166/)
+
 
 ### Students Questions 
 ---
