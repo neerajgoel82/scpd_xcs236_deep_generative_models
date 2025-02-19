@@ -78,6 +78,9 @@ I have created a separate page for each kind of models. I'll be covering the fol
 - [Energy Based Models](./models/EnergyBasedModels.md)
 - [Score Based Models](./models/ScoreBasedModels.md)
 
+### Evaluation of Generative Models 
+---
+[TBD]
 
 ### Useful Links 
 ---
@@ -88,6 +91,7 @@ I have created a separate page for each kind of models. I'll be covering the fol
 
 ### Students Questions 
 ---
+[Student Questions that were discussed during XCS236 Jan-Apr 2025](./faqs/StudentQuestions.md)
 
 
 
