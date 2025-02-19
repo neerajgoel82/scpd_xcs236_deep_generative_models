@@ -57,22 +57,22 @@ class VAE(nn.Module):
         ### START CODE HERE ###
 
         batch = x.shape[0]
+        z_prior_means = self.z_prior[0].expand(batch, self.z_dim)
+        z_prior_variances = self.z_prior[1].expand(batch, self.z_dim)
 
         #compute reconstruction loss
         q_phi = self.enc(x)
         z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
-        x_pred_logits = self.compute_sigmoid_given(z_pred)
-        log_p_theta = ut.log_bernoulli_with_logits(x, x_pred_logits)
-        rec = torch.mean(log_p_theta) * -1
+        x_pred_logits = self.dec(z_pred)
+        log_p_theta_image_wise = ut.log_bernoulli_with_logits(x, x_pred_logits)
+        rec = torch.mean(log_p_theta_image_wise) * -1
 
         #compute kl divergence 
-        z_prior_means = self.z_prior[0].expand(batch, self.z_dim)
-        z_prior_variances = self.z_prior[1].expand(batch, self.z_dim)
         kl_image_wise = ut.kl_normal(q_phi[0], q_phi[1], z_prior_means, z_prior_variances)
         kl = torch.mean(kl_image_wise) * -1
 
         #print some variables 
-        #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta)
+        #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta_image_wise)
 
         #compute nelbo
         nelbo = kl + rec
