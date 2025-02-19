@@ -1,0 +1,165 @@
+00:00 -
+00:05 - All right, so was the intro.
+00:10 - Hopefully, got you excited about the topic
+00:13 - and it showed you that it's really an exciting time
+00:16 - to be working in this area.
+00:17 - And that's why there is so much excitement also in the industry
+00:20 - and in academia around these topics.
+00:22 - Everybody is trying to innovate, build systems, figure out
+00:27 - how to use them in the real world, find new applications.
+00:30 - So it's really an exciting time to study this.
+00:35 - The course is designed to really give you the--
+00:39 - uncover what we think are the core concepts in this space.
+00:47 - Once you understand all the different building blocks,
+00:50 - the challenges, the trade-offs that all these models do.
+00:55 - Then you can not only understand how existing systems work
+01:00 - but hopefully you can also design the next generation
+01:02 - of these systems, improve them, figure out
+01:05 - how to use them on a new application area.
+01:10 - Again, the system, the course is designed to be pretty rigorous.
+01:14 - There's going to be quite a bit of math.
+01:16 - It's really going to delve deep into the key ideas.
+01:20 - And so, we're going to talk a lot about representation
+01:25 - as we discuss.
+01:26 - The key building block is going to be statistical modeling.
+01:30 - We're going to be using probability distributions.
+01:32 - That's going to be the key building block.
+01:34 - And so, we're going to talk a lot about how
+01:37 - to represent these probability distributions,
+01:40 - how to use neural networks to model probability distributions
+01:46 - where we have many random variables.
+01:48 - That is the challenge.
+01:49 - And you've seen simple probability distributions,
+01:51 - like Gaussians and things like that.
+01:54 - Doesn't work in this space because you
+01:56 - have so many different things that you have to consider
+01:59 - and you have to model at the same time.
+02:01 - And so, you need to come up with clever ways
+02:03 - to represent how all the different pixels in an image
+02:06 - interact with each other or how the different words
+02:09 - in a sentence-- they are connected to each other.
+02:11 - And so, a lot of it will--
+02:14 - a lot of the course content will focus
+02:17 - on different ideas, the different trade-offs
+02:19 - that you have to make when you build these kind of models.
+02:24 - We're going to talk about learning.
+02:25 - Again, these are going to be statistical generative models.
+02:29 - So there's always going to be data,
+02:30 - and you're going to use the data to fit the models.
+02:33 - And there's many different ways to fit models.
+02:36 - There's many different kinds of loss functions
+02:38 - that you can use.
+02:39 - There's stuff that is used in diffusion model, that is,
+02:41 - the stuff that is used in Generative Adversarial
+02:43 - Networks.
+02:44 - There is the stuff that is used in--
+02:46 - say, large language models, autoregressive models.
+02:49 - Those are essentially boiled down
+02:51 - to different ways of comparing these probability
+02:53 - distributions.
+02:54 - You have a data distribution, you have the model
+02:57 - distribution, and you want those two things to be similar.
+03:00 - So that when you generate samples from the model,
+03:03 - they look like the ones that came
+03:05 - from the data distribution.
+03:07 - But probability distributions, again,
+03:10 - going back to the first point, they are very complex.
+03:13 - If you have very complicated objects,
+03:16 - very high-dimensional objects, so it's
+03:18 - not straightforward to compare two probability distributions.
+03:21 - And measure how similar they are.
+03:24 - So you have to have a data distribution,
+03:27 - you have a family of models that you can pick from,
+03:29 - and you have to pick one that is close to the data.
+03:33 - But measuring similarity is very difficult,
+03:37 - and depending on how you measure similarity,
+03:39 - you're going to get different kinds of models
+03:41 - that work well in different kinds of scenarios.
+03:45 - And then we're going to talk about inference.
+03:47 - We're going to talk about how to generate samples
+03:50 - from these models efficiently.
+03:52 - Sometimes you have the probability distribution,
+03:54 - but it might not be straightforward to sample
+03:56 - from it.
+03:57 - So we will talk about that.
+03:59 - We will talk about how to invert the generative process,
+04:02 - how to get representations from these objects.
+04:06 - For example, following and making
+04:11 - the idea of vision as inverse graphics a little
+04:14 - bit more concrete.
+04:16 - And so we'll touch on unsupervised learning
+04:19 - and different ways of clustering because, at the end of the day,
+04:23 - what these models do is they have to find
+04:25 - similarity between data points.
+04:28 - When you're trying to complete a sentence, what you have to do
+04:30 - is you have to go through your training set,
+04:33 - you have to find similar sentences,
+04:34 - you have to figure out how to combine them,
+04:36 - and you have to figure out how to complete
+04:38 - the prompt that you're given.
+04:40 - So once you have generative models,
+04:43 - you can usually also get sort of representations.
+04:47 - You have ways of clustering data points that
+04:49 - have similar meaning.
+04:51 - And again, you can get features, and you
+04:54 - can do the things you would want to do
+04:57 - in unsupervised learning, which is do machine learning
+05:00 - when you don't have labels.
+05:01 - You only have the x but you don't have the y.
+05:07 - And you want to do interesting things
+05:09 - with the features themselves.
+05:15 - And so, those are the three key ideas
+05:19 - that are going to show up quite a bit in terms of models.
+05:23 - We're going to be talking about first the perhaps the simplest
+05:29 - model, which is one where essentially you have access
+05:34 - to a likelihood directly.
+05:36 - And there's going to be two kinds of models in this space.
+05:40 - Autoregressive models and flow-based models.
+05:43 - So autoregressive models are the ones
+05:44 - used in large language models and a few of other systems
+05:48 - that I talked about today.
+05:50 - Flow-based models are a different kind of idea
+05:53 - that is often used for images and other kinds
+05:57 - of continuous data.
+05:58 -
+06:01 - Then we'll talk about latent variable models,
+06:03 - the idea of using latent variables to increase
+06:05 - the expressive power essentially of your
+06:08 - of your generative models.
+06:10 - We'll talk about variational inference,
+06:12 - variational learning, the variational autoencoder,
+06:15 - hierarchical variational autoencoders.
+06:17 - Those sort of ideas.
+06:19 - We'll talk about implicit generative models.
+06:21 - Here the idea is that instead of representing the probability
+06:25 - distribution p of x, you're going
+06:27 - to represent the sampling process that you
+06:29 - use to generate samples.
+06:32 - And that has trade-offs.
+06:34 - It allows you to generate samples very efficiently,
+06:37 - but it becomes difficult to train
+06:39 - the models because you don't have access to a likelihood
+06:42 - anymore.
+06:43 - So you cannot use maximum likelihood estimation,
+06:46 - those kind of ideas that we understand very well and we
+06:50 - know have good performance.
+06:53 - So we'll talk about two-sample tests, F-divergences,
+06:57 - and different ways of training these sort of systems.
+07:00 - And in particular, we'll talk about Generative Adversarial
+07:03 - Networks and how to train them.
+07:06 - Then we'll talk about energy-based models
+07:08 - and diffusion models.
+07:10 - Again, this is sort of a state-of-the-art in terms
+07:14 - of image generation, audio generation.
+07:17 - People are starting to use them also for text.
+07:21 - That's what the technology behind the video
+07:23 - generation that I showed you before.
+07:26 - So we'll talk in-depth about how they work
+07:28 - and how you can think of them in terms of a latent variable
+07:31 - model and the connections with all the other things.
+07:35 - And Yeah, again, it's going to be a fairly mathematical class.
+07:40 - So there's going to be a lot of theory.
+07:42 - There's going to be algorithms.
+07:44 - And then we'll go through applications.
+07:47 - There is going to be homeworks where
+07:48 - you're going to get to play around with these models.

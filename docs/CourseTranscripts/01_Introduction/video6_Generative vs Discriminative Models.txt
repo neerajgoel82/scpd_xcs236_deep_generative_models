@@ -1,0 +1,451 @@
+00:00 -
+00:05 - SPEAKER: We're going to use a simple generative
+00:07 - model to solve a discriminative task
+00:11 - and we'll see how that will differ compared
+00:14 - to a traditional approach based on, let's say a neural network.
+00:19 - So let's say that you want to solve a task where you're
+00:22 - given a bunch of images, a bunch of emails,
+00:25 - and the goal is to predict whether or not
+00:27 - this email is spam.
+00:29 - So there is a binary label Y that you're trying to predict
+00:32 - and you're doing it using a bunch of features Xi
+00:37 - and let's say the features are just binary
+00:39 - and they are on or off depending on whether or not
+00:42 - different words in some vocabulary appear in the email.
+00:47 - And the usual assumption is that there is some underlying data
+00:51 - generating process and so there is some relationship
+00:54 - between the different words that you see in the email the X's
+00:58 - and the Y variable which is the label you're trying to predict.
+01:03 - So one way to approach this is by building a Bayesian network.
+01:08 - This is a basic classifier called the Naive Bayes
+01:12 - classifier which is basically going to say,
+01:16 - we want to model this joint distribution,
+01:18 - this joint distribution has too many variables,
+01:20 - we cannot afford to store it to learn the parameters from data.
+01:25 - So we're going to make a conditional independence
+01:27 - assumptions and we're going to assume
+01:29 - that the joint can be described by this directed acyclic graph.
+01:33 -
+01:36 - And if you are willing to make this kind of Bayes
+01:39 - net assumption, what this means is
+01:42 - that the features, the words, the Xi's are basically
+01:46 - conditionally independent given the label, given
+01:49 - the Y. If you're willing to make this assumption,
+01:55 - then you're able to factorize the joint which
+01:57 - is usually complicated as a product of conditionals.
+02:00 - So you can write it as the p of Y
+02:02 - because Y doesn't have any parent, and then
+02:04 - the probability of 1 variable given its parent,
+02:07 - probability of this variable given its parent, and so forth.
+02:09 -
+02:12 - Which means that you can basically--
+02:14 - According to this very simplified model of the world,
+02:16 - you can generate a data point by first choosing whether or not
+02:19 - it's spam and then choosing whether different words appear
+02:24 - in the email based on whether the email is spam or not.
+02:29 - And once you have that kind of model, what you can do
+02:37 - is you can try to estimate the parameters of this model
+02:39 - from data.
+02:40 - So you can try to estimate these probabilities
+02:44 - by looking at how frequently do you see different words
+02:47 - in different types of emails.
+02:49 - And then you can do classification
+02:52 - because at the end of the day what you're trying to do
+02:54 - is you're trying to classify whether or not
+02:56 - a new email is spam or not.
+02:58 - And you can use Bayes' rule to write down
+03:01 - the conditional distribution of Y given X. So given a new email,
+03:05 - you observe which words are there and which ones are not
+03:08 - and you can try to compute the probability of Y
+03:11 - by basically using Bayes' rule.
+03:14 - Probability of X, Y divided by the probability of X
+03:18 - essentially, which is what you have at the denominator.
+03:21 - And if you've done a good job at estimating these parameters
+03:28 - to the extent that the assumption is true,
+03:31 - this conditional independence assumption is true,
+03:33 - this model might perform reasonably
+03:35 - well at predicting the label Y given the features X.
+03:42 - The challenge of course, is once again,
+03:44 - that perhaps this conditional independence assumptions are not
+03:47 - that great.
+03:48 - If you think about it you're saying
+03:49 - that different words appear in an email independently
+03:54 - of each other.
+03:55 - So once you know why basically, knowing whether a word appears
+03:59 - or not doesn't help you predict whether some other word appears
+04:03 - in the email or not, which is probably not reasonable.
+04:07 - Nevertheless, this model tends to work OK in practice.
+04:11 - So even though the assumption is not quite true,
+04:13 - it might give you reasonable results in practice.
+04:18 - Now how does this fit into the discriminative
+04:22 - versus generative model of the problem?
+04:27 - So at the end of the day, we're trying
+04:31 - to model this joint distribution between features and a label Y.
+04:36 - And using chain rule we can write it
+04:40 - like this as the probability of the label times the probability
+04:44 - of the features given the label.
+04:45 - This is exactly what we've done in the Naive Bayes model
+04:48 - that we just saw.
+04:50 - Alternatively, you can use chain rule
+04:53 - based on a different ordering and you
+04:55 - can say, I can write it as the probability of observing
+04:58 - this feature vector times the probability
+05:02 - that, that particular feature vector has label Y.
+05:07 - And so these are basically two Bayesian networks that capture
+05:12 - the same joint distribution, one where we have Y and then X,
+05:16 - and then one where we have X and Y.
+05:19 - And the second one is basically the one that you deal
+05:23 - with when you think about usual discriminative models.
+05:27 - Like if you think about it, at the end
+05:29 - of the day if all you care about is predicting whether a new data
+05:34 - point has label 0 or 1, all you care about is p of Y given X.
+05:40 - And so the second kind of modeling
+05:44 - approach where you are modeling p of Y given X directly
+05:48 - might be much more natural.
+05:51 - In the left model we were specifying p of Y,
+05:55 - we were specifying p of X given Y
+05:58 - and then we would compute p of Y given X using Bayes' rule.
+06:03 - While in the second model you have access to p of Y given X,
+06:07 - the probability of this variable given its parent directly.
+06:12 - And so the idea is that if you know that all you care about
+06:19 - is p of Y given X, then there is no point in trying
+06:23 - to learn or model or deal with this marginal distribution
+06:28 - over the features, right?
+06:30 - If you know that you're always ever going to be given an email
+06:33 - and you just try to predict Y, why
+06:35 - do you bother trying to figure out what kind of feature vectors
+06:39 - X you're likely to see, right?
+06:42 - P of X here will basically be a distribution over the features
+06:47 - that your model is going to see.
+06:49 - If you know you don't care because you just
+06:52 - care about predicting Y from X, then you don't even
+06:54 - bother modeling p of X. So that's more convenient
+06:59 - and that's why typically the kind of models that you're
+07:02 - building that you use in machine learning,
+07:05 - they don't bother about modeling the distribution
+07:07 - over the features, they just bother
+07:09 - about modeling the relationship between a label and the features
+07:12 - X.
+07:13 - While in a generative model, it's the opposite.
+07:16 - You're basically modeling the whole thing,
+07:18 - you're modeling the full joint distribution.
+07:23 - And so that discriminatory model is basically
+07:27 - only useful for discriminating Y given
+07:29 - X, while a generative model is also
+07:30 - able to reason about its inputs, it's
+07:33 - able to reason about the full relationship between X and Y.
+07:38 - And so now there is still no free lunch in the sense
+07:43 - that if you think about it, it's true
+07:45 - that you can do this two factorizations,
+07:48 - you can use either factorized as p of Y and then p of X
+07:53 - given Y or you can do p of X and then p of Y given X.
+07:59 - But in both cases you end up with some of these conditionals
+08:03 - which are pretty complicated.
+08:05 - So in the generative model, you have a Bayesian,
+08:08 - if you were to actually unpack the fact that X
+08:11 - is a random vector, so you have a bunch of individual features
+08:15 - that you have to deal with, the two graphical models
+08:18 - corresponding to the two chain rule factorizations
+08:21 - would look like this.
+08:23 - In the generative view of the world, you have Y
+08:25 - and then you have all the features.
+08:27 - In the discriminative view of the world,
+08:29 - you have all the X's first and then you have Y given X.
+08:33 - And you still need to deal with the fact
+08:35 - that you have a lot of X's, you have potentially
+08:37 - a lot of features that you have to take into account
+08:40 - when you're predicting Y. And so in the generative modeling world
+08:47 - p of Y is simple but then you have a bunch of these variables
+08:51 - here that have a lot of parents, so there is a lot of complexity
+08:55 - that you have to deal with when you
+08:56 - need to decide what are the relationships
+08:59 - between the features.
+09:02 - In the discriminative modeling world,
+09:05 - it's true that you're making some progress because maybe you
+09:08 - don't need to model all these relationships between the X
+09:10 - variables, but you still need to be
+09:12 - able to model how Y depends on all the X's and Y has
+09:17 - a lot of parents.
+09:18 - So again, that conditional distribution
+09:21 - is potentially very complicated.
+09:25 - And so one way to make progress is
+09:28 - to say, OK, let's make conditional independence
+09:30 - assumptions.
+09:31 - So in general, a generative model
+09:34 - would have to look like this, so it
+09:36 - would have to be able to capture all dependencies between the X's
+09:40 - and the Y. If you're willing to make simplifying assumptions
+09:44 - and say, oh, things are conditionally independent,
+09:47 - then you basically chop some edges in the graph
+09:51 - and you end up with something that is much simpler.
+09:54 - Remember the last parents the variables have,
+09:56 - the simpler the relationships between the random variables
+10:00 - are, the simpler the model is.
+10:02 - And so you're saying once I know Y,
+10:06 - I can basically figure out the values of the X variables
+10:09 - and there is no relationship between them.
+10:12 - That's one way to make progress.
+10:15 - Obviously, it's a strong assumption,
+10:17 - it might or might not work in the real world.
+10:21 - In the discriminative model, you still need to be able to model
+10:25 - this conditional distribution of Y given all the X's.
+10:30 - And again, that's not straightforward
+10:32 - because if you think about all these features here,
+10:35 - let's say they are binary, there are 2 to the n possible feature
+10:40 - vectors that you have to deal with and for each one of them
+10:43 - you would have to specify like when
+10:45 - you look at this last conditional here
+10:48 - is the same as before.
+10:49 - You're conditioning on a lot of variables,
+10:52 - there are 2 to the n possible combinations of those X
+10:55 - variables and in full generality you
+10:58 - would have to assign a different number,
+11:00 - a different value for the probability of Y
+11:02 - for each one of them.
+11:05 - So again, the conditional distribution
+11:07 - of Y given all the parents is not
+11:10 - easy to deal with even in a discriminative model.
+11:14 - So the way you make progress usually
+11:16 - in a discriminative model is to assume
+11:19 - that the dependency is not fully general
+11:21 - and somehow takes a particular functional form.
+11:25 - So it's true that this X vector can
+11:29 - take many, many different values and if you
+11:32 - were to use a big table that table would have 2
+11:36 - to the n possible rows, so it would not
+11:38 - be able to store that, it would not be able to learn from data,
+11:41 - you would not be able to use it.
+11:43 - But what you can assume is that there is some simple function
+11:47 - that you can use to take X and map it to a probability value.
+11:53 - So the assumption that you have to make here to make progress
+11:57 - is to assume that there is some simple function f that you
+12:00 - can apply to the different values
+12:02 - that the X variables can take and that will map it
+12:05 - to this number that you care about which
+12:08 - is the conditional probability of Y given X. And there
+12:11 - is many different ways to do it, there are some constraints here
+12:19 - and one way to do it is to do what's
+12:22 - done in logistic regression for example.
+12:25 - So the idea is that, and that's why
+12:27 - it's called regression is that essentially it's not
+12:30 - a table that is going to be some function that will take
+12:33 - different values of X and we'll regress them to probabilities
+12:37 - for Y. And it's not an arbitrary regression problem because what
+12:44 - we're doing is we're trying to map these X's
+12:47 - to conditional probabilities and we know
+12:50 - that conditional probability is a number that
+12:52 - has to be between 1 and 0, like it doesn't make sense to say,
+12:57 - oh, I fit in a certain feature vector X.
+13:00 - In the spam classification is a bunch
+13:02 - of indicators of whether different words appear
+13:06 - in the email.
+13:07 - If this function gives me a value of minus 1,
+13:10 - it doesn't make sense because we know that probabilities
+13:14 - are numbers between 0 and 1.
+13:16 - So there are some constraints on this regression problem.
+13:21 - And in particular, we want the output to be between 0 and 1,
+13:27 - we want the dependency to be simple but reasonable.
+13:32 - If it's too complicated, it's a table, a lookup,
+13:36 - then you're back to the previous settings,
+13:39 - you don't gain anything.
+13:40 - So somehow you want a simple dependency
+13:43 - but it's sufficiently rich that it captures
+13:46 - real ways in which changing X should change
+13:49 - the probability of Y. And one way
+13:53 - to do it is to assume that there is some vector of parameters,
+13:58 - I'll find this case.
+14:00 - And then perhaps what you can do is
+14:04 - you can assume some linear dependence where you basically
+14:09 - take a linear combination of these X's, these features,
+14:13 - weighted by these coefficients alpha
+14:16 - and you try to do this as a regression.
+14:18 - It's like linear regression at the end of the day,
+14:21 - you take different values of X and you map them
+14:24 - to different outputs.
+14:26 - Now by itself this wouldn't work because remember
+14:30 - we have to assume that these numbers are between 0 and 1,
+14:34 - but that's something easy to fix.
+14:35 - You can just transform that value
+14:38 - with a function that rescales things and maps them
+14:41 - to be between 0 and 1.
+14:44 - For example, you can use the logistic function or the sigmoid
+14:48 - and if you do that then you get what's
+14:51 - known as logistic regression.
+14:54 - It's a way to model a conditional distribution of Y
+14:57 - given X, where you're assuming that,
+15:01 - that conditional distribution takes
+15:02 - a specific functional form.
+15:04 - You're assuming that given different values of X,
+15:08 - you can linearly combine them based
+15:10 - on some vector of coefficients alpha
+15:14 - and then you pass them through this sigmoid function,
+15:16 - this S-shaped function that will take
+15:21 - z values between minus infinity and plus infinity
+15:25 - and we'll rescale them to be between 0 and 1
+15:28 - so then they are valid probabilities.
+15:32 - And that's another way to make progress,
+15:35 - it's another way to deal with the fact that in general you
+15:38 - cannot represent this complicated dependency between Y
+15:42 - and all the X variables as a table.
+15:44 - You have to either assume that there
+15:46 - is conditional independencies or things don't even
+15:49 - depend on some of the inputs or you
+15:52 - assume that there is some specific functional form that
+15:56 - allows you to compute these probabilities.
+15:59 - And this is one such assumption is the logistic regression
+16:01 - assumption.
+16:02 - So the question is whether this implies
+16:05 - some conditional independence assumptions
+16:06 - and you can actually show the other way around that basically,
+16:09 - if you assume the Naive Bayes factorization, then
+16:13 - the conditional distribution of Y
+16:14 - given X will have this functional form,
+16:18 - but not necessarily vice versa.
+16:21 - And so in some sense you're making a weaker statement
+16:28 - about the relationship of the random variables which
+16:31 - is why this model is stronger in practice.
+16:34 - You're assuming less about how the random variables are related
+16:38 - so to the extent that you have enough data
+16:40 - to really learn the relationship.
+16:42 - You're better off with this model
+16:44 - because you are assuming less.
+16:47 - If you have very limited data, you
+16:49 - might be better off with the Naive Bayes model
+16:51 - because you're making a strong assumption
+16:54 - but the prior helps you more because you
+16:55 - don't have enough data to figure out how things are
+16:58 - really related to each other.
+16:59 - But this is kind of a different sort of assumption,
+17:02 - you're really saying there is some functional form that
+17:04 - tells you how the random variables are
+17:06 - related to each other.
+17:07 - The question is, does this imply that the joint is a product
+17:10 - distribution?
+17:12 - You're just working at the level of a single conditional,
+17:15 - so what we'll see is that in fact an autoregressive model,
+17:19 - a deep autoregressive model will essentially be just
+17:22 - be built by assuming that there is a chain rule factorization
+17:28 - and then modeling the conditionals using
+17:30 - this functional relationship.
+17:33 - Maybe a linear regression model or a deep neural network
+17:36 - and that's how we will build the first type
+17:38 - of useful deep generative model.
+17:41 - But this by itself is just for a single conditional.
+17:46 - So it's not a statement about the joint,
+17:48 - it's just saying I'm not even going to care about modeling
+17:51 - the p of X, I'm not going to reason about the inputs that
+17:55 - my logistic regression model is going to see because at test
+17:57 - time somebody is going to give me the X's.
+18:01 - So I don't need to bother about figuring out
+18:03 - how the different words are related to each other.
+18:05 - I'm only going to bother about modeling how to predict Y from X
+18:09 - and that's already hard but I'm going
+18:11 - to do it based on this simplifying assumption.
+18:14 -
+18:19 - And by assuming that you're making this linear dependence,
+18:23 - again, you're making some assumptions
+18:25 - which might or might not be true in the real world, right?
+18:28 - So in particular, this is a relatively simple dependency
+18:32 - that you're assuming between Y and X.
+18:35 - So what you're doing is you're saying that,
+18:39 - let's say if you have two features X1 and X2,
+18:44 - then you're basically saying that equal probability
+18:47 - contours are straight lines.
+18:49 - So there is some straight lines such that all the points
+18:54 - that lie on those straight lines they
+18:56 - have the same conditional probability for Y
+18:58 - or it also means that the decision boundary,
+19:02 - so if you're using a threshold to decide
+19:05 - whether a variable belongs to class
+19:07 - 0 or 1 is going to be again a straight line.
+19:11 - So all the points on this side of the line
+19:13 - are going to be positive, all the other ones
+19:15 - are going to be negative.
+19:17 - And specifically, basically it means
+19:20 - that if you think about how the probability changes
+19:23 - as you change X and Y, it has a very specific functional form.
+19:28 - It looks like this S kind of thing where the way
+19:32 - you change the probability as you
+19:34 - change X, the probability of Y given
+19:37 - X changes as you change X has a very specific functional form.
+19:41 - If you think about the lookup version of this,
+19:44 - it would be an arbitrary function.
+19:48 - Here you're saying, no, I'm willing to assume
+19:50 - that it takes a very specific relatively simple functional
+19:53 - form, which again might or might not be true in the real world
+19:58 - maybe the probability of Y given X should have
+20:01 - a very different shape and then this model
+20:03 - is not going to work well.
+20:06 - Like before we were assuming conditional independence
+20:09 - might or might not be true in the real world,
+20:11 - here we are assuming a specific functional form which
+20:14 - might or might not be true in the real world
+20:17 - and that determines whether or not
+20:18 - your model is going to work well or not in practice.
+20:21 -
+20:24 - And so again, basically these are
+20:28 - dealing with this issue of modeling distributions
+20:30 - over high dimensional spaces, you have to make assumptions.
+20:35 - Naive Bayes is one way to make progress,
+20:37 - conditional independence assumption.
+20:39 - The logistic regression model does not make that assumption
+20:42 - explicitly, it does not assume that the features
+20:45 - are conditionally independent given the label.
+20:47 - So it's a little bit more powerful.
+20:50 - If you think about the spam classification,
+20:53 - there might be two words in your vocabulary like bank
+20:57 - and account, knowing whether one appears in the email,
+21:01 - so knowing X1 tells you a lot about whether X2
+21:04 - appears in the email.
+21:07 - But the Naive Bayes model assumes that it doesn't help,
+21:11 - so that assumption is clearly wrong in the real world.
+21:15 - The discriminative model does not make that assumption
+21:18 - explicitly.
+21:20 - And so let's say that in your data set
+21:22 - these two words always appear together,
+21:25 - so whenever there is bank, there is also account.
+21:28 - The Naive Bayes model is forced to assume by construction
+21:31 - that they are independent.
+21:33 - So whenever you see that both of them appear,
+21:37 - it's going to double count the evidence,
+21:39 - is going to think both of them are telling me something about
+21:42 - whether this is spam or not.
+21:44 - I know that they are independent,
+21:45 - so when I see both of them at the same time,
+21:48 - I'm doubly confident that maybe this is spam.
+21:52 - The logistic regression model can actually just
+21:55 - set one of the coefficients to 0 and it doesn't double
+21:59 - count the evidence.
+22:00 - So you can see that you're making a weaker assumption
+22:04 - and it's actually powerful and that's
+22:06 - why this logistic regression model tends
+22:08 - to work better in practice.
+22:10 -
+22:12 - However, the issue is that one thing you cannot do,
+22:18 - let's say if you have a logistic regression model is that you
+22:21 - cannot reason about your own inputs.
+22:24 - So the only thing you can do is you can map X to Y,
+22:28 - but you cannot, let's say the same thing happens also in image
+22:36 - classification, so let's say that you have a model that is
+22:39 - predicting a label of an image given the image X,
+22:43 - that's the only thing you can do, predict Y from X.
+22:46 - So if somebody gives you a new image where some of the pixels
+22:50 - are missing, there is no way for you to impute the missing values
+22:55 - because you don't know what's the relationship between the X
+22:58 - variables.
+22:59 - You didn't model p of X at all, you only model p of Y given X
+23:04 - and so that's one thing you cannot do with a discriminative
+23:08 - model that you can do with a generative model.
+23:12 - A generative model is trying to model
+23:14 - the full joint distribution between Y and X,
+23:19 - and so at least in principle as long
+23:22 - as you can do inference, as long as you can compute
+23:24 - the right conditionals like modulo computational issues,
+23:28 - you have enough information to predict anything from anything.
+23:33 - So you can impute missing values,
+23:35 - you can do more interesting things.
+23:38 - But it's a harder problem because you're not only
+23:41 - modeling the relationship between how to predict Y from X,
+23:45 - you are also modeling the full thing,
+23:47 - you're modeling the relationship between the features,
+23:51 - between the inputs as well.

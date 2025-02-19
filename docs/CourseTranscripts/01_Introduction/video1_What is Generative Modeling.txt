@@ -1,0 +1,270 @@
+
+00:05 - SPEAKER: Welcome.
+00:07 - I'm super excited to see so many people
+00:09 - interested in deep generative models.
+00:13 - So I'm Stefano.
+00:15 - I'm the instructor of this class.
+00:17 - I've been teaching this course for a few years now.
+00:20 - I guess we started back when before all the generative AI
+00:25 - hype and before this topic was so popular in the industry.
+00:29 - And so now you're lucky.
+00:32 - You get to experience a pretty mature version of this course.
+00:36 - And it's going to be a pretty exciting quarter.
+00:42 - This is one of the hottest topics in the industry
+00:46 - right now.
+00:47 - There is, of course a lot of excitement
+00:48 - around the language models, about generative models
+00:51 - of images, of videos.
+00:53 - And the goal of this class is to give you really the foundations
+00:57 - to understand how the methods that
+01:00 - are used in industry and in academic papers actually work.
+01:05 - And hopefully get up to speed with all
+01:09 - the really fundamental concepts that you need in order
+01:12 - to build a generative model and maybe in the future
+01:16 - develop better systems, develop better models,
+01:19 - deploy them in industry, start your own company that
+01:22 - is sort of leveraging these technologies.
+01:25 - So at a high level, one of the reasons
+01:31 - I think these models are becoming so important in AI
+01:35 - and machine learning is that they really address
+01:39 - kind of the fundamental challenge
+01:41 - that we encounter in a lot of sub-fields of AI,
+01:44 - like computer vision, NLP, computational speech,
+01:49 - even robotics, and so forth.
+01:52 - If you think about it in a lot of these settings,
+01:55 - the fundamental challenge that you have
+01:57 - is to make sense of some complex high-dimensional signal
+02:02 - or object like an image or a speech signal
+02:06 - or a sequence of tokens or a sequence of characters
+02:10 - written in some language.
+02:12 - And this is challenging because from the perspective
+02:16 - of a computer, if you think about an image,
+02:17 - it's just like a big matrix of numbers.
+02:20 - And the difficulty is making sense of it,
+02:23 - trying to figure out how to map that very
+02:25 - complex high dimensional object to some kind of representation
+02:31 - that is useful for decision making, for a variety of tasks
+02:35 - that we care about, like figuring out what kind
+02:38 - of objects are in the image or what kind of relationships
+02:41 - they are in, what kind of materials they are made of,
+02:43 - if they are moving, how fast, things like that.
+02:47 - And similarly if you think about NLP, it's a similar story.
+02:50 - You have a sequence of characters
+02:53 - and you need to make sense of it.
+02:54 - You need to understand what's the meaning
+02:56 - and maybe you want to translate it in a different language.
+02:59 - The challenge is really understanding
+03:01 - what these complex objects really mean.
+03:05 - And understanding these objects is hard.
+03:08 - It's not even clear what it means to understand
+03:11 - what an image means.
+03:13 - But I like to use this analogy inspired
+03:16 - by this quote from Richard Feynman.
+03:19 - At some point he said, "What I cannot create,
+03:22 - I do not understand."
+03:24 - I think this was actually what they found on his whiteboard
+03:28 - after he passed.
+03:29 - And what he meant in this case is
+03:33 - that he was talking about mathematical theorems
+03:35 - and he was saying if I can't really derive a proof by myself,
+03:39 - I'm not really understanding the concept well enough.
+03:43 - But I think the analogy is that we can look
+03:46 - at the contrapositive of this.
+03:48 - And the philosophy behind generative modeling approaches
+03:53 - in AI is that if I claim I'm able to understand
+03:57 - what an image means or what a piece of text means,
+04:01 - then I should be able to create it, right?
+04:03 - I should be able to generate new images.
+04:05 - I should be able to generate new text.
+04:07 - So if you claim you understand what an apple is,
+04:10 - then you should be able to picture one in your head.
+04:14 - Maybe you're not able to create a photo of an apple,
+04:16 - but you know sort of what it means,
+04:18 - or if you claim you can speak Italian,
+04:21 - then you should be able to produce--
+04:24 - you should be able to speak in that language,
+04:26 - you should be able to write text in that language.
+04:29 - And that's kind of the philosophy
+04:31 - behind this idea of building generative models of images
+04:35 - or generative models of text or multimodal, generative models.
+04:38 - If you have these kind of capabilities,
+04:40 - so you're able to generate text that is coherent
+04:43 - and make sense in large language models,
+04:46 - like ChatGPT, those kind of things,
+04:48 - then it probably means that you have a certain level
+04:50 - of understanding, not only of the rules, the grammar
+04:55 - of the language, but also about common sense,
+04:59 - about what's going on in the world.
+05:01 - And essentially, the only way you
+05:03 - can do a good job at generating text that is meaningful
+05:07 - is to have a certain level of understanding.
+05:09 - And if you have that level of understanding,
+05:11 - then you can leverage it and you can
+05:12 - use it to solve all the tasks that we care about.
+05:18 - So how do we go about building a software,
+05:23 - writing code that can generate let's say images
+05:27 - or can generate text?
+05:29 - This is not necessarily a new problem.
+05:33 - It's not something that we are looking at for the first time.
+05:36 - People in computer graphics, for example,
+05:38 - have been thinking about writing code that can generate
+05:42 - images for a very long time.
+05:44 - And they made a lot of progress in this space.
+05:47 - And so you can think of the setting as something
+05:52 - like where you're given a high level description of a scene.
+05:54 - Maybe there are different kinds of objects,
+05:56 - of different colors, different shapes.
+05:59 - Maybe you have a viewpoint.
+06:01 - And the goal is to kind of write a renderer that
+06:05 - can produce an image that corresponds
+06:09 - to that high-level description.
+06:12 - And again, the idea is that if you can do this,
+06:16 - then you probably have a reasonable understanding
+06:18 - of what it means, that what the concept of a cube
+06:23 - is, what the concept of a cylinder is, what colors mean,
+06:27 - the relative position.
+06:29 - And in fact, if you can do this well,
+06:31 - then you can imagine a procedure where
+06:34 - you try to invert this process.
+06:37 - And given an image, you can try to figure out
+06:40 - what was the high level description that
+06:42 - produced this scene?
+06:45 - And to the extent that you don't have
+06:48 - sort of computational constraints
+06:49 - and you can do this efficiently, this
+06:52 - gives you a way to think about computer vision
+06:55 - in terms of inverse graphics.
+06:57 - So if you have a process that can generate images well
+07:01 - and you are somehow able to invert it,
+07:03 - then you are making progress towards computer vision tasks
+07:06 - because you are able to really understand
+07:09 - these high-level descriptions of the scenes.
+07:13 - And this is not going to be a course on computer graphics.
+07:18 - We're going to be looking at very different kinds of models.
+07:21 - But they will have a similar structure.
+07:23 - Many of them will have a similar structure
+07:25 - where there's going to be a generative component.
+07:27 - And then often, there's going to be latent variables
+07:30 - that you can kind of infer given the raw sensory inputs
+07:34 - in this case.
+07:35 - And you can use that to get features,
+07:38 - to get representations.
+07:40 - You can use them to fine-tune your models
+07:43 - to solve computer vision tasks.
+07:46 - And so this kind of philosophy and this kind of structure
+07:50 - will actually show up in the kind of models
+07:52 - that we'll build in the class.
+07:55 - So the kind of models we're going to work on,
+07:58 - they are not graphics-based.
+08:00 - They're going to be statistical models.
+08:02 - So we're only going to be talking
+08:04 - about models that are based on machine learning techniques.
+08:08 - And so the generative models that we're going to work with
+08:11 - are going to be based on a combination of data
+08:14 - and prior knowledge.
+08:16 - And so priors are always necessary.
+08:20 - But you can imagine that there is a spectrum.
+08:23 - You can rely more on data or you can rely more on priors.
+08:27 - And you can kind of think of computer graphics
+08:30 - as sort of lying on this extreme, where you leverage
+08:34 - a lot of knowledge about physics, about light transport,
+08:37 - about properties of objects to come up with good renderers.
+08:42 - This course is going to be focusing
+08:43 - on methods that are more like much more data
+08:46 - driven where we're going to be trying
+08:47 - to use as little prior knowledge as possible and instead leverage
+08:52 - data.
+08:54 - Large data sets of images or text,
+08:57 - perhaps collected on the internet.
+09:01 - And, yeah.
+09:03 - So at a very high level, these generative models
+09:07 - are just going to be probability distributions over let's say
+09:11 - images x or over sequences of text x.
+09:15 - And so in that sense, they are statistical.
+09:19 - And we're going to be building these models using
+09:22 - a combination of data, which you can
+09:24 - think of as samples from this probability distribution.
+09:27 - And in this case, the prior knowledge is basically
+09:31 - going to be a mix of the kind of architectures
+09:34 - you're going to be using, the kind
+09:35 - of loss functions that you're going
+09:37 - to be using for training the models, the kind of optimizer
+09:39 - that you're going to be using to try to reduce the loss
+09:43 - function as much as possible.
+09:45 - And this combination, having access to good data
+09:48 - and the right kind of priors is what
+09:52 - enables you to build hopefully a good statistical generative
+09:56 - model.
+09:58 - But at the end of the day, kind of like the abstraction
+10:02 - is that we're going to be working
+10:03 - with probability distributions.
+10:05 - And you can just think of it as a function that
+10:07 - takes any input x as input, let's say an image
+10:11 - and maps it to some kind of scalar probability value, which
+10:14 - basically tells you how likely is this particular input image x
+10:20 - according to my generative model.
+10:23 - And this might not look like a generative model
+10:27 - directly, like it looks like how do you actually generate data
+10:31 - if you have access to this kind of object?
+10:34 - The idea is that you can basically generate samples
+10:37 - from this probability distribution
+10:38 - to create new objects.
+10:40 - So you train a model, you learn this probability distribution,
+10:44 - and then you sample from it.
+10:46 - And by doing that, you generate new images that
+10:49 - hopefully look like the ones you've
+10:51 - used for training the model.
+10:55 - So that's the structure.
+10:57 - So in some sense, what we're trying to do
+10:59 - is we're trying to build data simulators.
+11:01 - So we often think of data as an input
+11:04 - to our machine learning problems.
+11:07 - Here we're kind of changing--
+11:09 - we're turning things around and we're thinking of data
+11:12 - as being an output.
+11:13 - So we need to think about different kinds of machine
+11:16 - learning models that we can use to simulate to generate data.
+11:20 - Of course, this looks a little bit weird
+11:23 - because we just said we're going to use
+11:24 - data to build these models.
+11:26 - So indeed, the idea is that we're going
+11:29 - to use data to build a model.
+11:31 - But then we can use to generate new data.
+11:33 - And this is useful because often, we're
+11:37 - going to be interested in simulators
+11:38 - that we can control through control signals.
+11:43 - And we'll see some examples of the control
+11:45 - signals you might want to use to control your generative process.
+11:50 - For example, you might have a model that can generate images
+11:54 - and you can control it by providing
+11:56 - a caption of the kind of images you want,
+11:59 - or you might have a model that can again generate images
+12:02 - and you can control it by providing maybe
+12:06 - black and white images and you can
+12:08 - use it to produce a colorized version of the image.
+12:11 - Or maybe you have a data simulator that can produce text
+12:14 - in English, and you can control the generative process
+12:17 - by feeding in text in a different language,
+12:20 - maybe in Chinese.
+12:21 - And that's how you build machine translation tools.
+12:24 -
+12:27 - The API is going to be, again, that
+12:30 - of a probability distribution.
+12:31 - So really you're going to be able to
+12:33 - for a lot of these models, you're
+12:35 - going to be able to also query the model with potential data
+12:39 - points.
+12:40 - And the model will be able to tell you whether or not
+12:43 - they are likely to be generated by this data simulator or not.
+12:46 - So in some sense, it also allows you
+12:48 - to build a certain understanding over what kind of data
+12:51 - points make sense and which ones don't, which
+12:53 - is going to be useful for some applications.
+12:57 - And really this data simulator is at the end
+12:59 - of the day a statistical model.
+13:01 - It's what we call the machine learning generative model.
+13:04 - And in particular in this class, we're
+13:06 - going to be thinking about deep generative models
+13:08 - where we're going to be using neural networks, deep learning
+13:11 - kind of ideas to implement this piece of code that gives you
+13:16 - these capabilities of generating data.

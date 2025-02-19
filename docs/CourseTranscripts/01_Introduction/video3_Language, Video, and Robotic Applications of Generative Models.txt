@@ -1,0 +1,257 @@
+00:00 -
+00:05 - Language, of course, that's another space
+00:08 - where there's been a lot of progress and a lot of excitement
+00:11 - around large language models.
+00:15 - These are basically models that have
+00:19 - been trained over large quantities of text, collected
+00:22 - on the internet often, and then they
+00:25 - learn a probability distribution over which sentences make sense
+00:28 - or not.
+00:30 - And you can use it to, again, do some sort
+00:32 - of inpainting where you can ask the model
+00:35 - to create a sentence that starts with some kind of prompt.
+00:40 - For example, this was an old language model,
+00:44 - I guess in 2019, I think.
+00:47 - Where you can ask the model to continue a sentence that starts
+00:51 - with, to get an A+ in deep generative models,
+00:55 - students have to.
+00:57 - And then let's see what the language model does,
+01:00 - and then it completes it for you, right?
+01:02 - And then it says something somewhat reasonable.
+01:05 - They have to be willing to work with problems that
+01:07 - are interesting, the best, not great, not perfect for today's
+01:14 - standards.
+01:14 - But again, for when this thing came out,
+01:16 - it was pretty mind-blowing that you
+01:19 - could build a model that can generate this quality of text.
+01:25 - Now I tried something similar on ChatGPT,
+01:29 - and this time I tried something harder.
+01:31 - Like here I said, to get an A+ in deep generative models,
+01:35 - here I tried, what should I do to get an A+ in CS236
+01:40 - at Stanford.
+01:40 - So I didn't even tell the model ChatGPT what CS236 is.
+01:45 - It actually knows that CS236 is deep generative models,
+01:50 - and here it gives you some actually pretty good tips
+01:53 - on how to do well in the class.
+01:55 - Attend lectures, read the materials,
+01:58 - stay organized, seek help, do the homeworks.
+02:02 - Then it gives you 15 of them.
+02:04 - I cut the prompt here, but it's pretty impressive
+02:11 - that you can do these kind of things.
+02:13 - And again, it probably means that there
+02:16 - is some level of understanding, and that's
+02:20 - why these models are so powerful,
+02:21 - and people are using them for doing all sorts of things
+02:24 - because they can generate means they understand something,
+02:27 - and then you can use the knowledge
+02:28 - to solve a variety of tasks that we that we care about.
+02:31 -
+02:35 - Of course, the nice thing about this space
+02:41 - is that you can often mix and match.
+02:43 - So you can control these models using various sorts
+02:49 - of control signals.
+02:50 - Once you can do generation, you can
+02:51 - steer the generative process using different control signals.
+02:56 - A natural one here would be, generate the text in English,
+03:01 - conditioned on some text in a different language,
+03:04 - so maybe Chinese.
+03:06 - So you have-- and this basically is machine translation, right?
+03:10 - So progress in generative models basically
+03:14 - directly translate into progress in machine translation.
+03:18 - If you have a model that really understands how to generate text
+03:21 - in English, and it can take advantage of the control signal
+03:25 - well, then it means that essentially it's
+03:27 - able to do translation reasonably well.
+03:31 - And a lot of the progress in the terms of the models
+03:34 - and the architectures that we're going to talk about
+03:36 - in this class are the kind of ideas
+03:38 - that are behind the pretty good machine translation
+03:42 - systems that we have today.
+03:44 -
+03:47 - Another example is code.
+03:50 - Of course, very exciting as a computer scientist.
+03:53 - Many of you are computer scientists, write a lot of code.
+03:56 - At the end of the day, code is text.
+03:58 - If you have a model that understands
+04:00 - which sequences of text make sense
+04:04 - and which ones don't, you can use it to write code for you.
+04:08 - So here's an example of a system that exists today
+04:13 - where you can try to get the model to autocomplete,
+04:17 - let's say the body of a function based
+04:19 - on some description of what the function is supposed to do.
+04:22 -
+04:25 - Again, these systems are not perfect, but they are very--
+04:28 - they're already pretty good.
+04:30 - Like they can do many, they can solve many interesting tasks,
+04:35 - they can solve programming assignments,
+04:41 - they can solve competition.
+04:42 - They do reasonably well in competitive programming
+04:47 - competitions.
+04:48 - So again, pretty cool that they understand the natural language,
+04:54 - they understand the syntax of the programming language,
+04:56 - they know how to put things together so that they
+04:59 - do the right thing.
+05:00 - They are able to translate in this case from natural language
+05:03 - to a formal language and Python in this case
+05:08 - and do the right thing.
+05:10 - So lots of excitement also around these sort of models.
+05:14 -
+05:17 - Another one that is pretty cool is video.
+05:20 - This is one of the active ones where the first systems are
+05:25 - being built. Again, you can imagine a variety
+05:28 - of different interfaces where you
+05:29 - can control the generative process
+05:32 - through many different things.
+05:34 - A natural one is text.
+05:36 - You might say you start with a caption
+05:38 - and then you ask the model to generate a video corresponding
+05:47 - to that caption.
+05:48 - This is one example.
+05:51 - The videos are pretty short right now.
+05:53 - That's one of the limitations.
+05:55 - But can you see it?
+05:57 - There, oh, yeah.
+05:58 - OK, it shows up there.
+06:01 - It is another example.
+06:03 - You're asking it to generate a video of a couple sledding
+06:06 - down a snowy hill on the tire Roman chariot style.
+06:12 - And this is sort of what it produces.
+06:16 - They are pretty short videos.
+06:19 - At the end of the day, you think of a video
+06:21 - as a sequence of images.
+06:22 - So if you can generate images, it's
+06:24 - believable that you can also generate a stack of images
+06:28 - which is essentially a video.
+06:31 - But pretty impressive that there's
+06:33 - a good amount of coherence across the frames.
+06:36 - It captures roughly what's asked by the user
+06:39 - and the quality is pretty high.
+06:42 - And if you're willing to work on this
+06:46 - and stitch together many different videos,
+06:48 - you can generate some pretty cool stuff.
+06:50 - [VIDEO PLAYBACK]
+06:53 -
+07:30 - This is just basically stitching together
+07:32 - a bunch of videos generated with the previous system,
+07:36 - and again, you can see it's not perfect, but it's remarkable.
+07:43 - I mean, we're not at the level where you can just
+07:45 - ask the system to produce a movie for you
+07:49 - with a certain plot or whatever with your favorite actor,
+07:52 - but it's already able to produce pretty high-quality content
+07:56 - that people are willing to look at and engage with.
+07:59 - So that's an exciting kind of development
+08:02 - that we're seeing generative models of videos.
+08:04 - I think when that starts to work,
+08:06 - and we're seeing the kind of progress in this space
+08:08 - that I showed you before for images, it's
+08:11 - happening right now.
+08:12 - I think when people figure this out and get really good systems,
+08:16 - they can generate long videos of high quality.
+08:19 - This could be really changing the way we--
+08:22 -
+08:26 - a lot of the media industry is going
+08:28 - to have to pay attention to this.
+08:30 - I don't know exactly what went into this.
+08:32 - I didn't make it myself, but I know
+08:35 - the system allows you to also control it
+08:39 - through a caption and a seed image.
+08:42 - So if you maybe already know what you want your character
+08:47 - to look like, then you can kind of use it and animate,
+08:50 - let's say, a given image.
+08:52 - And again, it's an example of controlling
+08:56 - the generative process like you can control it through text,
+08:59 - you can control it through images.
+09:01 - There are many different ways to do this.
+09:03 -
+09:06 - Yeah, and this is actually from a former PhD
+09:11 - Student in our group.
+09:12 - So yeah, it's a system that they are developing.
+09:15 - It's very good, I agree with you.
+09:19 - Pretty impressive stuff.
+09:20 - So that's the kind of thing you can do once you
+09:22 - learn this material very well.
+09:27 - All right, other completely different sort
+09:29 - of application area, sort of decision-making,
+09:34 - robotics, these kind of a lot of these domains, what
+09:40 - you care about is taking actions in the world
+09:43 - to achieve a certain goal, let's say driving a car
+09:45 - or stacking some objects, and so at the end of the day,
+09:49 - you can think of it as generating a sequence of actions
+09:52 - that makes sense.
+09:53 - And so again, the kind of machinery
+09:56 - that we're going to talk about in this course
+10:00 - translates pretty well to a lot of what we call imitation
+10:03 - learning problems where you are given examples
+10:05 - of good behavior provided, maybe by a human
+10:08 - and you want your model to generate
+10:10 - other behaviors that are good.
+10:12 - For example, you want the model to learn how to drive the car
+10:15 - or how to stack objects.
+10:18 - So here's an example of how you can use these sort of techniques
+10:22 - that we're going to talk about in the course
+10:24 - to learn how to drive the car in this in this video game.
+10:29 - And you have to figure out, of course, what actions make sense
+10:32 - and to not crash into other cars and stay into the road
+10:39 - and so forth.
+10:40 - It's non-trivial again, but if you have a good generative model
+10:44 - then you can make good decisions in this simulator.
+10:48 - This is an example where you can train a diffusion model
+10:52 - in this case to stack objects.
+10:56 - So again, you need to figure out what trajectories make sense
+10:59 - and if you have a good model that understands which
+11:02 - trajectories have the right structure then you
+11:04 - can use it to stack a different set of objects,
+11:06 - and you can control the model to produce high quality policies.
+11:12 - There's a lot of excitement in the scientific--
+11:16 - science and engineering around generative models.
+11:20 - One of your TAs is one of the world's experts
+11:23 - on using generative models to synthesize molecules that
+11:28 - have certain properties or proteins that
+11:30 - have certain properties, and either
+11:34 - at the level of their structure, or even
+11:38 - at the 3D level kind of really understand
+11:40 - the layout of these molecules.
+11:42 - And yeah, there is a lot of interest
+11:45 - in this space around building generative models
+11:50 - to design drugs or to design better catalysts.
+11:55 - At the end of the day, you can think of it as again,
+11:58 - some kind of generative model where
+11:59 - you have to come up with a recipe that
+12:01 - does well at a certain task.
+12:03 - And if you train a model on a lot of data on what's--
+12:07 - let's say, proteins perform well in a certain task
+12:10 - then you might be able to generate a sequence
+12:12 - of amino acids that perform.
+12:14 - That does even better than the things we have
+12:17 - or you might be able to design a drug that binds in a certain way
+12:21 - because you're targeting, let's say,
+12:23 - you know COVID or something.
+12:25 - And so there is a lot of interest
+12:29 - around building generative models over modalities
+12:32 - that are somewhat different from the typical ones.
+12:35 - It's not images.
+12:35 - It's not text.
+12:36 - But it's the same generative models.
+12:38 - It's stable diffusion models.
+12:40 - So there's going to be autoregressive models.
+12:42 - It's going to be the models we're going
+12:45 - to talk about in this course.
+12:49 - And right, so lots of excitement.
+12:53 - There are many other modalities that I
+12:57 - didn't put in the slide deck where there's been
+13:01 - progress generating 3D objects.
+13:05 - That's another very exciting area and many more.
+13:11 - Of course, there is also a bit of worry,
+13:17 - and hopefully we'll get to talk about it a bit
+13:20 - in the class around--
+13:24 - if we're computers are getting so good at generating content
+13:27 - that is hard to distinguish from the real one,
+13:29 - there is this big issue around deepfakes.
+13:33 - which one is real, which one is fake.
+13:35 - This was produced again by my students.
+13:37 - But you can get a sense of the sort of dangers
+13:40 - that these kind of technologies can have.
+13:42 - And there is a lot of potential for misuse
+13:45 - of these sort of systems.
+13:47 - So hopefully, we'll get to talk about not
+13:49 - doing that in the class.

@@ -1,0 +1,255 @@
+00:00 -
+00:05 - How do neural networks come in here?
+00:08 - Well, as we said, the issue with, or one
+00:13 - of the issues with the logistic regression model,
+00:15 - is that you're still making some simplifying assumption
+00:18 - on how y depends on x.
+00:20 - Right, we're assuming that there is this linear dependence.
+00:23 - You take the x, the features, you combine them linearly,
+00:27 - you pass them through the sigmoid,
+00:29 - and that's what gives you y, which again might not
+00:33 - be true in the real world.
+00:35 - And so one way to get a more expressive,
+00:39 - even make even weaker assumptions, in some sense,
+00:42 - is to basically allow for some non-linear dependence.
+00:49 - Right, you could say, instead of directly taking the x features
+00:53 - and map them by linearly combining them to a probability
+00:57 - value, I'm going to compute some features of the input x.
+01:02 - Perhaps I'll do it by taking some linear combination
+01:07 - of the features and then applying a non-linear function
+01:11 - to each value that I get out of this.
+01:15 - And then I'm going to do linear regression
+01:18 - on top of these features.
+01:21 - Right, so instead of directly applying linear regression
+01:24 - to x, first I transform x by multiplying it by a matrix, a
+01:29 - and then shifting by some vector of coefficients, b,
+01:32 - and then I do logistic regression on these features.
+01:36 - That's essentially a very simple one-layer neural network.
+01:41 - Instead of predicting directly based on x,
+01:43 - I transform x to get these features h,
+01:46 - and then I do linear regression based on that.
+01:48 - And that's strictly more powerful
+01:50 - because now I'm allowed to do more complicated kind
+01:53 - of computations.
+01:54 - And if you think about that graph,
+01:57 - that shape of that function of how y depends on x, now
+02:01 - I have two more parameters.
+02:03 - I have this matrix, this vectors,
+02:05 - vector of coefficients of biases b,
+02:10 - and I can use this to change the shape of the function.
+02:13 - I can get more complicated relationships between y and x.
+02:19 - And so there's a trade-off here.
+02:21 - I'm using more parameters to represent
+02:24 - this conditional distribution.
+02:26 - I no longer have just a vector of coefficients, alpha.
+02:29 - I also have a bunch of matrices for the previous layer
+02:32 - in the neural network.
+02:34 - But that gives me more flexibility
+02:36 - in predicting y from x.
+02:39 - And of course, you can imagine stacking this many, many times,
+02:44 - and then you can use a deep neural network
+02:46 - to predict y from x.
+02:49 - Essentially, what you can do is you
+02:51 - can repeat this multiple times, and you
+02:53 - can get a more expressive way of capturing
+02:56 - the relationship between some y variable
+02:59 - and the input variables x.
+03:03 - And this is going to be the building
+03:04 - block that we're going to use to build deep generative models.
+03:08 - So what we're going to do is we're
+03:10 - going to take advantage of this fact
+03:11 - that neural networks seem to work very well at solving
+03:15 - this kind of prediction tasks, and we're
+03:18 - going to combine them to build generative models.
+03:22 - And the simplest way to do it is to use chain rule
+03:26 - and then use neural networks to represent
+03:28 - each one of those conditionals.
+03:31 - And that's essentially on neural autoregressive model,
+03:34 - and essentially that's what large language models do.
+03:38 - They use chain rule and then they represent,
+03:41 - they simplify the conditionals by assuming that you can model
+03:46 - them using a neural network.
+03:49 - So you can predict the next word given the previous ones
+03:53 - using a neural network.
+03:54 -
+03:57 - But there's going to be other ways,
+03:59 - and when we see other classes of generative models
+04:01 - that are still kind of going to use this kind of ideas,
+04:04 - but maybe we're going to combine them in different ways,
+04:06 - and we're going to get different types of generative models.
+04:10 - So that's kind of the story.
+04:13 - There is the chain rule factorization,
+04:16 - which is fully general.
+04:17 - So given a joint, you can always write it
+04:19 - as a product of conditionals with no assumptions.
+04:23 - In a Bayesian network, you're going
+04:25 - to try to simplify these conditionals somehow
+04:28 - by assuming that the variables are conditionally independent.
+04:31 - So whenever you're trying to predict x4,
+04:34 - you don't really need x2 and x3.
+04:35 - You just need x1, for example, which is usually too strong,
+04:39 - and this doesn't work on high-dimensional data
+04:42 - sets on images, text, the kind of things we care about.
+04:46 - The one class of deep generative models,
+04:51 - very successful one conceptually, does this.
+04:54 - It just replaces all these conditionals
+04:57 - that we don't know how to deal with, with neural networks.
+05:01 - And you can choose different architectures,
+05:04 - but fundamentally, that's the whole idea.
+05:07 - We're going to use a neural network
+05:09 - to predict what's the fourth word given
+05:12 - the first, the second, and the third.
+05:15 - And again, there's no free lunch in the sense
+05:17 - that we're giving up is we're assuming that there
+05:21 - is some relationship that these conditional distributions can
+05:24 - basically be captured by a neural network, which
+05:29 - might or might not be the case in practice.
+05:33 - But that's the one way to get tractability to the extent
+05:37 - that these neural networks are not too big,
+05:39 - and somehow you're able to tie them together,
+05:41 - you can see that sort of you need a different neural network
+05:44 - for every position in the sequence, which
+05:47 - would be very tricky.
+05:48 - So somehow you need to figure out
+05:49 - a way to tie together the weights of this neural network.
+05:53 - So this can be done in practice, but ideally, this
+05:57 - is the one way to get a deep generative model.
+06:02 - The underlying idea is that you're
+06:03 - going to simplify this conditionals by dropping
+06:07 - the dependence on some variables,
+06:09 - and that gives you a Bayesian network.
+06:11 - Depending on which variables you drop,
+06:13 - you're going to get different graphs.
+06:15 - If you were to not drop any variable,
+06:18 - you get this you get the fully general model.
+06:21 - And that makes no assumptions.
+06:24 - So that's fully general, but it's
+06:26 - too expensive because these conditions are too--
+06:31 - whenever you're conditioning on too many things,
+06:34 - that conditional distribution is too complicated,
+06:37 - and you cannot store it.
+06:38 - You cannot learn it.
+06:39 - And so you cannot actually use it in practice.
+06:41 -
+06:45 - Cool
+06:47 - The last thing I wanted to mention
+06:51 - is how to deal with continuous variables.
+06:55 - So we often want to model not just discrete data
+06:58 - but actually data that is more naturally
+07:01 - thought of as continuous, so taking values
+07:05 - over the whole real axis.
+07:07 - And luckily, the machinery is very similar.
+07:10 - So here, instead of working with probability mass functions,
+07:13 - we work with probability density functions.
+07:18 - And here you can start to see how
+07:20 - the idea of working with tables already
+07:22 - doesn't work because kind of there
+07:24 - is an infinite number of different values
+07:26 - that x can take.
+07:28 - You cannot write down a table that will assign a number
+07:30 - to each one of them.
+07:32 - So you have to basically assume that there is some functional
+07:37 - form, there is some function that you
+07:40 - can use to map different values of x to a scalar.
+07:46 - And for example, you can assume that x
+07:48 - is Gaussian, which means that there
+07:50 - is a relatively simple function that depends on two parameters,
+07:54 - mu and sigma.
+07:56 - And then you can plug them into this expression
+07:58 - and you get back the density of the Gaussian
+08:02 - at any particular point x, where mu and sigma here
+08:06 - are the mean and the standard deviation of the Gaussian.
+08:09 - Or you could say, OK, maybe a uniform random variable.
+08:12 - Again this is another kind of relatively simple function
+08:16 - that you can use to map x to densities.
+08:21 - The uniform distribution over the interval between a and b
+08:24 - would have that kind of functional form, et cetera.
+08:29 - And the good news is that, again, we often care
+08:32 - about modeling many random variables, which
+08:35 - could be continuous or maybe a mix of continuous and discrete.
+08:39 - In this case, we care about the joint probability density
+08:44 - function.
+08:45 - And the same, for example, a joint Gaussian
+08:51 - would have that sort of functional form.
+08:53 - So now x is a vector of numbers.
+08:57 - And the good news is that the whole machinery
+08:59 - of chain rule-based rule, they all still apply.
+09:02 - So for example, we can write down the joint over PDF,
+09:06 - over probability density function,
+09:08 - over three random variables as a marginal PDF
+09:12 - over the first one, a conditional over the first,
+09:15 - the second given the first, and so forth.
+09:19 - And this is useful because we can again mix and match,
+09:25 - we can use Bayesian networks, or we
+09:27 - can use neural networks plus Bayesian networks
+09:30 - in different ways to get different types
+09:33 - of generative models.
+09:36 - So for example, you can get a mixture
+09:39 - of two Gaussians using a simple Bayesian network with two
+09:43 - random variables, z and x.
+09:47 - So the Bayesian network has two random variables
+09:49 - Z and x. x has z as a parent, z doesn't have any parent,
+09:55 - and so what it means is that the joint over x and z
+09:59 - can be factorized as the probability of z times
+10:02 - the probability of x given z.
+10:04 - And for example you could say z is a Bernoulli random variable
+10:10 - with parameter p.
+10:11 - So z is binary.
+10:13 - It's either 0 or 1, and you choose a value with probability
+10:17 - with flipping a biased coin with probability p.
+10:22 - And then condition on z, you choose a value for x by,
+10:26 - let's say, sampling from a Gaussian.
+10:28 - And because z can take two different values,
+10:31 - there's actually two Gaussians.
+10:33 - There is one Gaussian when z is 0
+10:35 - and there is one Gaussian when z is 1,
+10:38 - and these two Gaussians are allowed
+10:39 - to have different means and different variances.
+10:42 - So this would be our graphical model that
+10:47 - corresponds to a mixture of two Gaussians,
+10:49 - and because you're mixing together two Gaussians,
+10:51 - you have a slightly more flexible model.
+10:54 - The parameters here are p, which is the probability of choosing
+10:58 - 0 versus 1 for this latent variables,
+11:01 - and then you have the mean and the means
+11:03 - and the standard deviations.
+11:05 - Of course, you could choose other things.
+11:07 - For example, you could choose z to be a uniform random variable
+11:11 - between a and b, and then given z, x
+11:15 - let's say is a Gaussian with a mean, which is z and then maybe
+11:19 - a fixed standard deviation.
+11:22 - A more interesting one is the variational autoencoder,
+11:26 - which we're going to cover in-depth in future lectures.
+11:29 - But at the end of the day, a variational autoencoder
+11:32 - is this Bayesian network with two nodes, z and x,
+11:36 - and the assumption is that z is sampled from a Gaussian.
+11:40 - So p of z is just a simple Gaussian random variable. .
+11:45 - And here you see how we are going
+11:47 - to mix and match Bayesian networks and neural networks.
+11:51 - Given zx is, again, a Gaussian distribution, but the mean
+11:58 - and the variance of this Gaussian
+12:00 - are the outputs of some neural network or two
+12:05 - neural networks, mu theta and sigma phi, which depend on z.
+12:13 - So the sampling process is kind of a generalization of the ones
+12:17 - you see before.
+12:19 - Or again, you first sample z , then you feed z into a neural
+12:22 - network that will give you means and variances that you're using
+12:27 - another Gaussian distribution to sample a value for x.
+12:32 - And this kind of machinery is essentially
+12:34 - a variational autoencoder.
+12:36 - This corresponds to the generative process
+12:38 - that you use in a VAE or a variational autoencoder.
+12:42 - And we're going to have to talk about how you actually
+12:45 - train these kind of models and how to learn them,
+12:47 - but fundamentally you see how we take this idea of mix
+12:53 - and match them.
+12:55 - There's a little bit of Bayesian network,
+12:57 - a little bit of chain rule, a little bit of neural networks
+13:00 - to represent complicated conditionals,
+13:04 - but everything can be stitched together,
+13:06 - and that's how you get different kinds of generative models.
+13:10 - And yeah, just as a note, even though mu and sigma
+13:15 - could be very complicated, the conditional distribution
+13:18 - of x given z is still Gaussian in this case.
+13:20 - Right, so there are some kind of trade-offs
+13:22 - that you have to deal with.

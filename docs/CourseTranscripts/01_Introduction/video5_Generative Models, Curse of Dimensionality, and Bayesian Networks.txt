@@ -1,0 +1,781 @@
+00:00 -
+00:05 - SPEAKER: Welcome to lecture 2.
+00:09 - The plan for today is to talk a little bit
+00:15 - about what a generative model is and we're
+00:21 - going to encounter the first challenge whenever we want
+00:26 - to build a generative model of complex data sets
+00:29 - like images, text, which is the usual curse of dimensionality
+00:32 - that you might have seen before in other machine learning
+00:35 - classes.
+00:36 - And so the plan for today is to discuss
+00:40 - a little bit various ways at a very high level
+00:45 - that people have come up with to deal
+00:46 - with the curse of dimensionality.
+00:48 - And so we'll do a very brief crash
+00:51 - course on graphical models, this is kind of
+00:54 - like my CS 228 class or a part of it
+00:57 - compressed in a single lecture or half of a lecture.
+01:02 - And then we'll talk a little bit about the distinction
+01:05 - between a generative model and a discriminative model,
+01:07 - which is something, again, you might
+01:09 - have seen before in ML classes.
+01:11 - And finally, we'll get into the deep part
+01:14 - of the deep generative models and we'll
+01:16 - start to see how you can use neural networks to deal
+01:18 - with the curse of dimensionality.
+01:20 -
+01:23 - All right.
+01:23 - So this is going to be a high level picture, a high level
+01:26 - overview that roughly corresponds
+01:30 - to a lot of the ideas that we're going to talk about
+01:34 - in this course and it deals with this problem of learning
+01:37 - a generative model, the challenges that you encounter
+01:40 - and the different ways you can address them.
+01:43 - And by changing different pieces kind of like in this picture,
+01:47 - you're going to get different classes of generative models.
+01:50 - You might get autoregressive models
+01:53 - like the ones that are usually used for language,
+01:55 - you might get diffusion models, generative adversarial networks,
+01:59 - these things by changing ingredients
+02:02 - into this high level picture.
+02:04 - So this picture will come up several times
+02:06 - throughout this quarter and it kind of deals
+02:08 - with this basic problem that you have whenever you want
+02:11 - to train a generative model.
+02:13 - So the basic problem is one where
+02:16 - you're given a set of examples.
+02:19 - This might be images or it might be sentences
+02:23 - that you've collected on the internet
+02:25 - or it could be, I don't know, DNA sequences,
+02:28 - it could really be anything.
+02:31 - The assumption is that these data
+02:34 - points that you have access to are sampled
+02:37 - from some unknown probability distribution
+02:41 - that we're often going to denote P data.
+02:44 - This is kind of the the data generating process,
+02:46 - it's some complicated unknown process that
+02:52 - has generated the data for you.
+02:54 - And so the assumption is that all these different data
+02:57 - points that you have access to are related to each other
+03:00 - because they come from some true underlying common data
+03:05 - generating process.
+03:07 - And in the case of language, this
+03:09 - might correspond to maybe if you have a corpora of text collected
+03:13 - from the internet, this might correspond to the different ways
+03:17 - people write text for websites or for whatever sites
+03:23 - you've scraped to collect your data set,
+03:25 - or it might correspond to the complicated physical processes
+03:29 - that give rise to a natural distribution over images.
+03:33 - The key point here is that this data distribution
+03:35 - pdata is unknown.
+03:38 - You assume there is such an object
+03:40 - but the only thing you have access to
+03:42 - are a bunch of examples, are a bunch
+03:43 - of samples from this distribution.
+03:46 - And the whole problem in this class
+03:50 - and in the space of generative models and generative AI
+03:53 - is to basically come up with a good approximation of this data
+03:57 - generating process.
+03:59 - Because the idea is that if you have
+04:01 - access to a good approximation to this data generating process,
+04:04 - this data distribution pdata, then you
+04:07 - can sample from this approximation
+04:09 - that you have access to and you can generate new text.
+04:12 - Or if you have a distribution over images,
+04:16 - then you can sample from the distribution
+04:18 - and you can generate new images that hopefully
+04:21 - are close to the ones you've used for training or model
+04:25 - to the extent that you're doing a good job by coming up
+04:28 - with a good approximation of this data distribution,
+04:30 - hopefully, your samples are also going to be good.
+04:33 - And so in order to do that, you need
+04:35 - to define a model family which is this set here in green.
+04:40 - And you can think of this as a set of different probability
+04:44 - distributions that are indexed or parameterized
+04:47 - with this variable theta.
+04:49 - So think of it as all possible Gaussian distributions
+04:52 - that you can get as you change the mean and the covariance
+04:55 - or all the distributions that you
+04:57 - can get as you change the parameters
+04:59 - of your neural network, right?
+05:02 - And once you've defined this set,
+05:04 - the goal becomes that of trying to find
+05:06 - a good approximation of the data distribution within the set.
+05:10 - And so in order to do that, you need
+05:12 - to define some notion of distance,
+05:14 - so you kind of need to define a loss function,
+05:17 - you need to specify what you care about
+05:19 - and what you don't care about.
+05:20 - These objects, this probability distribution, the data
+05:23 - distribution, and your model distributions
+05:25 - are going to be pretty complex, they
+05:27 - are defined over high dimensional spaces.
+05:29 - So there's a lot of different, let's say images
+05:32 - you can assign probability to and you somehow
+05:34 - need to specify what you care about
+05:37 - and what you don't or equivalently you
+05:39 - need to specify some notion of distance or similarity
+05:43 - between the data distribution and your model.
+05:46 - And then you have an optimization problem,
+05:48 - then becomes a question of how do
+05:50 - you find the distribution in your set,
+05:52 - in your model family that is as close as possible to the data
+05:55 - distribution.
+05:56 - And so you try to find this projection
+05:58 - and try to find this point and then
+06:01 - hopefully, if you can solve this potentially hard optimization
+06:04 - problem you come up with your model,
+06:07 - you come up with a distribution that
+06:09 - is hopefully relatively close to your data distribution.
+06:12 - And again, then you can use it then
+06:14 - you have your language model or you have your diffusion model
+06:17 - and you can use it to generate images,
+06:19 - you can use it to generate text, you
+06:20 - can do many different things.
+06:23 - And so we see that there are several components here always
+06:31 - you need to start with some data,
+06:33 - then you need to define a model family,
+06:35 - and then you need to define a loss function or a similarity
+06:39 - metric between distributions that you should optimize over.
+06:43 - And what we'll see is that you're
+06:44 - going to get different classes of generative models
+06:46 - by changing these ingredients.
+06:49 - And the issue here is that it's not straightforward to come up
+06:55 - with--
+06:56 - is not like an optimal solution here
+06:58 - and that's why there are many different generative
+07:00 - models which is not clear what's the right model family that we
+07:05 - should use, it's not clear what's
+07:07 - the right notion of similarity that we
+07:08 - should use, for example, if you think about different data
+07:11 - modalities.
+07:12 - So that's why we're going to see different families
+07:14 - of the generative models that will essentially
+07:17 - make different choices with respect to the model family,
+07:20 - with respect to the loss, and so forth.
+07:22 - But at the end of the day pretty much all of the models
+07:26 - we'll see we'll try to learn this probability distribution.
+07:32 - And this is again, useful because once you
+07:36 - have this probability distribution,
+07:38 - you can sample from it, you can generate new data,
+07:42 - you can do density estimation.
+07:44 - So if you have access to a probability distribution,
+07:47 - then you can query your probability distribution
+07:50 - for any input x and the model can tell you
+07:53 - how likely this object is.
+07:56 - So if you train a model over a bunch of images of dogs,
+07:59 - then you come up with this P theta,
+08:00 - this distribution here that is as close as possible to the data
+08:04 - distribution.
+08:04 - Then you can fit in a new image and the model
+08:07 - will tell you how likely was it that this image was generated
+08:12 - basically by this model distribution
+08:14 - that you've come up with.
+08:16 - And this is potentially useful because you
+08:19 - can do for example anomaly detection,
+08:22 - you can check how likely that object is and you
+08:24 - can start reasoning about the inputs
+08:27 - that your models are seeing, you can identify anomalies,
+08:30 - you can do many interesting things once you have access
+08:33 - to a density.
+08:36 - And finally, this is also useful because essentially it's
+08:44 - a clean way to think about unsupervised learning.
+08:47 - If you think about it, if you're trying
+08:49 - to build a model that assigns high probability to images that
+08:54 - look like the ones you have in your training
+08:56 - set that, again, in order to do well,
+08:59 - you need to understand what all these images have in common.
+09:03 - And so maybe in this example you might
+09:05 - need to understand what does a dog look like,
+09:09 - parts you need to have, what kind of colors
+09:13 - exist in the real world, which ones don't, and things
+09:16 - like that.
+09:17 - And so implicitly by training these models,
+09:20 - perhaps on large quantities of unlabeled data, you kind of end
+09:24 - up learning the structure of the data,
+09:26 - you end up learning what all these data points
+09:28 - have in common, you end up learning
+09:30 - what are kind of the axes of variation that this data set has
+09:36 - and this is useful because it allows you to, for example,
+09:39 - essentially discover features in an unsupervised way.
+09:42 - And so we'll see that at least some
+09:44 - of the generative models we'll talk about
+09:46 - will actually allow you explicitly to recover features
+09:50 - for the data points and you can use
+09:51 - them to do controllable generation
+09:54 - or you can use them to do maybe semi-supervised learning
+09:58 - or few shot learning.
+09:59 - Once you have good features, it should
+10:01 - be relatively easy to let's say distinguish different breeds
+10:04 - of dogs and things like that.
+10:07 - So that's the high level story and we'll
+10:10 - see all these different components in much detail
+10:14 - throughout the course.
+10:15 - The first big question is, how do you represent a probability
+10:20 - distribution?
+10:21 - How do we actually come up with a reasonable set over which we
+10:26 - can optimize if we want to recover a good approximation
+10:29 - to the data distribution?
+10:31 - And this is not going to be trivial
+10:33 - because we care about objects that are pretty complicated
+10:37 - in the sense that they have, if you think about an image,
+10:41 - it's going to have many pixels or if you think about text,
+10:43 - we typically care about many tokens.
+10:46 - And so representing a probability distribution
+10:49 - over a high dimensional space is actually nontrivial
+10:53 - and that's the first challenge and where you
+10:56 - need to start making tradeoffs.
+10:57 -
+11:01 - If you're dealing with low dimensional data,
+11:03 - then the problem is not hard and this is something
+11:05 - you might have seen before.
+11:07 - If you have, let's say a single discrete random variable,
+11:13 - perhaps a binary random variable,
+11:15 - then it's not hard to describe all the different things that
+11:17 - can happen and assign probabilities to these events,
+11:20 - right?
+11:21 - So if you have a Bernoulli distribution or a Bernoulli
+11:24 - random variable, then you only have two outcomes, true/false,
+11:28 - heads or tails, something like that.
+11:30 - And in order to specify all the possible things that can happen,
+11:33 - you just need one parameter.
+11:35 - You just need a single number which tells you
+11:37 - the probability of heads or the probability of tails
+11:40 - is just going to be 1 minus the number p.
+11:43 - And learning these distributions from data is, of course, trivial
+11:48 - and it's useful but this is not quite going
+11:53 - to be enough to deal with let's say models over images or models
+11:58 - over text.
+12:01 - The other kind of building block that we're going to use
+12:05 - are categorical distributions.
+12:07 - So if you have more than two outcomes,
+12:09 - we have let's say k different outcomes,
+12:12 - then you're dealing with a categorical random variable
+12:16 - or you have m different outcomes here
+12:18 - and again, this is a useful building block.
+12:22 - You can use it to model things like rolling a die,
+12:25 - many other things.
+12:26 - The challenge here or where you're
+12:30 - starting to see where the issues might arise
+12:34 - is that, again, if you have m different things that
+12:39 - can happen, you need to specify a probability
+12:42 - for each one of them.
+12:43 - And so you basically need to have m numbers
+12:47 - and then these numbers have to sum to 1 because it's
+12:51 - a valid probability distribution and if you
+12:53 - sum all the probabilities of all the different things that
+12:56 - can happen, you have to get 1.
+12:58 - And so these are the two building blocks
+13:01 - and then you can combine them to model more interesting objects.
+13:06 - So let's say you want to build a generative model over images,
+13:11 - then you're going to have to model many different pixels
+13:14 - and to model the color of a single pixel,
+13:18 - perhaps you're going to use some RGB
+13:22 - encoding where you're going to have to specify three numbers.
+13:26 - You're going to have to specify the intensity
+13:27 - of the red channel, which let's say is a number between 0
+13:31 - and 255, you're going to have to specify a green channel
+13:34 - intensity and a blue channel intensity.
+13:37 - So you can imagine that with these three random variables,
+13:41 - you're going to capture the space of possible colors
+13:44 - that has been discretized according to that granularity
+13:48 - that you've chosen.
+13:50 - And now you're able to describe in many different colors
+13:54 - that you can get for that particular pixel
+13:56 - each one corresponding to an entry in this kind of cube.
+14:01 - And so now we have a richer model
+14:04 - and if you somehow are able to model this distribution well,
+14:08 - so you're able to assign probabilities
+14:11 - to all these entries, to all these different colors
+14:13 - that this individual pixel can take, then if you were
+14:16 - to sample from it then you would generate colors
+14:22 - for that pixel that are reasonable.
+14:24 - Hopefully, they match whatever training
+14:27 - data you had access to learn this distribution.
+14:31 - And how many parameters do you need
+14:34 - to specify this joint probability distribution?
+14:37 - How many different things can happen here, right?
+14:41 - There are basically 256 time 256 time 256 different colors
+14:46 - that we're able to capture.
+14:49 - And so if you want to be fully general,
+14:51 - you have to specify a probability
+14:53 - for each one of them.
+14:54 - So there is basically 256 cube entries in the cube
+14:59 - and you have to be able to assign a non-negative number
+15:02 - to each one of them.
+15:04 - And then you know that they all have to sum to 1,
+15:07 - so you have slightly less parameters
+15:10 - to fit but it's still a reasonably high number.
+15:14 -
+15:17 - And so here you start to see the issue
+15:19 - with having multiple random variables where
+15:23 - the space of possible outcomes, the possible things that
+15:26 - can happen it grows exponentially
+15:28 - in however many random variables you want to model.
+15:32 - And so as another example now let's
+15:34 - say you want to model a distribution over images
+15:36 - and for simplicity, let's say the images are just
+15:39 - black and white.
+15:40 - So you're going to model an image
+15:43 - as a collection of random variables
+15:45 - that is going to be one random variable for every pixel,
+15:48 - maybe there is 28 times 28 pixels.
+15:51 - Each pixel by itself is a Bernoulli random variable,
+15:55 - it can either be on or off, white or black.
+15:59 - And let's say you have a training set, maybe MNIST,
+16:02 - you have a bunch of images of handwritten digits
+16:06 - and that's your training set.
+16:08 - And then you would like to learn a probability distribution
+16:11 - over all these black and white images.
+16:15 - So how do you represent it?
+16:17 - Well, again, we have this collection of random variables
+16:20 - and they are all binary and we have n of them,
+16:23 - where n is the number of pixels that you have in the image
+16:26 - so it depends on the resolution.
+16:30 - And you can think about how many different images are there?
+16:34 - How many different black and white images
+16:36 - are there with n pixels?
+16:40 - Yeah, 2 to 2 the number of pixels that you have, right?
+16:42 - So there's two possible colors, two possible values
+16:46 - that first pixel can take times 2, the second times 2 times
+16:49 - 2 times 2.
+16:50 - You do it n times and you end up with 2 to the n.
+16:55 - So there is a huge number of different images
+16:59 - even in this simple scenario where
+17:00 - they are just black and white.
+17:02 - Very large state space sometimes it's called.
+17:07 - And so if you want it to be--
+17:09 - somehow if you are able to come up with this model,
+17:12 - somehow you are able to come up with a probability distribution
+17:15 - over these binary random variables,
+17:17 - then you have this object that given any input image
+17:20 - it will tell you how likely it is according to the model
+17:22 - and if you can sample from it.
+17:24 - You can assign values to all the pixels,
+17:26 - then it will generate an image.
+17:28 - And if you've done a good job again
+17:30 - at learning the distribution, it will
+17:32 - generate let's say images that look like the ones
+17:34 - that you had in the training set.
+17:36 - So they will look let's say like MNIST digits.
+17:38 -
+17:41 - But again, you see sort of the issue
+17:43 - is how many parameters do you need to specify this object?
+17:47 - 2 to the n minus 1, that's the issue.
+17:49 - There's 2 to the n possible things that can happen,
+17:52 - you have to assign a probability to each one of them.
+17:54 - Then, well, you say 1 parameter because you have to sum to 1
+17:57 - but this number quickly becomes huge.
+18:01 - I guess for even small number of n,
+18:04 - this is more than the number of atoms in the universe.
+18:07 - And so the question is, how do you store these parameters
+18:12 - in a computer?
+18:13 - How do you learn them from data?
+18:14 - You need some kind of tricks, you
+18:16 - need some kind of assumption, you need somehow
+18:19 - to deal with this complexity.
+18:21 - That's a challenge that you always
+18:23 - encounter whenever you want to build
+18:25 - a generative model of anything interesting,
+18:28 - whether it's text, DNA sequences, images, videos,
+18:31 - whatever, audio, you always have this issue of representing
+18:35 - a distribution.
+18:39 - Now one way to make progress is to assume something
+18:45 - about how the random variables are related to each other
+18:47 - and that's always the assumption that you have to make.
+18:50 -
+18:53 - A strong assumption that you can make
+18:56 - is to assume that all these random variables are
+18:58 - independent of each other.
+19:01 - And if you recall, if the random variables are independent
+19:05 - then it means that the joint distribution
+19:09 - can be factored as a product of marginal distributions.
+19:12 -
+19:16 - Now if you're willing to make this assumption, then
+19:20 - what happens?
+19:21 - How many different images are there here?
+19:24 - There is still 2 to the n possible images.
+19:27 -
+19:31 - You still have a probability distribution
+19:33 - over the same space.
+19:34 - You're still able to assign a probability
+19:38 - number to every possible assignment
+19:40 - of these n binary variables.
+19:43 - So it's still a distribution over these n binary variables,
+19:47 - it's still a high dimensional space.
+19:49 - However, what happens is that you can drastically
+19:52 - reduce the number of parameters that you need
+19:54 - to store this object, right?
+19:57 - How many parameters do you need to specify
+19:59 - this joint distribution?
+20:01 - Now it starts to become n, right,
+20:03 - because you just need to be able to store
+20:05 - each one of these entries, each one of these marginals,
+20:08 - and these are just Bernoulli random variables,
+20:11 - so you just need one parameter if they are binary.
+20:15 - And so if these are binary variables,
+20:19 - you need one parameter for each one
+20:21 - of those marginal distributions.
+20:23 - You basically just need to model each pixel separately,
+20:26 - modeling a single pixel it's easy.
+20:30 - And so if you're willing to make this assumption,
+20:33 - you are able to represent complicated object,
+20:37 - a probability distribution over images
+20:39 - with a very small number of parameters,
+20:43 - which means that this is something you can actually
+20:46 - implement, you can afford to store these things very easily.
+20:49 -
+20:53 - Of course, the challenge is that this independence assumption
+20:56 - is probably way too strong.
+20:58 - You are literally saying that you
+20:59 - can choose the values of the pixels independently.
+21:02 - And if you think about modeling, let's say images of digits,
+21:06 - it's probably not going to work because you imagine
+21:09 - when you sample from this distribution,
+21:11 - you're not allowed to look at any other pixel value
+21:15 - to choose a new pixel value, right?
+21:16 - And so you're literally choosing values at random, independently.
+21:23 - So it's going to be very hard to be
+21:25 - able to capture the right structure if you
+21:28 - make such a strong independence assumption.
+21:32 - So this is not quite going to work.
+21:35 - What you can do is you can try to make progress
+21:40 - by basically making conditional independence assumptions.
+21:44 - And so one very important tool that is actually
+21:49 - the thing behind autoregressive models, the language
+21:53 - models, large language models, they're
+21:55 - all built on that first tool which
+21:58 - is the chain rule of probability which hopefully you've
+22:01 - seen before.
+22:02 - The basic idea is that you can always write down
+22:06 - the probability of a bunch of events happening
+22:09 - at the same time as a product of conditional probabilities.
+22:14 - So you can always say that the probability that's S1
+22:17 - happens and S2 happens and S3 happens
+22:21 - and so forth, you can always write it as the probability
+22:24 - that S1 happens by itself and then the probability
+22:27 - that S2 happens given that S1 happened and so forth.
+22:31 - And this is always the case that you can always factorize
+22:34 - a distribution in that form.
+22:37 - And I guess a corollary of that is the famous Bayes' rule
+22:42 - which allows you to basically write
+22:44 - the conditional probability of one event given
+22:46 - another one in terms of the prior probability
+22:49 - and kind of like the likelihood of S2 happening given S1.
+22:53 -
+22:55 - The important one for now is going
+22:57 - to be the first one, chain rule although we're also
+23:00 - going to use Bayes' rule later.
+23:03 - But chain rule basically gives you
+23:05 - a way of writing down a joint distribution
+23:08 - as a product of potentially simpler objects
+23:13 - which are these marginals also conditional probabilities.
+23:20 - And so this is how you would use it,
+23:25 - you can always take a joint distribution over n variables
+23:30 - and write it down as a product in this way as the probability
+23:34 - of x1 times the probability of x2 given x1,
+23:37 - the probability of x3 given x1 and x2, and so forth.
+23:43 - Using chain rule, this is something you can always do.
+23:45 -
+23:49 - This is the factorization that is
+23:52 - used in autoregressive model, which
+23:56 - is the first class of models that we're
+23:58 - going to talk about which is again,
+24:00 - the same thing that is used in for example large language
+24:02 - models.
+24:03 - And here the idea is that you can write down
+24:05 - the probability of observing a sequence of words,
+24:09 - let's say in a sentence as the probability of observing
+24:11 - the first word times the probability of observing
+24:13 - the second word given the first one, times the probability
+24:16 - of observing the third word given the first two and so
+24:19 - forth.
+24:21 - But this is fully general, you can apply it also to pixels,
+24:24 - any collection of random variables
+24:26 - can always be factorized this way.
+24:28 -
+24:31 - Now how many parameters do we need if you
+24:35 - use this kind of factorization?
+24:38 - It seems like maybe we've made progress
+24:40 - because this object here is very complicated
+24:43 - but now p of x1 for example, is a simple object,
+24:47 - is a marginal distribution over a single pixel,
+24:50 - so perhaps we've made progress here.
+24:55 - So let's do the math, how many parameters do we need?
+24:58 - It turns out that we still need an exponentially large number
+25:01 - of parameters unfortunately, and the reason
+25:04 - is that it's no free lunch.
+25:07 - We haven't made any assumptions to get this factorization,
+25:10 - so we cannot expect to get any savings.
+25:14 - And you can see it here although the first distribution here
+25:22 - is indeed simple, you can store it represented
+25:25 - with a single parameter.
+25:27 - Then how many parameters do you need for the second?
+25:31 - Well, if the variables are binary,
+25:34 - then x1 can take two different values 0 and 1,
+25:37 - and for each one of them, you have
+25:39 - to specify a distribution over x2 which
+25:41 - will take you one parameter.
+25:43 - So p of x2 given x1 will take two parameters,
+25:48 - one for the case where the first bit or the first variable
+25:52 - is 0 and one for the case where it's 1.
+25:55 - And then if you look at the p of x3 given x1 and x2,
+26:00 - there are four possible values that x1 and x2 can take,
+26:04 - so you need four parameters.
+26:06 - So that's where you get this kind of geometric series
+26:09 - and that's where you get the exponential blow up.
+26:12 - These last conditionals here are very expensive.
+26:15 -
+26:19 - And so if you do the sum, you still don't get anything here.
+26:25 - But it gives us a way to perhaps make progress,
+26:29 - it's still a useful building block.
+26:31 - And for example, one thing you can do
+26:34 - is you can assume conditional independence.
+26:39 - For example, you might be willing to assume that the value
+26:44 - of the i'th plus 1 word is conditionally independent--
+26:49 -
+26:53 - given the i'th word, the value of the i'th plus 1 word is
+26:57 - conditionally independent of all the previous words, right?
+27:01 - So this is kind of like a Markov assumption.
+27:03 - So if these x's maybe represent the weather,
+27:06 - then you're saying the weather tomorrow
+27:09 - is conditionally independent from the past given the weather
+27:12 - today.
+27:14 - And if you're willing to make this assumption then
+27:16 - you get big savings.
+27:19 - What this means is that if you think
+27:20 - about the definition of conditional independence
+27:23 - is that a lot of these conditional distributions
+27:25 - will simplify.
+27:28 - And so in particular, this probability
+27:31 - of x3 given x1 and x2 becomes the probability of x3 given x2.
+27:37 - So if you are predicting the third word,
+27:40 - this is saying you just need to know the second word,
+27:42 - you can ignore the first word.
+27:46 - If you're predicting the last word,
+27:48 - you don't need to remember the entire sequence,
+27:50 - the previous word is sufficient.
+27:54 - And if you do that, then you get this nice expression
+27:58 - where the conditionals are now simple,
+28:01 - like you're always conditioning on at most one variable
+28:06 - and so now we get big savings.
+28:10 - How many parameters do we need here?
+28:12 - Yeah, something like that is linear in n basically,
+28:16 - depending on if the variables are binary, this is the formula.
+28:22 - So big savings and now we have a much more reasonable model.
+28:26 - This is much more reasonable than the full independence
+28:30 - model.
+28:32 - These Markovian models are quite useful in practice,
+28:36 - but again, if you think about language
+28:38 - or you think about pixels in an image,
+28:39 - it's probably not good enough.
+28:43 - You're probably not going to do a great job
+28:44 - if you're trying to predict.
+28:46 - If you think about your autocomplete in your phone,
+28:48 - you're trying to predict the next word just
+28:51 - based on the previous one and you ignore everything else,
+28:54 - you can do OK but it's not going to be great.
+28:56 - You need more context to be able to make a good prediction
+29:00 - about the next word.
+29:04 - And so although there is an exponential reduction,
+29:08 - maybe this assumption is still a little bit too strong.
+29:11 - And so one way to generalize this idea
+29:16 - is to use something called a Bayesian network which
+29:18 - is essentially the same machinery in slightly
+29:21 - more generality.
+29:24 - The basic idea is again, that we're going to write down
+29:29 - the joint as a product of conditionals,
+29:32 - but instead of having these simple conditionals where
+29:34 - it's always one variable given another variable,
+29:40 - we're going to use conditional distributions where
+29:43 - the i'th variable will depend on another set of random variables
+29:48 - which are the parents in this Bayesian network.
+29:53 - And so intuitively, the idea is that we're
+29:57 - going to try to write down the joint
+30:00 - as a product of conditionals, but now the conditionals
+30:03 - are a little bit more complex.
+30:05 - Now each variable is allowed to depend on a subset of variables,
+30:09 - it could be 1, it could be more, so that buys you a little bit
+30:12 - more flexibility.
+30:15 - And the idea is that because we're
+30:18 - using chain rule, as long as there is some ordering
+30:23 - that you've used to come up with this joint distribution
+30:26 - by simplifying the expression that you would get from chain
+30:30 - rule, then this is kind of guaranteed
+30:33 - to correspond to a valid model.
+30:36 - So essentially you can specify any conditional distribution
+30:41 - you want on the right hand side once you multiply them together
+30:44 - you're going to get a valid probability distribution
+30:47 - on the left hand side.
+30:50 - That's sort of the key intuition behind the Bayesian network.
+30:55 - More formally, a Bayesian network
+30:58 - is a data structure that you can use to specify a probability
+31:01 - distribution.
+31:04 - It's a graph based data structure
+31:06 - where basically there's going to be
+31:08 - an underlying directed acyclic graph, which basically gives you
+31:12 - the ordering in that chain rule factorization.
+31:15 - So there's going to be one node in the graph
+31:18 - for every random variable that you're modeling.
+31:20 -
+31:24 - If you're modeling images, one node for every pixel,
+31:27 - if you're modeling text, one word for every token
+31:29 - or every word that you have.
+31:31 - And then what you do is, for every node in the graph
+31:34 - you specify its conditional distribution given its parent
+31:40 - in this directed acyclic graph.
+31:42 -
+31:45 - The graph is the structure and then
+31:47 - by specifying different conditional distributions
+31:49 - for each variable given the parents,
+31:51 - you get different parameterizations
+31:53 - of these joints.
+31:56 - And the claim is that basically this is a valid probability
+32:01 - distribution and the reason is that it's essentially
+32:04 - the same trick we did for the Markov model.
+32:08 - You start given a directed acyclic graph,
+32:12 - you can always come up with an ordering,
+32:14 - you can just do topological sort on the graph.
+32:16 - You get an ordering, you can apply chain rule,
+32:19 - you factorize with respect to their ordering,
+32:21 - then you simplify the conditionals
+32:23 - based on some conditional independence assumption.
+32:28 - And that gives you a potentially compact data structure,
+32:34 - it depends on how many parents, how dense the graph is,
+32:37 - but this can give you savings.
+32:39 - Again, the challenge is that we have this joint distribution,
+32:42 - it takes too many parameters to represent this object.
+32:46 - But if these conditionals are relatively simple,
+32:50 - so you don't have too many parents for each variable,
+32:53 - then these conditionals are simple enough
+32:57 - that you can store this object, you can learn these parameters
+33:00 - from data, and so forth.
+33:02 - So it's exponential in the number of parents
+33:05 - that you have for each variable.
+33:07 - So if you make a very dense graph,
+33:09 - you're going to get a very expressive class of models
+33:12 - and you're not going to get big savings.
+33:14 - If you use a chain graph where there's
+33:17 - only one parent per node, then you get the Markov assumption
+33:20 - that we have before and there are things in between.
+33:24 - For example, what does it mean?
+33:29 - A directed cycle would be something like this,
+33:31 - so you need to make sure that there is no directed cycle which
+33:34 - means that there is an ordering and it
+33:36 - means you can use chain rule.
+33:41 - This is an example of a very simple Bayesian network.
+33:45 - Here the idea is that you have these five random variables
+33:49 - representing the difficulty of an exam, the intelligence
+33:53 - of a student, the grade that you get, so forth.
+33:58 - And there is a joint distribution
+34:00 - over these five random variables, which
+34:04 - is obtained as a product of conditional distributions
+34:08 - of each variable given the parent.
+34:10 - And so for this particular graph,
+34:14 - this node doesn't have any parent,
+34:16 - so you just write the marginal probability of that node.
+34:20 - This node doesn't have any parent,
+34:22 - so again, it's just the probability of getting
+34:25 - different intelligence values.
+34:27 - The grade has two arrows in coming from difficulty
+34:31 - and intelligence, so what you're seeing
+34:33 - is that the grades that you see depend essentially
+34:35 - on the possible values of the difficulty of the exam
+34:38 - and the intelligence of the student.
+34:41 - And so you can basically write down the joint
+34:43 - as a product of conditionals that would look like this.
+34:47 - And in this case, this might be more
+34:50 - economical than representing the joint
+34:52 - because you basically just have to specify
+34:54 - these tables, these conditional probability distributions.
+34:58 - You only need to work out basically
+35:00 - how these random variables are related to each other locally,
+35:03 - with respect to this graph.
+35:05 - You only need to know how to assign grades given
+35:08 - different values of difficulty and intelligence,
+35:11 - but you're breaking down the complexity
+35:13 - of the joint in terms of smaller local interactions
+35:18 - between the random variables.
+35:21 - And again, by making this assumption
+35:25 - that the global dependencies can be broken down
+35:29 - into simpler local dependencies, you
+35:31 - get benefits because these conditionals
+35:34 - are potentially much smaller, much simpler, easier
+35:38 - to represent.
+35:40 - And the idea is that assuming this factorization is
+35:46 - the same as assuming conditional independence is
+35:49 - and you can see it here we have this kind of factorization
+35:55 - for the joint which is implied by this graph.
+35:58 - In general, we know that you can always
+36:01 - have a more complicated factorization where
+36:04 - every variable depends on all the variables
+36:06 - that come before it in some ordering, right?
+36:10 - So in general, you would have to specify
+36:11 - the probability of having a certain difficulty for the exam,
+36:14 - you would have to specify the probability of some intelligence
+36:17 - value given the difficulty, a probability of g given i
+36:20 - and d, the probability of the SAT score given everything else,
+36:24 - and so forth.
+36:25 - Now if you're willing to assume that the intelligence
+36:29 - of the student does not depend on the difficulty of the exam,
+36:32 - then you can start simplifying these conditionals
+36:36 - and they become like the ones you see above.
+36:41 - For example, the SAT score only depends on the intelligence
+36:45 - and you don't need to know the difficulty of the exam,
+36:48 - you don't need to know the grade in the other exam
+36:50 - to figure out the SAT score.
+36:52 - And so this factorization basically
+36:55 - corresponds to a bunch of conditional independencies.
+36:59 - We're saying the difficulty and the intelligence
+37:01 - are independent of each other.
+37:03 - The SAT score is conditionally independent from the difficulty
+37:06 - and the grade given the intelligence, and so forth.
+37:10 - So Bayesian networks are basically
+37:13 - a way to get to simplify complicated distributions based
+37:17 - on conditional independence assumptions, which
+37:21 - are more reasonable than full independence assumptions.
+37:24 - Now to summarize, we can basically
+37:33 - represent, use Bayesian networks as a tool
+37:36 - to factorize distributions and write them down
+37:39 - as a product of conditionals.
+37:41 - You get the joint by multiplying together the conditionals,
+37:44 - you can sample by basically going through the ordering.
+37:47 -
+37:50 - In this class, we're actually not going
+37:54 - to be going this route, so that's
+37:55 - the route that you're going to take if you want to build up
+37:57 - probabilistic graph like a graphical model, a PGM,
+38:01 - a probabilistic graphical model.
+38:03 - In this class, we'll still be using
+38:05 - a little bit of graphical models notations,
+38:07 - but the graphical models are going to be relatively simple,
+38:10 - they typically involve 2 or 3 random variables,
+38:12 - random vectors.
+38:15 - And instead, we're going to be making other softer notion
+38:20 - of conditional independence which
+38:21 - is going to be essentially this idea of let's use neural
+38:25 - networks to try to represent how the different variables are
+38:28 - related to each other.
+38:30 - So we'll still have somewhat the flavor of a Bayesian network,
+38:33 - but it's going to be a little bit of a software constraint
+38:38 - between the variables.
+38:41 - Now obviously this was a bit of a crash course
+38:46 - but again, we're not going to be leveraging these things too
+38:49 - much.
+38:51 - We're going to use a little bit of graphical models notation
+38:54 - and a little bit of directed acyclic graphs for some
+38:57 - of the graphical models but nothing too heavy.
+39:00 - We're going to be using different assumptions
+39:02 - and different modeling ideas to build deep generative models.
+39:09 - And that's going to be again inspired
+39:12 - by the use of neural networks for let's say classification
+39:17 - or other kind of discriminative tasks
+39:19 - that you might have seen before.
+39:21 - And so now it's a good time to try
+39:24 - to get a sense of what's the difference between building
+39:27 - a generative model versus building as usual discriminative
+39:30 - model and how do we get the ideas from the things
+39:34 - that we know work when you're doing
+39:35 - let's say image classification or these are more
+39:38 - standard kind of machine learning problems
+39:41 - and translate them back into the generative modeling world.
