@@ -48,11 +48,18 @@ class VAE(nn.Module):
         #   nelbo, kl, rec
         ################################################################################
         ### START CODE HERE ###
+
+        #compute kl divergence 
+        q_phi = self.enc(x)
+        z = ut.sample_gaussian(q_phi[0], q_phi[1])
+        x_pred = self.sample_x_given(z)
+        log_p_theta = ut.log_bernoulli_with_logits(x, x_pred)
+        nelbo = torch.mean(log_p_theta) * -1
+        print("done")
         ### END CODE HERE ###
         ################################################################################
         # End of code modification
         ################################################################################
-        raise NotImplementedError
 
     def negative_iwae_bound(self, x, iw):
         """
