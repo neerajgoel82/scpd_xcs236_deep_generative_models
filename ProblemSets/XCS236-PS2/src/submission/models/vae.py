@@ -24,6 +24,13 @@ class VAE(nn.Module):
         self.z_prior_v = torch.nn.Parameter(torch.ones(1), requires_grad=False)
         self.z_prior = (self.z_prior_m, self.z_prior_v)
 
+    def print_1b_variables(self, q_phi, z_pred, x_pred_logits, log_p_theta):
+        print("q_phi mean shape: [" + str(q_phi[0].shape) + "]")
+        print("q_phi variance shape: [" + str(q_phi[1].shape) + "]")
+        print("z_pred shape: [" + str(z_pred.shape) + "]")
+        print("x_pred_logits shape: [" + str(x_pred_logits.shape) + "]")
+        print("log_p_theta shape: [" + str(log_p_theta.shape) + "]")
+
     def negative_elbo_bound(self, x):
         """
         Computes the Evidence Lower Bound, KL and, Reconstruction costs
@@ -53,19 +60,9 @@ class VAE(nn.Module):
 
         #compute reconstruction loss
         q_phi = self.enc(x)
-        print("q_phi mean shape: [" + str(q_phi[0].shape) + "]")
-        print("q_phi variance shape: [" + str(q_phi[1].shape) + "]")
-
         z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
-        print("z_pred shape: [" + str(z_pred.shape) + "]")
-        
-        
         x_pred_logits = self.compute_sigmoid_given(z_pred)
-        print("x_pred_logits shape: [" + str(x_pred_logits.shape) + "]")
-
         log_p_theta = ut.log_bernoulli_with_logits(x, x_pred_logits)
-        print("log_p_theta shape: [" + str(log_p_theta.shape) + "]")
-        
         rec = torch.mean(log_p_theta) * -1
 
         #compute kl divergence 
@@ -73,6 +70,9 @@ class VAE(nn.Module):
         z_prior_variances = self.z_prior[1].expand(batch, self.z_dim)
         kl_image_wise = ut.kl_normal(q_phi[0], q_phi[1], z_prior_means, z_prior_variances)
         kl = torch.mean(kl_image_wise) * -1
+
+        #print some variables 
+        #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta)
 
         #compute nelbo
         nelbo = kl + rec
