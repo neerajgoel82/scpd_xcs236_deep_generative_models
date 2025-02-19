@@ -49,13 +49,27 @@ class VAE(nn.Module):
         ################################################################################
         ### START CODE HERE ###
 
-        #compute kl divergence 
+        batch = x.shape[0]
+
+        #compute reconstruction loss
         q_phi = self.enc(x)
-        z = ut.sample_gaussian(q_phi[0], q_phi[1])
-        x_pred = self.sample_x_given(z)
+        z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
+        x_pred = self.sample_x_given(z_pred)
         log_p_theta = ut.log_bernoulli_with_logits(x, x_pred)
-        nelbo = torch.mean(log_p_theta) * -1
-        print("done")
+        rec = torch.mean(log_p_theta) * -1
+
+        #compute kl divergence 
+        z_prior_means = self.z_prior[0].expand(batch, self.z_dim)
+        z_prior_variances = self.z_prior[1].expand(batch, self.z_dim)
+        kl_image_wise = ut.kl_normal(q_phi[0], q_phi[1], z_prior_means, z_prior_variances)
+        kl = torch.mean(kl_image_wise) * -1
+
+        #compute nelbo
+        nelbo = kl + rec
+
+        #returning all the computed values
+        return nelbo,kl,rec
+
         ### END CODE HERE ###
         ################################################################################
         # End of code modification
