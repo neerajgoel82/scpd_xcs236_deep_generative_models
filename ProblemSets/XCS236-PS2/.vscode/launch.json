@@ -39,6 +39,15 @@
             "args": ["1b-0-basic"]
         },
         {
+            "name": "1c-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["1c-0-basic"]
+        },
+        {
             "name": "2a-0-basic",
             "type": "debugpy",
             "request": "launch",
