@@ -41,3 +41,25 @@ Discriminative modeling estimates *p(y|x)* i.e. discriminative modeling aims to 
 1. Generation: It should be possible to easily sample a new observation from *p<sub>theta</sub>* and the generated sample should look as if it was generated from *p<sub>data</sub>* (sampling)
 2. Density estimation: *p<sub>theta</sub>(x)* should be high if x looks like being generated from *p<sub>data</sub>*, and low otherwise (anomaly detection)
 3. Unsupervised representation learning: We should be able to learn the latent features of the data. In case of images it means what the images have in common. For e.g. in case of images of animals, features can be ears, tail, etc. (features)
+
+
+### Intuitive explanation of what is Representation Learning
+---
+Suppose you wanted to describe your appearance to someone who was looking for you in a crowd of people and didn’t know what you looked like. You wouldn’t start by stating the color of pixel 1 of a photo of you, then pixel 2, then pixel 3, etc. Instead, you would make the reasonable assumption that the other person has a general idea of what an average human looks like, then amend this baseline with features that describe groups of pixels, such as I have very blond hair or I wear glasses. With no more than 10 or so of these statements, the person would be able to map the description back into pixels to generate an image of you in their head. The image wouldn’t be perfect, but it would be a close enough likeness to your actual appearance for them to find you among possibly hundreds of other people, even if they’ve never seen you before.
+
+This is the core idea behind representation learning. Instead of trying to model the high-dimensional sample space directly, we describe each observation in the training set using some lower-dimensional latent space and then learn a mapping function that can take a point in the latent space and map it to a point in the original domain. In other words, each point in the latent space is a representation of some high-dimensional observation.
+
+### Perspective on different generative models 
+---
+While all types of generative models ultimately aim to solve the same task, they all take slightly different approaches to modeling the density function. Broadly speaking, there are three possible approaches:
+
+1. Explicitly model the density function, but constrain the model in some way, so that the density function is tractable (i.e., it can be calculated).
+2. Explicitly model a tractable approximation of the density function.
+3. Implicitly model the density function, through a stochastic process that directly generates data.
+
+ ![Taxonomy of generative modelling approaches](./images/taxonomy_of_generative_modelling_approaches.png)
+
+
+
+
+
