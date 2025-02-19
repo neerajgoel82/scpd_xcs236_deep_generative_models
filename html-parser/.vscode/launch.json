@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "htmlparser",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/htmlparser.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}
