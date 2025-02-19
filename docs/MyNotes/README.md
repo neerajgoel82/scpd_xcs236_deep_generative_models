@@ -59,6 +59,16 @@ While all types of generative models ultimately aim to solve the same task, they
 
  ![Taxonomy of generative modelling approaches](./images/taxonomy_of_generative_modelling_approaches.png)
 
+### Students Questions 
+---
+
+### Useful Links 
+---
+- [Course][XCS236](https://online.stanford.edu/courses/xcs236-deep-generative-models)
+- [Tutorial][Diffusion and Score Based Models Tutorial by Dr. Yang Song](https://www.youtube.com/watch?v=wMmqCMwuM2Q)
+- [Book][Generative Deep Learning](https://learning.oreilly.com/library/view/generative-deep-learning/9781098134174)
+
+
 
 
 
