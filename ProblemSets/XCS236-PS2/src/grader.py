@@ -50,7 +50,7 @@ class Test_1a(GradedTestCase):
     def setUp(self):
         self.tol = 1e-5
 
-    @graded()
+    @graded(timeout=30000)
     def test_0(self):
         """1a-0-basic: sample_gaussian"""
         torch.manual_seed(0)
@@ -68,7 +68,7 @@ class Test_1b(GradedTestCase):
         self.sol_VAE = self.run_with_solution_if_possible(submission, lambda sub_or_sol:sub_or_sol.models.vae.VAE)
     
     @torch.no_grad()
-    @graded()
+    @graded(timeout=30000)
     def test_0(self):
         """1b-0-basic: check VAE negative_elbo_bound output shapes"""
         torch.manual_seed(0)
@@ -94,7 +94,7 @@ class Test_1c(GradedTestCase):
     
     @graded()
     def test_0(self):
-        """1c-0-basic: check VAE reported nelbo, kl, and rec values"""
+        """1b-0-basic: check VAE reported nelbo, kl, and rec values"""
         with open('./submission/VAE.pkl', 'rb') as f:
             metrics = pickle.load(f)
         nelbo, kl, rec = metrics.values()

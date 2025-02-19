@@ -54,12 +54,16 @@ def sample_gaussian(m, v):
     # consider an alternative using torch.randn_like: https://pytorch.org/docs/stable/generated/torch.randn_like.html
     ################################################################################
     ### START CODE HERE ###
+    torch.manual_seed(0)
+    epsilon = torch.randn_like(m)
+    z = m + torch.sqrt(v) * epsilon
+    return z 
     ### END CODE HERE ###
+
     ################################################################################
     # End of code modification
     ################################################################################
-    raise NotImplementedError
-
+    
 
 def log_normal(x, m, v):
     """
