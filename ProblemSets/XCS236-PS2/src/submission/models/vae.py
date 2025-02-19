@@ -69,7 +69,7 @@ class VAE(nn.Module):
 
         #compute kl divergence 
         kl_image_wise = ut.kl_normal(q_phi[0], q_phi[1], z_prior_means, z_prior_variances)
-        kl = torch.mean(kl_image_wise) * -1
+        kl = torch.mean(kl_image_wise)
 
         #print some variables 
         #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta_image_wise)
