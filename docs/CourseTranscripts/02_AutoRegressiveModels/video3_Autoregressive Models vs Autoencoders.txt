@@ -1,0 +1,494 @@
+00:00 -
+00:05 - SPEAKER: OK.
+00:06 - Now as a way to kind of get a deeper understanding of what
+00:11 - these kind of models do, you might
+00:13 - notice that they look a lot like autoencoders.
+00:19 - If you look at this kind of computation graph
+00:22 - that I have here where you have the data point x1,
+00:27 - x2, x3, and x4 that is being mapped to this
+00:31 - predicted probability z1 hat, x2 hat, x3 hat, and so forth,
+00:37 - it looks a little bit like an autoencoder where
+00:41 - you take your input x and then you map it
+00:44 - to some kind of predicted reconstruction of the input.
+00:51 - And more specifically, an autoencoder
+00:55 - is just a model that is often used again
+00:58 - in unsupervised learning.
+00:59 - It has two components.
+01:01 - It's an encoder.
+01:03 - Takes a data point and maps it to some kind
+01:05 - of latent representation.
+01:06 - And then, for example, it could be again a simple neural
+01:10 - network, a two layer net like this.
+01:14 - And then there is a decoder whose job
+01:17 - is to try to invert this transformation.
+01:19 - And the job of the decoder is to take the output of the encoder
+01:22 - and map it back to the original data point.
+01:26 - And in this case, in this graph that I have here,
+01:30 - it could be another neural network
+01:32 - that takes the output of the encoder
+01:34 - and maps it back to some reconstruction of the input.
+01:37 -
+01:41 - And the loss function that you would use
+01:45 - would be some kind of reconstruction loss.
+01:47 - So you would try to train the encoder and the decoder
+01:51 - so that for every data point, when
+01:56 - you apply the decoder to the encoder,
+01:58 - you get back something close to the original data point.
+02:01 - So depending on whether the data is discrete or continuous,
+02:04 - this could be something like a square loss
+02:08 - where you try to make sure that at every coordinate,
+02:10 - your reconstructed ith variable is close to the original one.
+02:16 - If you have discrete data, it's more like,
+02:19 - does the model-- is the model doing a good job at predicting
+02:22 - the value for the ith let's say in this case,
+02:26 - it's binary here, where the ith random variable
+02:29 - that I'm actually observing.
+02:30 - So if the ith random variable is true or is 1,
+02:35 - is the model giving me a high probability for the value 1?
+02:41 - But not super important, but this
+02:43 - is how you would try to learn the decoder and the encoder
+02:47 - so that they satisfy this condition.
+02:49 - And of course, there is a trivial solution
+02:50 - that is the identity mapping.
+02:53 - So if the encoder is just an identity function
+02:56 - and the decoder is some identity function,
+02:58 - then you do very well at this.
+03:01 - And it's not what you want typically.
+03:03 - So typically, you would constrain the architecture
+03:06 - somehow so that it cannot learn an identity function.
+03:09 - But that has the flavor of what we're
+03:14 - doing with this sort of autoregressive models.
+03:18 - We're taking the data point and then
+03:21 - we're trying to use parts of the data point
+03:24 - to reconstruct itself or we feed it through these networks.
+03:28 - And then we output these predicted values.
+03:31 - And if you were to think about how
+03:33 - you would train one of these models,
+03:35 - by let's say maximum likelihood, you
+03:36 - would get losses that are very similar to this.
+03:41 - If you were to train these logistic regression classifiers,
+03:44 - you would get something very similar to this, where you would
+03:47 - try to predict the value that you actually
+03:49 - see in the data point.
+03:51 - So the question is, what are autoencoders used for?
+03:55 - Yes, one typical use case would be
+03:58 - to learn a compressed representation of the data.
+04:02 - Somehow if you can do this, maybe you
+04:05 - force the output dimension of the encoder to be small,
+04:10 - and then in order to do a good job at reconstruction,
+04:13 - it has to capture the key factors of variation
+04:16 - in the data.
+04:17 - And so you can think of it as some nonlinear PCA thing that
+04:21 - will try to discover structure in the data
+04:25 - in an unsupervised way.
+04:26 - The question is, can we do sampling with an autoencoder?
+04:29 - No.
+04:29 - An autoencoder is not quite a generative model.
+04:31 - So these two things are not quite the same.
+04:33 - But they are related.
+04:34 - And that's what we're going to see next.
+04:37 - So yeah, this was coming up.
+04:40 - Typically, you would train this to do representation learning,
+04:43 - try to find good representations.
+04:46 - What is exactly if you think about kind of what we just said,
+04:52 - if you have an autoencoder, there
+04:54 - is not-- it's not really a generative model.
+04:57 - How do you generate data from an autoencoder?
+04:59 - So the variational autoencoder will
+05:01 - be let's try to learn a simple generative model to feed
+05:05 - fake inputs to your decoder.
+05:10 - And so you can fake the process and you can use it to generate.
+05:14 - So that's the variational autoencoder solution
+05:16 - I will talk about later.
+05:18 - But if you just have-- there is not an obvious way
+05:20 - to generate the inputs to the decoder, unless you have data.
+05:23 - But at that point, you're not really sampling.
+05:26 - Literally a variational auto encoder
+05:27 - is this plus what you suggested, forcing the latent
+05:31 - representations to be distributed according
+05:33 - to a simple distribution, a Gaussian.
+05:35 - And if that happens to work well,
+05:37 - then you can sample from that distribution,
+05:39 - feed the inputs to the decoder and that works.
+05:42 - But that requires a different kind of regularization.
+05:46 - The relationship here is that although these two things look
+05:51 - similar, it's not quite the same.
+05:53 - And the reason is that we cannot get generative model from
+05:59 - an autoencoder because somehow we're not putting enough
+06:02 - structure on this kind of computation graph.
+06:05 - And there is not an ordering.
+06:07 - Remember that to get an autoregressive model,
+06:09 - we need an ordering, we need chain rule.
+06:12 - So one way to actually get or to connect these two things
+06:16 - is to enforce an ordering on the autoencoder.
+06:20 - And if you do that, you get back basically
+06:22 - an autoregressive model.
+06:25 - And so basically, if you are willing to put constraints
+06:30 - on the weight matrices of these neural networks
+06:35 - so that there is a corresponding basically Bayesian network
+06:40 - or chain rule factorization, then you
+06:44 - can actually get an autoregressive model
+06:46 - from an autoencoder.
+06:49 - And the idea is that basically, if you think about it,
+06:52 - the issue is that we don't know what to feed to the decoder.
+06:57 - So somehow we need a way to generate the data sequentially
+07:01 - to feed it into this decoder that we have access to.
+07:04 - And so one way to do it is to set up the computation graph
+07:10 - so that the first three constructed random variable
+07:14 - does not depend on any of the inputs.
+07:16 -
+07:19 - If that's the case, then you can come up
+07:22 - with the first output of this decoder yourself,
+07:25 - because you don't need any particular input to do that.
+07:29 - And then you can feed your predicted first random variable
+07:34 - into--
+07:35 - then let's say that at generation time,
+07:38 - then you don't need it.
+07:39 - Now if you can--
+07:41 - it's fine if the predicted value for the second random variable
+07:47 - depends on x1, that's fine because we can make up
+07:52 - a value for x1.
+07:54 - Then we can feed it into the computation
+07:56 - and we can predict a value for x2.
+07:59 - Then we can take of this value--
+08:01 - we can take the first two, feed them
+08:02 - into the autoencoder kind of thing
+08:05 - and predict a value for x3.
+08:07 - And we can keep going.
+08:08 - And it's the same thing as an autoregressive model.
+08:12 - So if you look at this kind of computation graph,
+08:15 - you can see that the predicted value for x1
+08:18 - depends on all the inputs in general.
+08:23 - And so if you look at the arrows,
+08:27 - all the inputs have an effect on the first predicted value.
+08:31 - And so that's a problem because we cannot get an autoregressive
+08:34 - model if we do it that way.
+08:36 - But if we somehow mask the weights in the right way,
+08:39 - we can get an autoregressive model.
+08:42 - And then as a bonus, then we have a single neural network
+08:46 - that does the whole thing.
+08:47 - So it's not like before that we had different classification
+08:54 - models or that they were tied together somehow.
+08:58 - If we can do this, then it's a single neural network.
+09:02 - That in a single forward pass can produce all the parameters
+09:05 - that we need.
+09:07 - The bonus would be single pass.
+09:09 - You can get everything as opposed to n different passes.
+09:12 - And the way you do it is to basically mask.
+09:19 - So what you have to enforce is some kind of ordering.
+09:23 - And so you basically have to take the general computation
+09:27 - graph that you have from an autoencoder
+09:28 - and you have to mask out some connections so that there
+09:34 - is some ordering that then you can use to generate data.
+09:39 - And the ordering can be anything.
+09:42 - So for example, you can pick an ordering
+09:45 - where we choose the x2, x3, and x1, which corresponds
+09:51 - to the chain rule factorization of probability of x2, x3 given
+09:54 - x2 and x1 given the other two.
+09:58 - And then what you can do is you can mask out
+10:01 - some connections in this neural network
+10:03 - so that the reconstruction for x2
+10:07 - does not depend on any of the inputs.
+10:09 -
+10:12 - And then you can mask out the parameters
+10:15 - of this neural network so that the parameter of x3
+10:20 - is only allowed to depend on x2.
+10:25 - And the parameter of x1 is allowed to depend on everything,
+10:32 - just like according to the chain rule factorization.
+10:36 - And so one way to do it-- yeah, so that's I
+10:39 - think what I just said.
+10:42 - One way to do it is you can basically
+10:45 - keep track for every hidden--
+10:47 - for every unit in your hidden layers,
+10:49 - you can basically keep track of what inputs it depends on.
+10:58 - And so what you could do is you could pick for every unit,
+11:00 - you can pick an integer i and you
+11:02 - can say I'm only going to allow this unit
+11:05 - to depend on the inputs up to the ith index i.
+11:12 - And so you can see here that there's these 2, 1, 2, 2.
+11:18 - This basically means it's only allowed to depend, for example,
+11:22 - this unit is only allowed to depend on the unit 1 and 2.
+11:26 - This unit here is labeled 1, so it's only
+11:28 - allowed to depend on the first input
+11:31 - according to the ordering, which is x2.
+11:33 -
+11:35 - And then you basically recursively add the masks
+11:42 - to preserve this invariant.
+11:44 - So when you go to the next layer and you
+11:46 - have a node that is labeled 1, then you
+11:48 - are only allowing a connection to the nodes that are labeled up
+11:53 - to one in the previous layer.
+11:56 - And the way you achieve it is by basically masking
+11:58 - out and setting to 0 basically some
+12:02 - of the elements of the matrix that you
+12:04 - would use for that layer of the neural network.
+12:09 - And if you do that, then you preserve this invariant
+12:11 - and you can see that indeed the parameter of the probability
+12:15 - of x2, which is the output, the second output
+12:18 - of the neural network does not depend
+12:20 - on any input, which is what we want for our chain rule
+12:25 - factorization.
+12:26 - And if you look at the parameter of x3, which
+12:29 - is the third output, you'll see that if you follow
+12:32 - all these paths, they should only
+12:35 - depend on basically the second on x2, which
+12:41 - is the variable that come before it in the ordering.
+12:44 - And so by maintaining this invariant,
+12:47 - you get an autoencoder which is actually
+12:50 - an autoregressive model.
+12:51 -
+12:54 - You are essentially forcing the model
+12:56 - not to cheat by looking at future outputs to predict.
+13:00 - And you can only use past output--
+13:02 - past inputs to predict future outputs essentially.
+13:06 - And this is one architecture that would
+13:08 - enforce this kind of invariant.
+13:11 - This is done during training.
+13:12 - So you have to--
+13:14 - during training-- you basically have to set up an architecture
+13:17 - that is masked so that it's not allowed to cheat while you
+13:22 - train, because if you didn't mask, then it could--
+13:26 - when trying to predict the x2, you just
+13:28 - look at the actual value and you use it, right?
+13:31 - And so this is very similar if you've seen language models,
+13:34 - you also have to mask to basically
+13:37 - not allow it to look into future tokens to make a prediction.
+13:41 - If you're allowed to look into the future to predict tokens,
+13:45 - then it's going to cheat and you're not
+13:47 - going to do the right thing.
+13:48 - And this is the same thing at the level of the compute-- it's
+13:54 - a different computation graph that basically achieves
+13:56 - the same sort of result.
+13:58 - So the question is, is the benefit only at training time
+14:00 - or inference time?
+14:01 - So the benefit is only at training time
+14:03 - because at inference time, you still
+14:04 - have the sequential thing that you
+14:06 - would have to come up with a value for the first variable
+14:10 - and fit it in.
+14:11 - So it would still have to be sequential.
+14:12 - That's unavoidable.
+14:14 - Every autoregressive model has that kind of annoying flavor,
+14:18 - basically.
+14:20 - So the ordering, that's also very hard.
+14:22 - I think if you have something where you know the structure
+14:26 - and you know again that there is some causal or there is time,
+14:30 - maybe there is a reasonable way of picking an ordering.
+14:32 - Otherwise you would have to either choose many orderings
+14:37 - if you have basically have a mixture, choose one at random.
+14:41 - But there is not a good way of basically selecting an ordering.
+14:44 - There is actually research where people
+14:46 - have been trying to learn autoregressive models
+14:48 - and an ordering.
+14:49 - So you can define a family of models
+14:52 - where you can search over possible orderings
+14:55 - and search over factorizations over that ordering.
+14:59 - But you can imagine there is n factorial different orderings
+15:01 - to search over and it's discrete.
+15:03 - So it's a very tough optimization problem
+15:06 - to find the right ordering.
+15:09 - So the loss function would be the ones
+15:11 - that we have here, which would be basically
+15:17 - you would try to make the predictions close to what
+15:19 - you have in the data.
+15:20 - So the loss function wouldn't change.
+15:21 - It's just that the way you make predictions is you're
+15:24 - not allowed to cheat, for example,
+15:26 - or you're not allowed to look at xi when you predict xi.
+15:30 - And you're only allowed to predict it
+15:32 - based on previous variables in some ordering.
+15:36 - And it turns out that, that would be exactly the same loss
+15:38 - that you would have if you were to train
+15:40 - the autoregressive model.
+15:41 - It depends on kind of the model family that you choose.
+15:43 - But if you have logistic regression models,
+15:46 - it would be exactly the same loss, for example.
+15:50 - An alternative way to approach this
+15:52 - is to use RNN, some kind of recursive style of computation
+15:59 - to basically predict the next random variable given
+16:07 - the previous ones according to some model.
+16:11 - At the end of the day, this is what
+16:14 - the key problem whenever you build an autoregressive model
+16:17 - is solving a bunch of coupled kind of prediction problems,
+16:22 - where you predict a single variables-- single variable
+16:25 - given the other variables that come before it in some ordering.
+16:28 - And the issue is that this history kind of
+16:33 - keeps getting longer.
+16:34 - So you're conditioning more and more things.
+16:36 - And RNNs are pretty good at or it's one way
+16:41 - to handle this kind of situation and try
+16:48 - to keep a summary of all the information or all the things
+16:51 - you've conditioned on so far and recursively update it.
+16:57 - And so a computation graph would look something like this.
+17:01 - So there is a summary h, let's say h of t or h of t
+17:06 - plus 1, which basically is a vector that summarizes
+17:10 - all the inputs up to that time.
+17:15 - And you initialize it somehow based on some initialization.
+17:20 - And then you recursively update it
+17:22 - by saying the new summary of the history
+17:26 - is some transformation of the history I've seen so far.
+17:30 - And the new input for that time step xt plus 1.
+17:35 - And maybe this is one way to implement it.
+17:38 - You do some kind of linear transformation of ht, xt plus 1.
+17:43 - You apply some non-linearity.
+17:45 - And that gives you the new summary up to time t plus 1.
+17:52 - And then what you can do is just like what we've done so far
+17:54 - is then you use h to basically--
+17:57 - or you transform h and you map it to either let's say
+18:03 - a category-- the parameters of a categorical random variable
+18:06 - or a Bernoulli random variable or a mixture of Gaussians,
+18:10 - whatever it is that you need to predict, you do it through--
+18:15 - well, I guess you probably also would need some nonlinearities
+18:17 - here.
+18:18 - But there is some output, which is
+18:19 - the thing you use for prediction, which
+18:21 - is going to depend only on this history vector or the summary
+18:26 - vector of all the things you've seen so far.
+18:28 -
+18:31 - And the good thing about this is that basically, it
+18:37 - has a very small number of parameters,
+18:39 - like regardless of how long the history is,
+18:41 - there is a fixed number of learnable parameters
+18:43 - which are all these matrices that you use to recursively
+18:48 - update your summary of all the information you've seen so far.
+18:55 - And so it's constant with respect to n.
+18:59 - Remember we had the things that were linear in n.
+19:02 - We had things like quadratic in n.
+19:04 - This thing is actually constant.
+19:07 - The matrices are fixed and you just keep applying them.
+19:09 - So the question is, is this a Markov assumption?
+19:11 - This is not a Markov assumption in the sense
+19:13 - that if you think about xt is not just
+19:17 - a function of the previous xt minus 1, right?
+19:22 - It still depends on all the past random variables.
+19:29 - Again, not entirely general way.
+19:33 - So you can only capture the dependencies,
+19:36 - but you can write down in terms of this sort of recursion.
+19:40 - And so it's definitely not a Markov assumption.
+19:47 - And this is that if you think about the computation graph,
+19:49 - it does depend on all the previous inputs.
+19:51 -
+19:56 - And so this is an example of how you would use this kind of model
+20:01 - to model text.
+20:03 - So the idea is that in this simple example,
+20:06 - we have only let's say four different characters-- h, e, l,
+20:11 - and o.
+20:12 - And then you would basically encode them,
+20:16 - let's say using some one-hot encoding.
+20:19 - So h is 1, 0, 0, e is 0, 1, 0, 0, and so forth.
+20:25 - And then as usual, you would use some kind
+20:27 - of autoregressive factorization.
+20:30 - So you write it down in this case from the ordering
+20:32 - is the one from left to right.
+20:33 - So you write the probability of choosing the first character
+20:36 - in your piece of text, then the probability
+20:39 - of choosing the second character given the first one,
+20:42 - and so forth.
+20:43 - And what you would do is you would basically
+20:48 - obtain these probabilities from the hidden layer
+20:53 - of this recurrent neural network.
+20:56 - So you have these hidden layers that
+20:57 - are updated according to that recursion
+20:59 - that I showed you before.
+21:01 - And then you would use the hidden layer,
+21:03 - you would transform it into an output layer,
+21:08 - which is just four numbers.
+21:09 - And then you can take a softmax to basically map
+21:12 - that to for non-negative numbers between 0 and 1 that sum to 1.
+21:20 - And so in this case, for example, we have a hidden layer.
+21:24 - And then we apply some linear transformation
+21:27 - to get these four numbers.
+21:29 - And we're trying to basically choose the values such
+21:34 - that the second entry of that vector
+21:36 - is very large, because that would put a lot of probability
+21:38 - on the second sort of possible character, which
+21:42 - happens to be e, which is the one we want
+21:45 - for the second position.
+21:48 - And so then when you train these models,
+21:50 - the game is to choose values for these matrices
+21:52 - so that let's say you maximize the probability of observing
+21:55 - a particular data point or data set.
+21:58 -
+22:03 - And yeah, so again, the kind of key thing
+22:08 - here is that you have a very small number of parameters.
+22:10 - And then you use the hidden state of the RNN
+22:15 - to get the conditional probabilities
+22:16 - that you need in an autoregressive factorization.
+22:19 -
+22:26 - And then you can see kind of like the recursion,
+22:28 - then you would compute the next hidden state
+22:31 - by taking the current history.
+22:33 - Then every-- the new character that you have access to,
+22:36 - you update your recursion and you get a new hidden state.
+22:39 - You use that hidden state to come up
+22:41 - with a vector of predicted probabilities
+22:42 - for the next character and so forth.
+22:46 - So it's the same machinery as before,
+22:47 - but instead of having multiple linear regression
+22:51 - or logistic regression classifiers,
+22:53 - we have a bunch of classifiers that are tied together
+22:55 - by this recursion.
+22:57 -
+23:01 - And the pro is that you can apply it to sequences
+23:04 - of arbitrary length.
+23:06 - And it's actually in theory at least
+23:08 - RNNs are pretty general in the sense
+23:11 - that they can essentially represent
+23:15 - any computable function, at least in theory.
+23:18 - In practice, they are tricky to learn.
+23:21 - And you still need to pick an ordering, which
+23:24 - is always a problem for autoregressive models.
+23:26 - The key thing-- the key issue with this RNNs
+23:30 - is that they requires-- they're very slow during training time
+23:34 - because you have to unroll this recursion
+23:36 - to compute the probabilities.
+23:40 - And that's a problem.
+23:43 - But I'll just show you some examples
+23:45 - and then I think we can end here.
+23:47 - It actually works reasonably well, right?
+23:49 - If you take a simple three-layer RNN and you
+23:52 - train it on the all the works of Shakespeare at the character
+23:56 - level.
+23:56 - So it's literally what I just showed you, just
+23:59 - a three-layer RNN.
+24:01 - And then you sample from the model,
+24:03 - you can get things like this, which
+24:07 - has a little bit of the flavor of Shakespeare, I guess.
+24:13 - If you think about it, this is at the character level.
+24:16 - It's literally generating character by character.
+24:18 - It's actually pretty impressive, it
+24:21 - needs to learn which words are valid and which ones are not,
+24:24 - the grammar, the punctuation.
+24:26 - It's pretty impressive that a relatively simple model
+24:28 - like this working at the level of characters can do like this.
+24:33 - You could train it on Wikipedia.
+24:35 - And then you can sample and you can make up
+24:37 - fake Wikipedia pages like this one on the Italy
+24:44 - that conquering India with.
+24:48 - It's pretty interesting made-up stuff.
+24:52 - But again, you can see it's pretty interesting
+24:54 - how it's able to--
+24:55 - it has the right markdown syntax and it's closing the brackets
+24:58 - after opening them, which has to remember
+25:01 - through this single hidden state that it's carrying over.
+25:04 - Yeah.
+25:04 -
+25:07 - So it's even making up links for this made-up facts
+25:16 - that it generates.
+25:17 - And you train it on baby names and then
+25:20 - you can sample from the model.
+25:21 - You can get new names.
+25:24 - So yeah, it's a pretty--
+25:28 - works surprisingly well.
+25:30 - I guess the main issue that hopefully then maybe
+25:33 - I guess we'll go over it next time that the reason this is not
+25:36 - used for state of the art language models
+25:39 - is that you have this bottleneck that you need to capture all
+25:42 - the information up to time t in a single vector, which
+25:46 - is a problem.
+25:48 - And the sequential evaluation, that's the main bottleneck.
+25:51 - So it cannot take advantage of modern kind of GPUs
+25:55 - because in order to compute the probabilities,
+25:58 - you really have to unroll the computation and you have to go
+26:00 - through it step by step.
+26:01 - And that's kind of the main challenge.

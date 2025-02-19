@@ -1,1 +1,624 @@
 
+00:00 -
+00:05 - SPEAKER: Actually, autoregressive models
+00:07 - or certain kinds of autoregressive models,
+00:10 - you can also think of them as normalizing flows.
+00:14 - And so just to see this, you can think
+00:17 - about an autoregressive model, a continuous one where
+00:24 - we are defining the density, the full joint
+00:27 - as a product of conditionals.
+00:29 - And let's say that each conditional
+00:32 - is a Gaussian with parameters computed
+00:35 - as usual by some neural network that
+00:38 - takes as input the previous variables
+00:40 - and then computes a mean and a standard deviation,
+00:43 - and that's how you define the i-th conditional
+00:46 - in your autoregressive model.
+00:48 - So this is not kind of the language model version,
+00:51 - where each of these conditionals is a categorical distribution.
+00:55 - This is the continuous version where
+00:57 - the conditionals themselves are, let's say,
+01:01 - Gaussians in this case.
+01:04 - And what I'm going to show you next
+01:06 - is that you can think of this, actually,
+01:08 - as an autoregressive model, as a flow model.
+01:12 - This as defined like this is just an autoregressive model.
+01:16 - You can think about how you would generate samples
+01:19 - from this model.
+01:20 - And the way you would generate samples is something like this.
+01:24 - You could imagine generating one sample
+01:32 - from a standard, normal distribution for every i,
+01:36 - for every component, for every random variable, individual
+01:40 - random variable that you're modeling.
+01:43 - And then what you do is, well, to sample from the conditionals,
+01:47 - you have to--
+01:49 - the conditionals are Gaussian with certain means
+01:51 - and standard deviations.
+01:52 - So kind of using the reparameterization trick,
+01:55 - you can obtain a sample for-- as usual,
+01:59 - you sample the first random variable,
+02:01 - then you sample the second given the first.
+02:04 - And to do that, you need to sample
+02:05 - from these Gaussians, which have certain means
+02:07 - and certain standard deviations.
+02:09 - So you would generate a sample from, let's say,
+02:12 - the first pixel or the first random variable
+02:15 - by just shifting and scaling this unit standard
+02:21 - random Gaussian random variable, which
+02:26 - is just Gaussian distributed.
+02:28 - So it's starting to look a little bit like a real MDP
+02:31 - kind of model, right, where you have the z's and then you shift
+02:34 - and scale them.
+02:35 - How do you sample x2?
+02:38 - Well, you sample x2 given x1, so you take the value of x1.
+02:42 - You feed it into these two neural networks.
+02:44 - You compute the mean and the standard deviation
+02:47 - of the next conditional, and then you sample.
+02:49 - And so you do that, and then you sample
+02:55 - x2 by shifting and scaling this unit random variable z2, right?
+03:02 - Do remember that if zi is a Gaussian with mean 0
+03:07 - and standard deviation 1, if you shift it by mu 2
+03:10 - and you rescale it by this constant,
+03:13 - you get a Gaussian with the right mean
+03:16 - and the right standard deviation.
+03:19 - And again, this feels a lot like a normalizing flow model
+03:25 - that we saw before.
+03:27 - Given x1 and x2, we can compute the parameters
+03:31 - of the next conditional, so a mean and a standard deviation,
+03:35 - and we can compute--
+03:36 - we can sample the third, let's say,
+03:39 - pixel by shifting and scaling these basic random variable z's
+03:44 - that we that we had access to.
+03:47 - And so all in all, we can think of what
+03:53 - you get by sampling from this autoregressive model as a flow
+03:56 - in the sense that you start with this random vector
+04:00 - of simple normals, and then you shift them and scale them
+04:07 - in some interesting way using these conditionals,
+04:11 - using these neural networks mu and alpha
+04:14 - that define the conditionals in the autoregressive model.
+04:19 - Like these two, sampling the autoregressive model
+04:23 - just by going through the conditionals one at a time
+04:26 - is equivalent to doing this, which you can think
+04:30 - of as taking a bunch of simple random variables zi's, all just
+04:35 - Gaussian independent of each other.
+04:37 - Then you just feed them through this interesting kind
+04:39 - of transformation to get your final output x1 through xn.
+04:45 - Yeah.
+04:46 - AUDIENCE: How?
+04:46 - SPEAKER: Let's see.
+04:47 - How do we invert it?
+04:48 - Yeah, great question.
+04:49 - I think that's going to come next.
+04:52 - The forward mapping, again, you can kind
+04:54 - think of it as a flow that basically does this.
+04:58 - You use the z's to compute the first x.
+05:03 - And then what you do is you compute the new parameters,
+05:07 - and then you get the new x blah, blah.
+05:10 - And you can kind of see that sampling in this model is slow,
+05:18 - like in autoregressive models, because in order
+05:21 - to compute the parameters that you need to transform sort
+05:23 - of the i-th simple prior or random variable zi,
+05:30 - you need to have all the previous x's to figure out
+05:34 - what's the right shift and scale that you need to apply.
+05:38 - What is the inverse mapping?
+05:41 - How do you go from x to z?
+05:44 - Well, the good news is that you can compute all these mus
+05:48 - and alphas in parallel because once you have the image,
+05:53 - you have all the x's, so you can compute all the mu's and alphas
+05:57 - or the shifts and scales in parallel.
+06:00 - And then you compute the corresponding z's
+06:05 - by just inverting that shift and scale transformation.
+06:08 - So if you recall, if you want to compute z1
+06:14 - from x1, what you do is you take x1, you subtract mu 1,
+06:18 - and you divide by this exponential, by this scaling.
+06:22 - Just like in real MDP, that's how you do the transformation.
+06:27 - And so sampling, you can see, you go from z to x
+06:31 - and you kind of need to do one at a time.
+06:33 - But because these alphas and mus depend
+06:35 - on the x's at kind of inference time or during learning,
+06:40 - you can compute all the mus and alpha in parallel.
+06:46 - And then you can compute the z's, again, all in parallel,
+06:51 - just by shifting and scaling.
+06:52 - And then the Jacobian is still lower diagonal,
+06:59 - and so you have an efficient kind of determinant computation.
+07:02 - And so you can evaluate likelihoods
+07:06 - efficiently in parallel, just like in an autoregressive model,
+07:09 - right?
+07:09 - If you remember, the nice thing about an autoregressive model
+07:12 - is that, in principle, you can evaluate all the conditionals
+07:16 - in parallel because you have all you need.
+07:18 - You know how to compute--
+07:20 - once you have all the whole x vector,
+07:22 - you can compute all the conditionals
+07:23 - and you can evaluate the loss on each individual component
+07:28 - of your random variable, and the same is true here.
+07:33 - So you can basically define a model to kind of like be
+07:39 - inspired by autoregressive models,
+07:43 - which is called a Masked Autoregressive Flow, MAF,
+07:49 - that basically transforms simple random variables z into x
+07:53 - or equivalently x to z's.
+07:56 - And if you parameterize it this way,
+07:58 - then you can get efficient learning, basically,
+08:04 - because you can go from x to z very efficiently in parallel.
+08:08 - But as expected, kind of sampling
+08:10 - is slow because it's just an autoregressive model
+08:12 - at the end of the day.
+08:14 - So if you want to sample, you kind of
+08:17 - have to go through this process of basically transforming
+08:21 - each individual zi variable one at a time.
+08:27 - So this is basically just interpreting
+08:30 - an autoregressive model as a flow model,
+08:33 - and it inherits the properties of autoregressive models, which
+08:36 - is the same model, so sampling when sequential is low.
+08:40 - But as expected, you can evaluate likelihoods
+08:43 - because it's just basically a change of variable formula,
+08:45 - and so it's possible to actually compute
+08:49 - all the likelihoods exactly like in an autoregressive model.
+08:55 - And so this is another way of building a flow model, which
+08:59 - is basically you start with an autoregressive model,
+09:01 - a continuous one, and then you can essentially
+09:05 - think of it, at least if it's a Gaussian autoregressive model,
+09:10 - you can kind of interpret it as a continuous--
+09:14 - as a normalizing flow model.
+09:17 - The other thing you can do is, if you need a model that you
+09:21 - can sample from efficiently, we know
+09:26 - that one of the issues with autoregressive models
+09:28 - is that sampling is kind of slow because you have to generate
+09:31 - one variable at a time.
+09:32 -
+09:35 - Once you start thinking of an autoregressive model as a flow
+09:37 - model, you can just kind of turn this picture around and call
+09:45 - the x a z and the z an x.
+09:47 - And at that point, it's just another invertible
+09:52 - transformation, so which one is the input, which
+09:54 - one is the output doesn't actually matter.
+09:56 - It's just an invertible neural network,
+09:58 - and you can use it one way or you can use it the other way,
+10:00 - and it's still an invertible neural network.
+10:03 - And if you do that, you get something
+10:06 - called an inverse autoregressive flow, which is basically
+10:08 - just the same neural network used
+10:11 - in the other direction, where if you do it
+10:15 - in the other direction, now you're
+10:17 - allowed to do the forward mapping from z to x in parallel.
+10:22 - So you can actually generate in a single shot, essentially.
+10:26 - You can generate each component of the output in parallel
+10:29 - without waiting for the previous entries.
+10:34 - Because we know that the computation in that direction
+10:37 - is parallel, you basically can sample all the z's independently
+10:42 - from the prior.
+10:43 - And if the mus and alphas depend on the z's, then
+10:47 - you already have them and you can compute all of them,
+10:51 - again, in parallel.
+10:52 - And then and then you just shift and scale all the outputs
+10:57 - by the right amount, and then you produce a sample.
+11:02 - And so if you basically flip things around,
+11:05 - you get a model where you can do very efficient sampling.
+11:08 - It's no longer sequential, like an autoregressive model,
+11:11 - but everything can be done in parallel.
+11:14 - Of course, the downside of this is that now inverting the model
+11:19 - is sequential.
+11:21 - So it's still an invertible mapping,
+11:22 - but now, if we want to go from x to z,
+11:26 - let's say because we want to train this model,
+11:28 - so we want to do maximum likelihood training,
+11:31 - then we need to be able to go from images,
+11:33 - let's say from x to latent variables.
+11:36 - And that, you have to be able to do it for every single data
+11:40 - point.
+11:41 - And if you try to figure out what does the computation
+11:43 - graph look like, you can see that it becomes sequential
+11:47 - because what you have to do is you have to shift--
+11:51 - you have to compute z1 by inverting this relationship.
+11:55 - So you take the first pixel, you shift it and scale it,
+11:57 - and you get the new latent variable.
+11:59 - Now you can use that latent variable
+12:01 - to compute the new shift and scale for the second dimension.
+12:06 - These mus, they still depend on the alphas,
+12:09 - and the mus depend on the previous variables.
+12:11 - So now that you have z1, you can compute mu 2 and alpha 2,
+12:17 - and now you can shift and scale x2 to get z2.
+12:21 - And now you can use z1 and z2 to compute the new shift and scale
+12:27 - and so forth.
+12:29 - So that's basically the same thing
+12:30 - you would have to do when you would-- that you
+12:34 - that you normally do when you sample
+12:35 - from an autoregressive model.
+12:37 - So you have to kind of generate one variable at a time.
+12:41 - Here, you have to invert one variable at a time
+12:43 - before you can invert the next.
+12:46 - And so this is a great model that
+12:49 - allows you to sample very efficiently,
+12:51 - but it's very expensive to actually compute
+12:53 - likelihoods of data points.
+12:55 - So this would be a tricky model to use during training
+13:00 - because you would have to kind of go
+13:02 - through each individual variable to be able to invert
+13:04 - and to be able to compute likelihoods.
+13:09 - The good thing is that it's actually
+13:11 - fast to evaluate likelihoods of a generated point.
+13:14 - So if you generate the data yourself,
+13:17 - then it's easy to evaluate likelihoods because you kind
+13:21 - of already have all the z's.
+13:22 - Then you map them to x, which you
+13:24 - can do efficiently if you store the latent
+13:29 - vector that you use to generate a particular data point.
+13:32 - Then you don't have to recompute it.
+13:34 - You already have it, and so you can actually
+13:36 - evaluate likelihoods of data points you generate yourself
+13:39 - very efficiently because all you need
+13:45 - is you need to be able to evaluate
+13:46 - the likelihood of this z1 through zn, and the prior,
+13:51 - you need to be able to evaluate the determinant of the Jacobian,
+13:53 - which depends on these alphas and which
+13:57 - you can compute because you have all the z's
+13:58 - to begin with if you generate a data point yourself.
+14:04 - And we'll see that this is going to be somewhat useful when
+14:08 - we talk about how to distill models
+14:12 - so that if you have a model that is maybe autoregressive
+14:16 - and it's slow to sample from, we're going to see that it's
+14:21 - possible to distill it into a model of this type, so
+14:25 - different kind of flow that after you train a model, kind
+14:29 - of a student model that is much faster than the teacher model
+14:34 - that you train sort of autoregressively
+14:36 - and can generate sort of in one shot, in parallel, kind of this.
+14:42 - And this property at the end here,
+14:44 - the fact that you can evaluate likelihoods
+14:46 - of points you generate yourself, is
+14:47 - going to be useful when we talk about that.
+14:51 - And again, these two normalizing flows, MAF, IAF,
+14:58 - are actually the same model, essentially, right?
+15:00 - It's just if you swap the role of x and z,
+15:04 - they are essentially the same kind of thing.
+15:08 - If you think of it from the perspective of MAF,
+15:10 - then you compute the x, the alphas, and the mus
+15:14 - as a function of the x's, and that's
+15:16 - the way you would do it in an autoregressive model,
+15:19 - if you just flip things around, you
+15:21 - can get an inverse autoregressive flow
+15:25 - by just having the mus and the alphas
+15:29 - depend on the z's, which is basically
+15:32 - what you get if you relabel z and x in that in that figure.
+15:37 - And so that's another way to get a flow model is
+15:40 - to basically start with a Gaussian autoregressive model,
+15:44 - and then you can get a flow model that way.
+15:49 - And yeah, so they're essentially dual.
+15:53 - They're essentially the same thing.
+15:54 -
+15:57 - And so the trade-offs, sort of our MAF,
+16:01 - it's basically an autoregressive model.
+16:03 - So you have fast likelihood evaluation, slow sampling,
+16:06 - one variable at a time.
+16:09 - IAF is the opposite because it's the reverse,
+16:11 - so you can get fast sampling, but then you
+16:13 - have slow likelihood evaluation.
+16:16 - MAF is good for training because what we need
+16:20 - is we need to be able to evaluate likelihoods efficiently
+16:23 - for every data point, if you want to do maximum likelihood
+16:26 - training, and so MAF is much better for that.
+16:30 - On the other hand, if you need something
+16:32 - where you need to be able to generate very,
+16:33 - very quickly, IAF would be a better kind of solution.
+16:37 -
+16:40 - And natural question, can we get the best of both worlds?
+16:44 - And that's sort of what they did with this parallel wavenet,
+16:49 - which used to be a state of the art model for speech generation.
+16:55 - And the basic idea was to start with a really good
+16:58 - autoregressive model and then distill
+17:02 - it, which is just a MAF, basically,
+17:05 - and then distill it into an IAF student model that
+17:11 - is going to be hopefully close to the teacher
+17:14 - and is going to be much faster to generate samples from.
+17:19 - And so that's basically the strategy they used.
+17:22 - They used an MAF, which is just an autoregressive model,
+17:26 - to train a teacher model.
+17:30 - You can compute likelihoods efficiently.
+17:32 - It's just an autoregressive model,
+17:33 - so it's easy to train the usual way.
+17:37 - And once you train this teacher, you
+17:40 - can train a student model to be close to the teacher.
+17:45 - But because it's an IAF model by design,
+17:48 - it would allow you to sample much more efficiently.
+17:54 - And the key observation that we mentioned before
+17:58 - is that you can actually evaluate likelihoods
+18:00 - on your own samples.
+18:03 - So if you generate the samples yourself,
+18:05 - you can actually evaluate likelihoods efficiently.
+18:09 - And then basically one way to do it is to--
+18:15 - this objective function, which is basically based
+18:18 - on KL divergence, where what you would do is you
+18:22 - would first train the teacher model on maximum likelihood.
+18:25 - This is your autoregressive model that
+18:27 - is expensive to sample from.
+18:29 - And then you define some kind of KL divergence
+18:32 - between the student distribution, which
+18:34 - is an IAF model, efficient to sample from, and the teacher
+18:37 - model.
+18:39 - And this is just the KL divergence between student
+18:42 - and teacher, and this is important
+18:44 - that we're doing it in this direction.
+18:46 - You could also do KL divergence teacher-student,
+18:48 - but here we're doing KL divergence student-teacher.
+18:52 - And the KL divergence, if you expand it,
+18:56 - it basically has this form.
+18:58 - And you can see that this objective
+19:00 - is good for training because what we need to do in order
+19:05 - to evaluate that objective and optimize
+19:06 - it is we need to be able to generate samples
+19:09 - from the student model efficiently.
+19:11 - The student model is an IAF model,
+19:14 - so it's very easy to sample from.
+19:16 - We need to be able to evaluate the log probability of a sample
+19:21 - according to the teacher model.
+19:24 - That's, again, easy to do because it's just
+19:26 - an autoregressive model, so evaluating likelihoods is easy.
+19:29 -
+19:32 - To evaluate the likelihood of the data point
+19:35 - that you generate yourself using the student model,
+19:38 - which is what you need for this term,
+19:40 - again, that's efficient to do if you have an IAF
+19:43 - model because you've generated the samples yourself,
+19:45 - so you know the z, so you know how to evaluate likelihoods.
+19:50 - And so this kind of objective is very, very suitable
+19:53 - for this kind of setting, where the student model
+19:56 - is something you can sample from efficiently from.
+19:58 - You can evaluate likelihoods on your own samples efficiently.
+20:01 - And then you have a teacher model for which
+20:04 - you can evaluate likelihoods.
+20:06 - Maybe it's expensive to sample from,
+20:07 - but we don't care because we never
+20:09 - sample from the teacher model.
+20:11 - You just need to be able to do good MLE training, which
+20:14 - we know we can do with autoregressive models.
+20:16 - And to the extent that this KL divergence is small,
+20:19 - then the student distribution is going
+20:21 - to be close to the teacher distribution.
+20:23 - So if you sample from the student model,
+20:25 - you're going to get something similar to what you would have
+20:28 - gotten if you were to sample from the teacher model,
+20:30 - but it's much, much faster.
+20:31 -
+20:34 - And all the operations that you see
+20:37 - there, they can be implemented efficiently,
+20:39 - and that's kind of what they did for this parallel wavenet.
+20:44 - You train a teacher model by maximum likelihood,
+20:46 - and then you train a student IAF model
+20:49 - to minimize this KL divergence.
+20:51 - And at test time, then you throw away your teacher.
+20:54 - And at test time, what you put on mobile phones
+20:59 - to generate samples very efficiently
+21:01 - is to use the student model.
+21:03 - Yes.
+21:03 - So you do optimize this function,
+21:06 - so you do need to optimize both these, the sampling n,
+21:10 - but you don't need to optimize t. t is fixed.
+21:14 - And because everything can be parameterized,
+21:15 - so you can still back propagate through
+21:17 - that because, essentially, it's just
+21:20 - kind of a big reparameterization trick
+21:22 - that you're doing on the student model,
+21:25 - is just starting with simple noise and then transforming it.
+21:28 - And so it's easy to figure out how,
+21:30 - if you were to update the parameter of the student model,
+21:32 - how would the sample change.
+21:35 - You can do it in this case because it's
+21:38 - the same as reparameterization.
+21:39 -
+21:43 - And yeah, that's what they did, and they
+21:46 - were able to get very, very impressive speed-ups.
+21:50 - This was a paper from Google a few years ago,
+21:53 - and that's how they were able to actually deploy
+21:55 - the models in production.
+21:56 - They trained a really good teacher model by training it
+22:00 - autoregressively.
+22:00 - That was too slow to generate samples.
+22:02 - But then by thinking it as a kind of from this flow model
+22:07 - perspective, then there was a pretty natural way of distilling
+22:10 - down into something similar, but that has kind of the opposite
+22:15 - property of being able to sample efficiently,
+22:18 - even though you cannot get likelihoods.
+22:20 - If you just care about inference,
+22:21 - you just care about generation, that's
+22:23 - a more convenient way of parameterizing
+22:27 - the family of distributions.
+22:29 - The question is, can we do this for language models?
+22:31 - The problem is that if you have a language model that's
+22:33 - discrete, and so there is no-- you can't necessarily
+22:37 - think of it as a flow model.
+22:39 - And so there is not--
+22:41 - you can't really think of sampling from a language model
+22:45 - as transforming a simple distribution, at least not
+22:48 - in a differentiable, invertible way because the x is discrete,
+22:54 - and so there is not really a way to transform
+22:56 - a continuous distribution into a discrete one.
+22:59 - And so you can't do it this way, basically, unfortunately.
+23:03 - Flow models are only applicable to probability density
+23:06 - functions, so you cannot apply them to probability mass
+23:10 - functions where you would have discrete random variables.
+23:14 - So it's only applicable to continuous random variables
+23:16 - because otherwise the change of variable format does not apply,
+23:19 - so you cannot use it anymore.
+23:21 - Cool.
+23:22 - So that's another family.
+23:23 - And now, for the remaining few minutes,
+23:26 - we can just go through a few other options
+23:29 - that you have if you want to build invertible mappings.
+23:32 - One natural thing you might want to do,
+23:35 - if you start thinking of autoregressive models
+23:38 - are basically flow models, we know
+23:41 - that you can use convolutional networks
+23:45 - in autoregressive models as long as you mask them
+23:48 - in the right way.
+23:49 - And so the natural thing you can ask
+23:52 - is if it's possible to define invertible layers that
+23:55 - are convolutional in some way because we
+23:57 - know convolutions are great.
+23:59 - And by itself, a convolution would not be invertible.
+24:04 - But if you mask it in the right way,
+24:06 - you can kind get the structure or the computation structure
+24:10 - of an autoregressive model, and you
+24:11 - can build up a layer that is actually invertible.
+24:17 - And if you do things in the right way,
+24:20 - you can actually make it such that it's not only invertible,
+24:23 - but you can actually evaluate the determinant of the Jacobian
+24:26 - efficiently.
+24:27 - And kind of like in autoregressive models,
+24:31 - like in PixelCNN, really all you have to do
+24:34 - is you have to mask the convolutions so that there
+24:36 - is some kind of ordering, so then that would give you the--
+24:40 - it would not only allow you to invert things more efficiently,
+24:43 - but it would also allow you to compute
+24:44 - the determinant of the Jacobian efficiently because it basically
+24:47 - makes the Jacobian lower triangular,
+24:50 - and so then we can compute Jacobians determinant
+24:53 - efficiently, which is what I just said.
+24:58 - And basically what you can do is you
+25:02 - can try to enforce certain conditions on the parameters
+25:04 - of the neural network so that the transformation
+25:07 - is guaranteed to be invertible.
+25:09 - And you can read the paper for more details,
+25:11 - but essentially what it boils down
+25:13 - is something like this, where if you have a three-channel input
+25:16 - image, like the one you have on the left, and you have,
+25:20 - let's say, a 3 by 3 kernel, convolutional kernel, which
+25:24 - looks at, let's say, R, G, and B, what you can do
+25:28 - is you can mask the parameters of that kernel, which
+25:32 - in this case is just this cube.
+25:33 - There is a cube for the three channels,
+25:37 - and you can mask them so that you only look at the--
+25:41 - because that you only look at the pixels
+25:43 - that come before you, basically, in the ordering.
+25:46 - So you can see the receptive fields of these kernels
+25:49 - here on the right.
+25:51 - And when you produce the three values on the three channels,
+25:56 - they are produced by a computation that is basically
+25:59 - consistent with this ordering.
+26:01 - And you can see that, just like in the PixelCNN,
+26:04 - you have to decide on which colors you start from,
+26:08 - and then you have to be kind of causal also with respect
+26:12 - to the channels that you have in the image.
+26:15 -
+26:19 - And yeah, so basically there are ways
+26:23 - to define convolutional kernels that would give you
+26:27 - invertible mappings.
+26:29 - And you're losing out something because the receptive fields,
+26:35 - you're no longer able to look at everything in the image.
+26:39 - You're kind of restricted in what you can look at,
+26:41 - but what you gain is that you get attractable Jacobian,
+26:45 - basically.
+26:46 - And you can build a flow model by stacking
+26:49 - these kind of layers, and this works reasonably well.
+26:53 - Here's some examples on MNIST samples, CIFAR-10,
+26:57 - ImageNet samples that you get by training, basically, a flow
+27:01 - model where you have all these convolutional layers that
+27:04 - are crafted in a certain way so that the filters are basically
+27:09 - invertible.
+27:12 - The other quick thing I wanted to mention
+27:14 - is kind of a different perspective on what
+27:20 - happens when you train a flow model, this idea that you can
+27:24 - either think about training a model such that the distribution
+27:29 - of the samples that you get is close to the data distribution,
+27:33 - or you can think of training the model as basically saying,
+27:37 - if I were to transform my data according
+27:39 - to the inverse mapping, I should be
+27:41 - getting something that is close to the prior of the flow model,
+27:44 - as close, for example, a Gaussian distribution.
+27:47 - So you can use this dual perspective
+27:49 - to construct other kinds of layers that can get you--
+27:53 - that basically where every layer is
+27:56 - kind of trying to make the data look more Gaussian, essentially.
+28:02 - And the basic intuition is something like this.
+28:05 - If you have a flow model where you transform
+28:08 - a Gaussian random variable into data x and then
+28:11 - you have some true data distribution,
+28:14 - so a true random variable x tilde,
+28:16 - which is the one that is distributed really according
+28:19 - to the data, if you do maximum likelihood training, what you do
+28:23 - is you minimize the KL divergence between the data
+28:25 - distribution and the distribution
+28:27 - that you get by sampling from this model,
+28:30 - by transforming Gaussian noise through this invertible mapping
+28:33 - f theta.
+28:35 - Or equivalently, you're minimizing the KL divergence
+28:37 - between the distribution of the true x tilde, which
+28:41 - is distributed according to the data,
+28:43 - and this new random variable x that you
+28:45 - get by transforming Gaussian random noise, which is basically
+28:53 - this is saying that if you take Gaussian samples
+28:55 - and you transform them through this mapping,
+28:57 - you should get something close to the data.
+29:00 - Equivalently, you can also, because of properties of the KL
+29:04 - divergence, which is invariant to invertible transformations,
+29:07 - you can also think of this as trying to minimize the KL
+29:10 - divergence of what you get by transforming
+29:13 - the true data according to the inverse mapping
+29:16 - and transforming the samples through the inverse mapping.
+29:20 - And we know what we get if we transform samples
+29:22 - through the inverse mapping.
+29:24 - We get the prior.
+29:27 - And so equivalently, you can kind
+29:28 - think of training a flow model as transforming
+29:35 - this data through this random vector x tilde, which
+29:39 - is distributed according to the data,
+29:41 - into one that is distributed as a Gaussian.
+29:45 - And so you can think of the flow model
+29:46 - as basically Gaussianizing the data.
+29:49 - You start out with a complicated distribution.
+29:51 - If you go through the flow in the backward direction,
+29:55 - you're mapping it into something that
+29:57 - has to look like a Gaussian.
+30:00 - And how to achieve this?
+30:03 - One natural way of doing it is to basically, at least if you
+30:06 - have one-dimensional data, is through the inverse CDF.
+30:10 - And so going through quickly because I don't have time,
+30:14 - but if you have a random variable that
+30:17 - has some kind of data distribution,
+30:20 - if you apply the inverse or, again, I guess
+30:25 - the CDF of the data-- there is going
+30:28 - to be a CDF for the data distribution.
+30:31 - And if you apply the CDF of the data distribution
+30:35 - to this random vector or random variable,
+30:37 - you're going to get a uniform random variable.
+30:40 - That's basically the way you sample from--
+30:42 - it's one of the ways to sample from a random variable
+30:45 - with known CDF.
+30:46 - You sample uniformly.
+30:49 - You inverse the CDF, and you get a sample from x tilde.
+30:53 - And so basically, this kind of transformation
+30:58 - where you are transforming a data
+31:01 - sample through the CDF, which is kind of a way to kind of whiten
+31:05 - the data, it's kind of the thing you
+31:07 - would do by subtracting the mean divided
+31:10 - by the standard deviation.
+31:11 - Something similar, if you apply this kind of transformation,
+31:14 - you get something that is uniform.
+31:16 - So this is guaranteed to be between 0 and 1.
+31:19 - And once you have a uniform random variable, what you can do
+31:22 - is you can apply the inverse CDF of a Gaussian,
+31:24 - and you can transform it into something
+31:26 - that is exactly Gaussian.
+31:28 -
+31:30 - And this, basically the composition
+31:34 - of the true CDF of the data and the inverse CDF of a Gaussian
+31:38 - will transform any random vector into a Gaussian one.
+31:44 - And that's basically the idea of Gaussianizing
+31:47 - flows is that you stack a bunch of transformations, trying
+31:50 - to make the data more and more Gaussian.
+31:53 - And I guess I'm going to skip this,
+31:56 - but if you know about copula models,
+31:59 - these are a famous kind of statistical model
+32:01 - that's often used on Wall Street.
+32:03 - You can think of it as a very shallow kind
+32:06 - of normalizing flow, where you only
+32:08 - apply one layer of Gaussianization
+32:10 - on each individual dimension.
+32:13 - So you start with data that is not Gaussian distributed,
+32:15 - then you apply this Gaussian CDF trick
+32:18 - to basically make each individual dimension Gaussian.
+32:22 - And even though jointly it's not Gaussian,
+32:24 - that's your model of the data.
+32:26 - And then you can stack them together, and then you get--
+32:30 - you keep doing this thing and you apply some rotations.
+32:32 - Then you can transform anything into a Gaussian.
+32:34 - And this is another way of basically building
+32:38 - invertible transformations.

@@ -1,0 +1,334 @@
+00:00 -
+00:05 - SPEAKER: Now why does this work?
+00:08 - That's an example of why can you approximate this expectation
+00:12 - with this sample average.
+00:14 - This is something that is basically a Monte Carlo
+00:17 - estimate.
+00:18 - You might have seen it before, the idea is
+00:21 - that if you have an expectation of some function,
+00:23 - there's a random variable x, there is a function g of x.
+00:26 - You want to get the expected value of g
+00:29 - of x which is just this thing, you can approximate this
+00:34 - by just taking, the true thing would look at all the things
+00:38 - that can happen and it would weight them with the probability
+00:41 - under P. Alternatively, what you can
+00:44 - do is you can just generate T scenarios,
+00:47 - T samples and look at the average value of g
+00:51 - under these T samples and that should
+00:55 - be a reasonable approximation, right?
+00:57 - You can approximate the expectation
+01:00 - by looking at the value of the function on this T
+01:04 - representative samples.
+01:06 -
+01:08 - And this g hat is a random variable
+01:13 - because it depends on these samples x1 through xT.
+01:17 -
+01:21 - But it has good properties in the sense
+01:25 - that in expectation it gives you back what you wanted.
+01:31 - So although this g hat is now a random variable, in expectation
+01:39 - that this random variable has the right value which
+01:44 - is the true expectation of the function, the thing
+01:46 - you want it to compute.
+01:49 - And the more samples you get, the better the approximation is.
+01:54 - So although g hat is random, as you increase
+01:59 - the number of samples T, g hat converges pretty strongly
+02:05 - to this expected value.
+02:08 - So the more samples you take, kind of the less randomness
+02:12 - there is and the more likely you are
+02:14 - to get close to the true answer you're
+02:16 - looking for which is the expectation of the function.
+02:21 - And the variance also goes down as the number
+02:24 - of samples increases.
+02:27 - So you have a random variable that an expectation gives you
+02:30 - the answer you want and as you increase
+02:32 - the number of samples, the variance of this random variable
+02:35 - becomes smaller and smaller which
+02:37 - means that your approximation becomes more and more reliable.
+02:41 - The less unlikely you are that the estimate
+02:44 - you have is wildly off.
+02:47 - And that's exactly what we're doing here,
+02:53 - this expectation is a number, it's not random,
+02:56 - we're approximating it with a quantity that
+02:59 - depends on the training set.
+03:01 - So different training sets would give you different answers
+03:05 - but if the training set is sufficiently large,
+03:07 - this sample average would be very close to the expectation.
+03:13 - And the larger the training set is, the more likely
+03:16 - it is that this sample average that you get on the data set
+03:20 - is actually going to be pretty close to the true expected value
+03:24 - that you care about.
+03:25 -
+03:28 - Cool.
+03:31 - And we'll see this idea come up often,
+03:35 - this idea that there is an intractable expectation that you
+03:38 - have to deal with and you're going to approximate it using
+03:41 - samples from the distribution.
+03:43 - It's a pretty convenient way of making
+03:47 - algorithms more computationally tractable essentially.
+03:52 - Now back to learning, you've probably seen maximum likelihood
+03:56 - learning in examples like learning the parameters
+03:59 - of a Bernoulli random variable.
+04:01 - So let's say you have two outcomes, heads and tails,
+04:06 - you have a data set, so you've seen
+04:09 - that you flip the coin five times and the first two times
+04:13 - were heads then you have a tail then a heads and a tail.
+04:17 - You assume that there is some underlying data distribution
+04:21 - that produced the results of this experiment
+04:24 - that you did with five tosses of the coin.
+04:28 - And then you model all these Bernoulli distributions
+04:32 - and then again, you just need one parameter
+04:34 - to describe the probability of heads
+04:36 - versus the probability of tail.
+04:38 - And then you could try to fit and you
+04:40 - try to find a model of the world that
+04:43 - is as close as possible to the true data generating process.
+04:47 -
+04:49 - For example, you might see that there is 3 heads out of 5 coin
+04:53 - flips and then you try to find a good model
+04:56 - for this kind of data.
+04:59 - And a way to do it is maximum likelihood, so in this case
+05:02 - P theta would be really, really simple,
+05:04 - it's just a single kind of Bernoulli random variable.
+05:07 - You have one parameter which is the probability of heads,
+05:10 - 1 minus theta is the probability of tails.
+05:12 - And then you have your data set which is 3 heads and 2 tails
+05:17 - and then you can evaluate the likelihood of the data
+05:20 - and it's just that expression.
+05:22 - So you have theta, theta, 1 minus
+05:25 - theta because the third result is a tail and so forth.
+05:30 - And now this is a function of theta
+05:32 - as you change theta, the probability
+05:34 - that your model assigns to the data set changes
+05:37 - and if you plot it, it kind of has the shape
+05:41 - and then maximum likelihood would
+05:44 - tell you pick the theta that maximizes
+05:46 - the probability of observing this particular data set
+05:49 - and that basically corresponds to trying to find
+05:52 - a maximum of this function.
+05:55 - And in this case what's the solution?
+05:59 - Yeah, 0.6, right?
+06:01 - In this case you can actually solve this in closed form
+06:03 - and you can work out what is the optimal theta
+06:05 - and it's going to be 0.6.
+06:08 - And so we're basically going to do the same thing now
+06:11 - but for autoregressive models.
+06:14 - So this is the same idea, except that now theta
+06:19 - is very high dimensional, it's all possible parameters
+06:22 - of a neural network but the y-axis is the same,
+06:26 - it's basically the probability that your model assigns
+06:29 - to the data set and then you try to find theta that maximizes
+06:33 - the probability of observing the data set that you have access
+06:36 - to.
+06:38 - And the good news is that, in an autoregressive model evaluating
+06:42 - likelihoods is relatively easy.
+06:45 - If you want to evaluate the probability
+06:47 - that the model assigns to a particular image or sentence
+06:51 - or whatever, the probability of x is just given by chain rule,
+06:56 - is the product of the conditional probabilities.
+07:00 - And so evaluating the probability of a single data
+07:04 - point is very easy, it's exactly the same computation
+07:08 - we did before when we were trying to do anomaly detection.
+07:11 - You just go through all the conditionals
+07:14 - and you multiply them together.
+07:17 - And how to evaluate the probability of a data set?
+07:24 - Well, the probability of the data set
+07:26 - is just the product of the probabilities
+07:28 - of the individual data points and the individual data points
+07:32 - are just obtained through chain rule.
+07:36 - And so again, it's all pretty simple,
+07:39 - if you want to maximize the probability of observing
+07:43 - the data set that you have access to,
+07:45 - you can also take a log and you can maximize the log likelihood
+07:49 - and you get an expression that when
+07:55 - you can turn the log of a product into a sum of logs.
+07:59 - But we no longer have a closed form solution.
+08:02 - So before for the Bernoulli coin flips,
+08:05 - you all knew the answer is 0.6.
+08:07 - If you have a deep neural network here,
+08:10 - you no longer have a closed form way of choosing theta
+08:13 - and you have to rely on some optimization algorithm
+08:16 - to try to make this objective function as high as possible
+08:21 - or you negate it and try to make it as small as possible.
+08:26 - And so for example, you can use gradient descent.
+08:31 - So that's the objective function that we're trying to optimize.
+08:35 - And if you take a log, I guess it boils down
+08:39 - to this which is much more natural,
+08:43 - so you go through all the data points,
+08:45 - you go through all the variables in each data point,
+08:47 - and you look at the log probability assigned
+08:51 - by of that variable given all the ones
+08:53 - that come before it in that data point.
+08:57 - So equivalently, what you're doing is,
+08:59 - remember that this P neural here are basically
+09:01 - classifiers that try to predict the next value given
+09:05 - everything before it.
+09:08 - This loss is basically just evaluating
+09:09 - the average loss of all these classifiers across data points
+09:14 - and across variables.
+09:17 - And so again, basically minimizing L divergence
+09:21 - is the same as maximizing log likelihood
+09:24 - which is the same as basically trying
+09:26 - to make these classifiers perform as well as they can.
+09:29 - They should do a pretty good job at predicting
+09:32 - overall data points j, overall variables i.
+09:34 - They should do a pretty good job at predicting the next variable
+09:38 - given what they've seen so far for that particular data point.
+09:45 - And so all of this is basically boiling down to,
+09:48 - let's try to make these classifiers that
+09:51 - predict the next variable given the ones
+09:53 - before it as efficient, as good as
+09:55 - possible in terms of the essentially cross entropy.
+10:00 - So one way to do it is you can initialize all the parameters
+10:03 - at random and then you can compute gradients on this loss
+10:07 - by back propagation and then you just do gradient ascent
+10:11 - on this thing.
+10:14 - It's nonconvex but in practice, basically that's
+10:17 - how you would train all these models
+10:19 - and it tends to work pretty well in practice.
+10:24 - One thing to note is that as written this quantity involves
+10:32 - a sum over an entire data set, like if you want to you know
+10:36 - what's the effect of changing the parameter of one of these
+10:40 - classifiers, you want to get the gradient of the loss with
+10:45 - respect of let's say theta i, where theta i is basically
+10:48 - the parameters of the i'th conditional.
+10:52 - You would have to sum over the whole data set
+10:56 - to get this gradient which would be of course way too expensive
+11:00 - because you would have to go through the whole data set
+11:02 - to figure out how to adjust the parameters of your classifier.
+11:07 - And that's tricky but well, here I'm actually--
+11:17 - the good news is each conditional
+11:19 - can be optimized separately if there is no parameter sharing.
+11:22 - In practice there is always parameter sharing.
+11:24 -
+11:26 - The challenge is that you have this big sum over all the data
+11:31 - points in the data set but again, what we can do
+11:35 - is we can use a Monte Carlo estimate.
+11:37 - So instead of going through the whole data set,
+11:40 - we can try to estimate what is the gradient just
+11:43 - by looking at a small sample of data points.
+11:46 - Just like before, we were approximating an expectation
+11:50 - with a sample average.
+11:52 - We can think of this sum over m or all the data points,
+11:56 - we can multiply by m and divide by 1 over m
+11:59 - and then we can think of this sum 1
+12:02 - over m as an expectation with respect
+12:05 - to a uniform distribution over the data points in the data set.
+12:09 -
+12:12 - And so you can write down the gradient
+12:14 - as the expectation of the gradient with respect
+12:17 - to a uniform distribution over the data set.
+12:22 - So far we haven't gained anything
+12:24 - but now you can do Monte Carlo.
+12:27 - You can approximate this expectation
+12:30 - by taking a bunch of samples and evaluating the gradient only
+12:34 - on those samples and that's basically stochastic gradient
+12:37 - descent or mini batch where you would basically select
+12:42 - a small subset of data points.
+12:45 - You will evaluate the gradient on those data points
+12:48 - and you would update your model accordingly.
+12:52 - And so we see another layer of Monte Carlo simulation or Monte
+12:58 - Carlo estimate where instead of evaluating the full gradient,
+13:01 - you evaluate the gradient on a subset of data points
+13:04 - to make things scalable.
+13:05 -
+13:08 - And what else?
+13:11 - The other thing to keep in mind is that, well, there
+13:13 - is always the risk of overfitting that came up before.
+13:17 - If you just blindly optimize that objective,
+13:19 - you could just memorize the data set.
+13:23 - So if the data becomes the model,
+13:27 - you're going to perform pretty well at this prediction task
+13:31 - but that's not what we want.
+13:34 - So we don't care about the performance on the data set,
+13:39 - we care about performance on unseen samples
+13:43 - that come from the same distribution
+13:45 - as the one we've used for training.
+13:47 - So the same problems that we've seen
+13:49 - when you train a machine learning model apply here.
+13:52 - Blindly minimizing this loss might not
+13:55 - do what we want because you can do very well on the training
+13:58 - set, but you might not be doing well in general,
+14:01 - you might not be generalizing.
+14:04 - And so what you would need to do is
+14:07 - to somehow restrict the hypothesis space
+14:10 - or regularize the model somehow so that this doesn't happen,
+14:13 - so that it doesn't just memorize the training set,
+14:16 - and you don't get this overfitting behavior.
+14:20 -
+14:24 - And then you get the usual bias variance tradeoffs
+14:29 - where if you limit the model too much, if you restrict
+14:33 - the modeling capacity too much instead of using
+14:36 - deep neural network, you use logistic regressions,
+14:38 - or you make very strong conditional independence
+14:41 - assumptions, your modeling capacity or hypothesis space
+14:46 - becomes too limited and you might not
+14:48 - be able to do well at minimizing that loss on the training set.
+14:52 - And this is basically bias because it
+14:56 - limits how well you can approximate the target
+14:58 - distribution even if you could optimize as well as you could.
+15:03 - And then the tradeoff here is that if you
+15:06 - choose model families that are too flexible, then
+15:10 - you encounter the other issue which is variance.
+15:14 - So your model might be fitting too well,
+15:18 - it might be fitting even better than the true model that
+15:21 - generated the data and even small changes to the data set
+15:25 - could have huge changes to the parameters that you output
+15:30 - and that's variance.
+15:32 - So you kind of like want to find a sweet spot
+15:35 - where you balance the effect of bias
+15:38 - and variance on the performance of your model.
+15:42 - And kind of visually I think this is an example,
+15:48 - let's say that you have a bunch of data points
+15:50 - and you're trying to fit a curve,
+15:52 - trying to predict y from x.
+15:54 - If you choose a very simple kind of space
+15:57 - of possible relationships like all linear models,
+16:00 - you can do very well at fitting but somehow
+16:02 - if the model class is too simple,
+16:04 - you're not going to be able to capture
+16:06 - the true trend in the data.
+16:08 - So the bias here will hurt you too much, so it underfits.
+16:15 - If you choose a very flexible model lots of parameters,
+16:18 - you're going to be fitting the data set extremely well but you
+16:23 - can see that perhaps it's too flexible the model.
+16:27 - If you were to change one single data point a little bit,
+16:29 - the predictions would change drastically
+16:32 - and that's maybe overfitting.
+16:35 - And so you want maybe that sweet spot
+16:37 - where you have a low degree polynomial that
+16:39 - fits the data a little bit worse than this high degree
+16:42 - polynomial, but it will generalize
+16:45 - and it will perform OK in practice.
+16:47 - So there's a few things you can do,
+16:49 - one is to prevent overfitting is you could be Bayesian
+16:51 - but that's very hard computationally.
+16:55 - Another thing you can do is you can
+16:57 - try to do cross validation where you kind of keep some held out
+17:02 - data to evaluate the performance of your model
+17:05 - and if you see that there is a big gap between the performance
+17:07 - that you had at training time versus what
+17:09 - you had on the validation set, then you know you're overfitting
+17:13 - and so maybe you want to reduce the complexity of your model.
+17:16 -
+17:19 - And so, yeah, one thing you can do
+17:20 - is you can reduce the complexity of your neural networks,
+17:23 - reduce the number of parameters, share parameters, kind of make
+17:27 - the set smaller in some way.
+17:31 - Another thing that was mentioned before is you
+17:33 - could try to use some kind of like soft preference for simpler
+17:36 - models so that if you have two models that
+17:39 - fit the data equally well, they achieve the same loss.
+17:42 - Maybe you have a regularization term
+17:44 - that says prefer the simpler one, maybe the one
+17:47 - with fewer parameters or the one where the magnitude
+17:51 - of the parameters is smaller.
+17:53 -
+17:56 - And the other thing is what I just mentioned,
+18:00 - you can always evaluate performance
+18:02 - on some held out validation set.
+18:03 - This is actually what people do in practice
+18:06 - and you can check if there is a big gap between training
+18:11 - and validation loss, then you know
+18:12 - that you're probably overfitting and maybe you
+18:15 - want to reduce the size of the set
+18:18 - or you want to do something to prevent that overfitting.

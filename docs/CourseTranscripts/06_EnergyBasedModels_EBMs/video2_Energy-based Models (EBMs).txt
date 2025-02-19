@@ -1,1 +1,683 @@
 
+00:00 -
+00:05 - SPEAKER: So what energy-based models
+00:07 - do is they try to break this constraint
+00:11 - and try to go beyond basically probability
+00:16 - densities or probability mass functions that are guaranteed
+00:20 - to be normalized for which basically
+00:23 - because the normalization constant is known analytically.
+00:26 - And instead, we're going to be working with settings where
+00:32 - this normalization constant, this partition function Z theta,
+00:36 - is something that we'll have to maybe deal with,
+00:41 - that either we're not going to be able to compute it
+00:43 - or we're going to approximate it.
+00:44 - But it's not going to be something
+00:47 - that is known to take a, say, value 1 for any choice of theta,
+00:51 - it's going to it's going to change as a function of theta
+00:53 - in some complicated way, and we're just
+00:55 - going to have to basically deal with it.
+00:58 - And so specifically, we're going to be looking
+01:00 - at models of this form where we have a probability density
+01:04 - function over x, which is parameterized by theta
+01:08 - and is defined as the exponential of f theta
+01:12 - because we need to make sure that the function is
+01:14 - non-negative.
+01:17 - So this is like the unnormalized probability,
+01:19 - the exponential of f theta.
+01:21 - And then we divide by the partition function
+01:24 - to get an object that is actually normalized.
+01:27 - So you can start with an arbitrary, basically,
+01:31 - neural network f theta.
+01:33 - You take the exponential.
+01:34 - You get a non-negative function.
+01:36 - And then you define a valid probability density function
+01:40 - by dividing by this partition function,
+01:42 - by this normalization constant, which
+01:44 - is just the integral basically of
+01:46 - this unnormalized probability.
+01:50 - And so that's all--
+01:52 - basically, that's the definition of an energy-based model.
+01:56 - It's very flexible because you can choose essentially
+02:01 - an arbitrary function, f theta.
+02:03 - And that defines a valid probability density function.
+02:09 - We chose specifically the exponential here instead of,
+02:13 - let's say, squaring f theta for several reasons.
+02:19 - The first one is that it allows us
+02:21 - to capture pretty nicely, pretty easily
+02:24 - big variations in the probability
+02:27 - that the model assigns to different axis.
+02:29 - So if you're thinking about modeling images, or even text
+02:33 - to some extent, you might expect very big variations
+02:36 - in the probabilities that the model assigns to,
+02:39 - let's say, well-formed images as opposed to pure noise.
+02:44 - And so it makes it easier to model these big variations
+02:49 - in the probability if you take an exponential here, right,
+02:54 - because small changes in f theta,
+02:56 - which is what your neural network does,
+02:58 - will lead to big changes in the actual probabilities that
+03:01 - are assigned by the model.
+03:02 - You could also do it with just take a square here.
+03:08 - But then that would require bigger changes
+03:11 - in the outputs of the neural network.
+03:14 - So it's going to be much less smooth.
+03:16 - Softmax is an example of that, yeah.
+03:20 - That's a good point.
+03:20 - Yeah, a Softmax is one way of doing this and essentially
+03:26 - mapping the output of a neural network, which is not
+03:30 - necessarily a valid probability, a valid categorical distribution
+03:34 - over, let's say, the outputs that you're trying to--
+03:37 - So energy-based models it's a very general term in the sense
+03:42 - that you could even think of an autoregressive model
+03:47 - as being a type of energy-based model
+03:49 - where, by construction, Z theta is always guaranteed to be 1.
+03:56 - So this is just a very general type of model
+04:02 - where we're going to be able to take
+04:04 - an arbitrary neural network, let's say, f theta
+04:07 - and get a valid probability density function from it.
+04:11 - It's more general because it doesn't have to be,
+04:14 - Z theta doesn't have to be exactly 1.
+04:17 - And it doesn't have to be, like in the Gaussian case,
+04:20 - some known--
+04:24 - Z theta might not be something that is known analytically.
+04:27 - So you might not be able to know that the integral,
+04:29 - that this integral evaluates to the square root of 2 pi sigma
+04:33 - squared, right, because that only happens
+04:36 - when f theta is very simple.
+04:39 - If f theta is x minus mu squared,
+04:44 - then you get a Gaussian.
+04:45 - And then how to compute that integral analytically.
+04:48 - If you're thinking about the problem more abstractly,
+04:51 - as saying, OK, how do I come up with a way
+04:55 - of designing functions that are non-negative
+04:58 - and they are guaranteed to have some fixed integral?
+05:02 - How would you go about it, right?
+05:04 - One way is to kind of define a set of rules, almost
+05:08 - like an algebra, where you can start from objects that
+05:11 - have the properties you want.
+05:13 - And you can combine them to construct
+05:15 - more complicated objects that, again,
+05:17 - have the properties you want.
+05:19 - And one way to do it is what I was showing here
+05:22 - is you can take linear combinations
+05:26 - of these objects, convex combinations of these objects.
+05:28 - And that's one way of defining a new object that
+05:32 - still has the properties you want
+05:34 - in terms of simpler objects.
+05:36 - The latent variable would basically be the alpha--
+05:41 - the alphas are the probabilities that the latent bit.
+05:44 - Here, basically, this would correspond to a latent variable
+05:47 - model.
+05:47 - But there is a single latent variable, which can only
+05:51 - take two different values.
+05:54 - And it takes value, the first value with probability
+05:56 - alpha, the second value with probability 1 minus alpha.
+06:00 - And so that gives you that sort of behavior.
+06:04 - AUDIENCE: Thank you.
+06:05 - SPEAKER: But I think what you were saying about the Softmax is
+06:08 - another good example of essentially
+06:11 - an energy-based model.
+06:13 - Softmax is a way of defining--
+06:17 - essentially, if you think about a Softmax layer,
+06:21 - it has exactly this kind of structure.
+06:24 - And it is, in fact, a way of defining a probability
+06:28 - distribution over a set of-- over a categorical, basically,
+06:31 - random variable, which is the predicted label in terms
+06:35 - of a function f theta, which is just
+06:38 - the raw outputs of your neural network, which might not
+06:41 - be necessarily normalized.
+06:43 - So the Softmax is exactly this kind of thing.
+06:46 - But the Softmax is a case where this partition function,
+06:50 - this normalization constant, can be computed analytically
+06:53 - because you only have, let's say, k different classes.
+06:56 - So the Softmax will involve in the denominator
+06:59 - of the Softmax you have a sum over k
+07:01 - different possible outputs.
+07:04 - And so, in that case, this normalization constant
+07:08 - can actually be computed exactly.
+07:12 - We're going to be interested in settings, where
+07:15 - x, this integral, is going to be very
+07:20 - difficult to compute exactly because x is very high
+07:25 - dimensional.
+07:26 - So there is many different-- if you
+07:28 - think about a distribution over images,
+07:31 - x that it can take an exponentially large number
+07:36 - of different values.
+07:38 - So if you have to integrate over all possible images,
+07:41 - that's going to be a very expensive computation,
+07:44 - practically impossible to compute.
+07:46 - So that's kind of the difference between
+07:48 - the Softmax-style computation and what we're doing here.
+07:51 -
+07:55 - Cool, and so yeah, why do we use exponential?
+07:59 - Because we want to capture big variation.
+08:01 - The other reason is that, as we've seen,
+08:04 - many common distributions, like the Gaussian and the exponential
+08:08 - and all the ones in the exponential family,
+08:10 - they have this kind of functional form.
+08:13 - They have this flavor of something exponential,
+08:15 - of some simple function in the argument of the exponential.
+08:20 - And the reason these distributions are so common
+08:24 - is that they actually arise under fairly general
+08:26 - assumptions.
+08:28 - So they if you know about maximum entropy modeling
+08:37 - assumptions, which is basically this idea of trying to come up
+08:42 - with a distribution that, in some sense, fits the data
+08:46 - but minimizes all the other assumptions that you make
+08:48 - about the model, then it turns out
+08:50 - that the solution to that kind of modeling problem
+08:53 - has the form of an exponential family.
+08:55 - So that's why they are called energy-based models because this
+09:01 - also shows up a lot in physics.
+09:04 - Think about the second law of thermodynamics.
+09:06 - And in that case, minus f of x is called the energy.
+09:13 - And there is a minus because, if you think about physics,
+09:17 - configurations where you can imagine
+09:19 - x are the possible states that the system can be in,
+09:22 - states that have lower energy, so high f theta,
+09:27 - should be more likely.
+09:28 - So that's why there is the minus sign.
+09:31 - But that's why they are called energy-based models
+09:34 - because they are inspired by statistical physics,
+09:37 - essentially.
+09:38 -
+09:42 - So cool.
+09:44 - So that's the basic kind of paradigm
+09:49 - of an energy-based model.
+09:51 - You start with an arbitrary, essentially arbitrary
+09:56 - neural network, f theta.
+09:58 - You take an exponential to make it non-negative.
+10:01 - And then you divide by this normalization constant,
+10:05 - this partition function, which is
+10:06 - just the integral of this unnormalized probability.
+10:11 - And this, for any choice of theta,
+10:15 - defines a valid probabilistic model.
+10:17 - So it's guaranteed to be non-negative.
+10:20 - It's guaranteed to sum to 1.
+10:22 - And so from the point of view of flexibility,
+10:27 - this is basically as good as it gets.
+10:29 - There is no restriction essentially
+10:31 - on the f thetas that you can choose,
+10:34 - which means that you can plug in whatever architecture
+10:36 - you want to model the data.
+10:39 - The cons, there is many.
+10:41 - As usual, there is usually some price to pay.
+10:44 - If you want flexibility, you are basically
+10:46 - making less assumptions about the structure of your model.
+10:50 - And so there is a price to pay computationally.
+10:52 - And one big negative aspect of energy-based models
+10:59 - is that sampling is going to be very hard.
+11:01 - So even if you can fit the model,
+11:03 - if you want to generate samples from it,
+11:05 - it's going to be very tricky to do that.
+11:08 - So it's going to be very slow to generate new samples
+11:11 - from an energy-based model.
+11:13 - And the reason is that basically evaluating probabilities
+11:19 - is also hard because if you want to evaluate
+11:22 - the probability of a data point, you basically--
+11:25 - it's easy to get the unnormalized piece,
+11:28 - this exponential of f theta.
+11:29 - You just feed it through your neural network.
+11:31 - You get a number.
+11:32 - That gives you the normalized probability.
+11:34 - But somehow, to actually evaluate a probability,
+11:37 - you have to divide by this normalization
+11:38 - constant, which is, in general, very expensive to compute,
+11:44 - which hints at why also sampling is hard.
+11:48 - If you don't even know how to evaluate probabilities
+11:51 - of data points efficiently, it's going
+11:53 - to be pretty tricky to figure out how to generate,
+11:56 - how to pick an x which are the right probability.
+12:00 - Even evaluating the probability of a data point is hard.
+12:03 - Yeah, so sampling is hard.
+12:05 - Even if somebody gives you the p theta of a function,
+12:09 - it tells you, here's the model.
+12:12 - Basically, the problem is that sampling is hard
+12:16 - because, first of all, there is no order.
+12:18 - If you think about an autoregressive model,
+12:20 - there is no ordering.
+12:22 - So the only thing you can do is, as you will see,
+12:26 - there's going to be some kind of local type procedure
+12:28 - where you can try to use essentially a Markov chain Monte
+12:31 - Carlo kind of methods to try to go look for x's that
+12:34 - are likely essentially under the model.
+12:37 - But even evaluating likelihoods is not possible.
+12:42 - It's hard because that requires the normalization constant.
+12:45 - And so, in general, there is not going
+12:47 - to be an efficient way of generating samples
+12:51 - from these kind of models.
+12:53 - Yeah, so you can imagine, yeah, there is no ordering.
+12:56 - x is just a vector.
+12:58 - It gives your data.
+12:59 - And you just feed it into a neural network.
+13:01 - And then you get a number that is
+13:04 - like the unnormalized probability.
+13:06 - But that doesn't tell you how likely
+13:08 - that data point is until you know
+13:10 - how likely everything else is.
+13:12 - So you need to know the normalizing constant,
+13:15 - the partition function to know, even just
+13:18 - to know how likely a data point is.
+13:20 - And so, as you can imagine, even figuring out if you were
+13:23 - to sample from a distribution like that,
+13:25 - it's pretty difficult, right, because you cannot even--
+13:31 - if you wanted to even just invert the CDF kind of thing
+13:34 - that would require you to be able to evaluate probabilities,
+13:37 - so it's just it's just a very tricky thing to do.
+13:42 - As we'll see, it's hard but possible.
+13:48 - And in fact, if you think about a diffusion model
+13:51 - is essentially doing this.
+13:54 - So it's not going to be as straightforward
+13:56 - as just the sampling from a bunch of conditionals,
+14:00 - like in an autoregressive models.
+14:01 - We're going to have to do more work to sample from the model.
+14:06 - Evaluating probabilities will also
+14:07 - require some approximations or some other kind
+14:11 - of techniques that are much more sophisticated.
+14:13 - But yeah, these kind of idea of being able to essentially use
+14:19 - an energy-based model and be able to use whatever arbitrary
+14:21 - architectures to model your data actually paid off in a big time
+14:27 - if you think about the success of diffusion model, which
+14:31 - I think largely depends on the fact
+14:34 - that we're allowed to use very complicated neural networks
+14:38 - to model to model the data.
+14:39 -
+14:42 - And yeah, there is also no feature learning in the sense
+14:45 - that, at least in this vanilla formulation,
+14:49 - there is no latent variables.
+14:50 - But I guess that you can add.
+14:51 - So it's not really a big con in this case.
+14:56 - And the fundamental issue, the reason
+14:59 - why all these tasks are so hard is the curse of dimensionality,
+15:05 - which basically, in this case, means
+15:08 - that, because we want to have a lot of flexibility in choosing
+15:13 - f theta, we're not going to be able to compute
+15:15 - this integral analytically.
+15:18 - It's not like the Gaussian case, so we're not
+15:20 - going to be able to compute that in closed form.
+15:23 - And if you wanted to basically brute force it or use
+15:26 - numerical methods to try to approximate that integral,
+15:31 - the cost that you pay will basically scale exponentially
+15:35 - in the number of variables that you're trying to model.
+15:39 - And essentially, if you think about the discrete case,
+15:45 - there is the number of possible x's
+15:48 - that you would have to sum over grows combinatorially
+15:52 - in the number of--
+15:53 - grows exponentially in the number of dimensions
+15:56 - that you have.
+15:57 - And essentially, the same thing happens also
+15:59 - in the continuous world.
+16:01 - If you were to discretize and have little units of volume
+16:06 - that you use to cover the whole space,
+16:08 - the number of little units of volume that you need
+16:11 - will grow exponentially in the number of dimensions
+16:14 - that you deal with.
+16:16 - And so that's essentially the key challenge
+16:21 - of these energy-based models.
+16:22 - Computing this denominator is going to be hard.
+16:25 - So on the one hand, we're going to get flexibility.
+16:28 - On the other hand, there is this big computational bottleneck
+16:32 - that we have to deal with the partition function, basically.
+16:37 - And the good news is that there is
+16:40 - a bunch of tasks that do not require knowing the partition
+16:44 - function.
+16:46 - For example, if all you have to do is to compare,
+16:52 - you have two data points, x and x prime, and all you have to do
+16:55 - is to know which one is more likely.
+16:59 - So you just want to do a relative comparison between two
+17:03 - data points.
+17:04 - So you cannot necessarily, even though you might not be able
+17:08 - to evaluate the probability of x and the probability of x prime
+17:11 - under this model because that would require knowing
+17:14 - the partition function, if you think about what happens if you
+17:17 - take the ratios of two probabilities,
+17:20 - that does not depend on the normalization constant.
+17:24 - And if you take the ratio, both the numerator
+17:28 - and the denominator, they are both
+17:30 - normalized by the same constant.
+17:31 - And so that basically goes away.
+17:35 - If you think about the slices of pie,
+17:40 - if you're trying to just look at the relative size,
+17:42 - you can do that easily without knowing
+17:44 - the actual size of the pie, which means that we can check,
+17:52 - given two data points, we can check which
+17:54 - one is more likely very easily.
+17:56 - Even though we cannot know how likely it is,
+17:58 - we can check which one is more likely between the two.
+18:01 - And this is going to be quite useful when
+18:03 - we design sampling procedures.
+18:05 -
+18:08 - And you can still use it to do things like anomaly detection,
+18:13 - denoising, as we'll see when we talk about diffusion models also
+18:17 - relies on this.
+18:19 - And in fact, people have been using energy-based models
+18:23 - for a long time, even for a variety
+18:27 - of different basic discriminative tasks.
+18:32 - If you think about object recognition,
+18:36 - if you have some kind of energy function
+18:38 - that relates the label y to the image x,
+18:44 - and you're trying to figure out what is the most likely label,
+18:47 - then as long as you can compare the labels between them,
+18:50 - then you can basically solve object recognition.
+18:55 - And these kind of energy-based models
+18:57 - have been used to do sequence labeling,
+18:59 - to do image restorations.
+19:01 - As long as the application requires relative comparisons,
+19:05 - the partition function is not needed.
+19:08 - And as an example, we can think about the problem
+19:11 - of doing denoising, and this is like an old school approach
+19:15 - to denoising, where we have a probabilistic model that
+19:19 - involves two groups of variables.
+19:23 - We have a true image y that is unknown,
+19:26 - and then we have a corrupted image x,
+19:28 - which we get to observe.
+19:30 - And the goal is to infer the clean image given
+19:33 - the corrupted image.
+19:34 - And one way to do it is to have a joint probability
+19:38 - distribution, which is going to be an energy-based model.
+19:42 - And so we're saying that the probability of observing
+19:46 - a clean image y and a corresponding noisy image x
+19:51 - has this kind of this functional form, where there
+19:54 - is the normalization constant.
+19:55 - And then it's the exponential of some relatively simple function,
+20:00 - which is the energy or the negative energy in this case.
+20:04 - And this function is basically saying something
+20:07 - like there is some relationship between the i-th corrupted pixel
+20:12 - and the i-th clean pixel.
+20:14 - For example, they should be fairly similar.
+20:17 - So whenever you plug in xi and yi configurations
+20:22 - where xi is similar to yi should be more likely
+20:26 - because we expect the corrupted pixel more
+20:29 - likely to be similar to the clean pixel
+20:30 - than to be very different from it.
+20:33 - And then maybe you have some kind
+20:34 - of prior where the image is that is saying what choices of y
+20:39 - are more likely, a priori?
+20:41 - And maybe you have some kind of prior
+20:44 - that is saying neighboring pixels tend
+20:48 - to have a similar value.
+20:50 - Then you sum up all these interaction terms,
+20:53 - one per pixel.
+20:54 - And then maybe you have a bunch of spatial local interactions
+20:57 - between pixels that are close to each other in the image.
+21:00 - And that defines an energy function.
+21:03 - And if you want to do denoising, if you
+21:07 - want to compute given an x, you want
+21:09 - to figure out what is the corresponding y, what you would
+21:12 - do is you would try to find a y that maximizes p of y given x.
+21:17 - And if, even though p, the probability,
+21:20 - depends on the normalization constant,
+21:24 - basically, you can see that the normalization constant doesn't
+21:29 - matter.
+21:30 - So as long as you want to find the most likely solution,
+21:36 - what is the actual probability, so what is the--
+21:40 - 1 over Z just becomes a scaling factor.
+21:42 - And it doesn't actually affect the solution of the optimization
+21:45 - problem.
+21:46 - So it might be still tricky to solve the optimization
+21:49 - problem, in that you're still optimizing
+21:51 - on a very large space.
+21:53 - But at least it does not depend--
+21:56 - as long as you're maximizing the actual value,
+22:00 - basically all the y's are going to be divided by the same Z.
+22:03 - So again, it doesn't matter as long as you're going to be able
+22:07 - to compare two y's.
+22:08 - And that's all you need.
+22:10 - It's really all about there are a bunch of tasks.
+22:13 - Well, basically, what you care about is doing comparisons.
+22:17 - And to the extent that the task only involves comparisons,
+22:20 - then you don't actually need to know the partition function.
+22:24 - You may still need to have the partition function if you
+22:26 - want to train the models.
+22:27 - That's what's going to come up next.
+22:30 - But at least doing comparison is something
+22:34 - you can do without knowing the partition function.
+22:37 - That's another nice thing is that the derivative also
+22:39 - does not depend-- the derivative of the log probability
+22:41 - does not depend on the normalization constant.
+22:44 - So we're going to be able to use it to define
+22:48 - basically sampling schemes.
+22:50 - Yeah.
+22:51 -
+22:54 - Cool.
+22:56 - Now, another thing you can do is you can combine various models.
+23:00 - So let's say that you have a bunch of probabilistic models.
+23:06 - For example, it could be in different model families, maybe
+23:09 - a PixelCNN, a flow model, whatnot.
+23:13 - You could imagine that each one of them
+23:16 - is like an expert that will individually
+23:19 - tell you how likely is a given x according to which
+23:24 - each one of these three models.
+23:26 - And you could imagine what happens if you
+23:29 - try to ensemble these experts.
+23:32 - And for example, you could say, if all these experts are making
+23:37 - judgments independently, it might make sense
+23:39 - to ensemble them by taking a product.
+23:45 - And the product of these objects that
+23:48 - are normalized by themselves is not going to be normalized.
+23:53 - But we can define a normalized object
+23:55 - by dividing by this normalization constant.
+24:00 - And intuitively, this kind of way of ensembling
+24:04 - behaves like an end operator, where as long as one
+24:08 - of the models assigns 0 probability,
+24:11 - then the product evaluates to 0.
+24:14 - And this ensemble model will assign a 0 probability.
+24:18 - While if you think about the mixture model, where you would
+24:21 - say alpha p theta 1 plus 1 minus alpha p theta 2,
+24:26 - that behaves more like an or, where you're saying,
+24:29 - as long as one of the models assigns some probability,
+24:32 - then the ensemble model will also assign some probability.
+24:37 - Taking a product behaves more like an end.
+24:42 - But it's much trickier to deal with because you
+24:44 - have to take into account the partition function.
+24:49 - But this allows you to combine energy-based models,
+24:52 - combine models in an interesting way.
+24:55 - Like you can have a model that produces young people,
+25:03 - and then you have a model that produces females.
+25:07 - And then you can combine them by multiplying them together.
+25:10 - And then you get a model that is putting most of the probability
+25:13 - mass on the intersection of these two groups.
+25:16 - And you can get that kind of behavior.
+25:18 - So you can combine concepts.
+25:20 - As long as the different models have learned different things,
+25:23 - by ensembling them this way, you can combine them
+25:26 - in interesting ways.
+25:28 - The difference is, if you think about it,
+25:30 - the product, well, as long as one of them
+25:33 - basically assigns 0 probability, then the whole product
+25:37 - evaluates to 0.
+25:38 - And so the ensemble model, the product of experts
+25:41 - will also assign 0 probability.
+25:42 - If you think about a mixture, even if one of them
+25:45 - assigns 0 probability, as long as the others
+25:48 - think this thing is likely, that thing
+25:51 - will still have some probability.
+25:53 - And so it behaves more like an or in the sense that, as long
+25:57 - as it's a soft or.
+25:59 - How do we sample that?
+26:00 - That will come up how--
+26:01 - there are ways to do it.
+26:02 - It's just expensive.
+26:03 - So it's not impossible.
+26:06 - It's just like an autoregressive model.
+26:08 - It's very fast.
+26:10 - In energy-based model, you're going
+26:12 - to have to more compute basically at inference time
+26:15 - when you want to generate a sample.
+26:16 - That's kind of the price you pay.
+26:18 - Yeah, so you can see that if you have individual probability
+26:23 - density functions, so probability mass functions,
+26:26 - if you multiply them together you
+26:28 - get another function, which is non-negative, but is not
+26:33 - necessarily normalized.
+26:35 - So to normalize it, you have to divide by this partition
+26:39 - function.
+26:39 - And from that perspective, it's an energy-based model.
+26:42 - And so you can think of the energy of the product of experts
+26:46 - as being the sum of the log likelihoods
+26:50 - of each individual model because you can write p theta
+26:54 - 1 as exp log p theta 1, and the other one has x log p theta 2.
+26:59 - And then it's like the exp of the sum of the logs.
+27:02 - The problem is that the sum of the log likelihoods,
+27:06 - it's an energy.
+27:07 - And it's not guaranteed to be normalized by design.
+27:11 - And so you have to then renormalize everything
+27:15 - with this global kind of partition function.
+27:17 -
+27:20 - Cool.
+27:22 - Another example is the RBM, the Restricted Boltzmann machine.
+27:26 - This is actually an energy-based model with latent variables.
+27:29 - And this one is a discrete probabilistic model,
+27:35 - where both the visible variables,
+27:38 - let's say, our binary, and the latent variables
+27:41 - are also binary.
+27:42 - So you have n binary variables x, and m latent variables z.
+27:48 - Both of them, all the variables here are going to be binary.
+27:53 - For example, the x could represent pixel values,
+27:55 - and the z's, as usual, have latent features.
+27:59 - And the joint distribution between z
+28:02 - and x is an energy-based model.
+28:04 - And it's a pretty simple energy-based model in the sense
+28:07 - that there is the usual normalization constant.
+28:09 - There is the usual exponential.
+28:10 - And then the energy is just like a quadratic form,
+28:15 - where you get the energy by--
+28:17 - you have a W matrix.
+28:20 - You have a vector of biases basically,
+28:23 - b, another vector of biases, c.
+28:26 - And you map the values that the x variables have and the z
+28:32 - variables have to a scalar by just taking this kind
+28:36 - of expression, which is just a bunch of linear terms
+28:40 - in the x's, a bunch of linear terms in the z's.
+28:43 - And then there is this cross product
+28:45 - between the xi's and the zj's, which are weighted by this--
+28:51 - which weight in terms this weight matrix w.
+28:55 - And it's restricted.
+29:00 - It's called a Restricted Boltzmann machine
+29:01 - because basically in this expression
+29:04 - there is no kind of connection between the visible units
+29:09 - or the hidden units.
+29:11 - And so basically, there is no xi xj term in here.
+29:15 - There are interactions between the x variables
+29:18 - and the z variables but not between the x variables
+29:22 - or between the z variables by themselves.
+29:26 - Not super important, but the key thing
+29:30 - is that this is actually one of the very first important
+29:33 - for historical reasons.
+29:34 - It's one of the first deep generative models
+29:39 - that actually kind of worked.
+29:42 - They were able to train these models on image data
+29:47 - by stacking multiple RBMs.
+29:51 - So an RBM it's basically a joint distribution
+29:54 - between visible and hidden.
+29:56 - And then if you stack a bunch of them,
+29:59 - so you have visibles at the bottom,
+30:01 - then you have one RBM here.
+30:03 - Then you build an RBM between the hidden units
+30:07 - of the first RBM and some other hidden units of the second RBM,
+30:10 - and so forth, you get a Deep Boltzmann machine.
+30:16 - And the idea is that, OK, you have the pixels at the bottom.
+30:21 - And then you have a hierarchy of more and more abstract
+30:24 - features at the top.
+30:26 - And actually, it's actually pretty interesting
+30:30 - that very early days of deep learning people
+30:34 - were not able to train a deep neural networks very well.
+30:37 - Even in the supervised learning setting,
+30:41 - things didn't quite work.
+30:43 - And the only way they were able to get good results
+30:45 - was to actually pretrain the neural network
+30:48 - as a generative model.
+30:49 - So they would kind of choose an architecture,
+30:53 - which is like this Deep Boltzmann machine architecture.
+30:56 - They would train the model in an unsupervised way
+30:58 - as an RBM, so just as an energy-based model.
+31:01 - They would train the weights of these matrices
+31:05 - through some technique that we'll talk
+31:07 - about later in this lecture.
+31:09 - And then they would use that as initialization
+31:11 - for their supervised learning algorithms.
+31:14 - And that was the first thing that made deep learning work,
+31:17 - and it was the only thing that worked initially.
+31:20 - And they figured out other ways of making things work.
+31:23 - But yeah, it was actually quite important
+31:25 - for getting people on board with the idea of training
+31:29 - large neural networks.
+31:32 - And here you can see some samples
+31:34 - of this these kind of models.
+31:35 - Again, this is a long time ago, 2009.
+31:39 - But people were able to generate some reasonable
+31:42 - looking samples by training one of these Deep Boltzmann
+31:46 - machines.
+31:48 - And so you can see that the fundamental issue here
+31:57 - is the partition function is normalization constant.
+32:00 - And just by looking through an example in the RBM setting,
+32:04 - we can see why indeed computing the volume is hard.
+32:07 - If you think about even just a single layer
+32:10 - RBM, where you have these x variables, these z variables,
+32:16 - you have this energy-based model.
+32:18 - Computing the exponential of this energy function
+32:21 - is super easy.
+32:23 - It's just basically a bunch of dot products.
+32:26 - But the normalization constant is very expensive.
+32:29 - The normalization constant is going
+32:31 - to be a function of w, b, and c.
+32:33 - So the theta, the parameters that you
+32:35 - have in the model, which in this case
+32:37 - are these biases, b and c, and this matrix w.
+32:41 - But computing a normalization constant
+32:43 - requires you to go through every possible configuration,
+32:47 - every possible assignment to the x variable,
+32:49 - every possible assignment to the z variables,
+32:52 - and sum up all these unnormalized probabilities.
+32:56 - And the problem is that there is basically
+32:57 - 2 to the n terms in this sum, 2 to the m terms in this sum.
+33:02 - So you can see that, even for small values of n and m,
+33:06 - computing that normalization constant is super expensive.
+33:10 - It's a well-defined function.
+33:11 - It's just that if you want it to compute it--
+33:13 - it doesn't have a closed-form.
+33:15 - Unlike the Gaussian case, there is no closed-form
+33:18 - for this expression.
+33:20 - And brute forcing takes exponential time.
+33:23 - So we'll have to basically do some kind of approximation.
+33:28 - And in particular, the fact that the partition function
+33:31 - is so hard to evaluate means that likelihood
+33:34 - based training is going to be almost impossible because just
+33:37 - to evaluate the probability of a data point
+33:40 - under the current choice of the parameters
+33:43 - requires you to know the denominator in that expression.
+33:48 - And that's not generally known, and you're not
+33:51 - going to be able to compute it.
+33:54 - And so that's the issue.
+33:59 - Optimizing the unnormalized probability,
+34:02 - which is just the exponential, is super easy.
+34:05 - But you have to take into account, basically,
+34:09 - during learning, you need to figure out
+34:10 - if you were to change the parameters by a little bit,
+34:13 - how does that affect the numerator,
+34:15 - which is easy in this expression.
+34:18 - But then you also have to account
+34:20 - how does changing the parameters affect the total volume?
+34:23 - How does that affect the probability
+34:25 - that the model assigns to everything
+34:26 - else, all the possible things that can happen?
+34:29 - And that is tricky because we cannot even compute this
+34:32 - quantity.
+34:33 - So it's going to be hard to figure out
+34:35 - how does that quantity change if we
+34:37 - were to make a small change to any of the parameters.
+34:40 - If I were to change, let's say, b by a little bit,
+34:43 - I know how to evaluate how this expression changes
+34:46 - by a little bit.
+34:47 - But I don't know how to evaluate how this partition function
+34:49 - changes by a little bit.
+34:51 - And that's what makes learning so hard.
+34:54 - Yeah, so how do we generate, how do they learn?
+34:56 - We haven't talked about it.
+34:57 - That's going to come up next.
+34:59 - How do we do learning, and how do you sample from the models?
+35:03 - Yeah, the problem is that, learning is hard
+35:06 - because it requires-- evaluating likelihoods
+35:08 - requires the partition function, which you don't have.
+35:10 - Sampling, as we'll see, is also kind of hard.
+35:14 - But there are approximations that you can do.
+35:16 - And that's basically what they did.

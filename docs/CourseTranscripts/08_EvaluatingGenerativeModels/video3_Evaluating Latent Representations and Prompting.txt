@@ -1,1 +1,439 @@
-
+00:00 -
+00:05 - SPEAKER: Now, another thing you might
+00:07 - want to do with the model is to get features.
+00:11 - We've talked about this idea of doing unsupervised learning.
+00:14 - You have a lot of unlabeled data.
+00:16 - You might be able to get good features from the model.
+00:19 - How do you evaluate whether you have good features
+00:22 - or not, which you know already, what's
+00:26 - the task you are thinking about.
+00:29 - You're trying to get features because then
+00:31 - at the end of the day, you care about classifying.
+00:33 - You have a classification problem in mind.
+00:35 - Then you can always sort of measure the performance
+00:39 - on the downstream task.
+00:40 - So in that case, it's not too hard.
+00:44 - It's a lot more tricky to--
+00:47 - if you don't have a task in mind and you're just trying to say,
+00:50 - OK, is this model is producing better features
+00:52 - than this other model, then it's a lot more
+00:54 - tricky to be able to say something definitive there.
+00:59 - And there is different aspects that you
+01:05 - might want to consider if you are in the unsupervised setting,
+01:09 - where there is no task, there is no labels, so no objective way
+01:13 - of basically comparing different sort of representations
+01:16 - that you might get.
+01:17 - You might care about how good the model is at clustering,
+01:20 - maybe you care about compression,
+01:23 - maybe you care about disentanglement.
+01:25 - So maybe you care about this idea
+01:27 - that we briefly talked about that if you have a latent
+01:30 - variable model, you would like the latent variables to have
+01:32 - some kind of meaning, and maybe you
+01:34 - might want to be able to control different factors of variation
+01:37 - by changing the variables individually.
+01:40 - So that's what's kind of referred as disentanglement,
+01:43 - where the different variables have kind of separate meanings,
+01:46 - and they control different aspects
+01:48 - of the data-generating process.
+01:52 - So if you care about clustering, ideally, you
+01:57 - would to be able to group together data points
+02:01 - that have somehow the similar meaning,
+02:03 - or that they are similar in some way.
+02:05 - And this is all very cyclical, but that's the problem
+02:08 - with unsupervised learning.
+02:09 - And one thing you can do is you can
+02:11 - get-- you can take your VAE or your model that gives you
+02:16 - latent representations.
+02:17 - You can map points in to this feature space.
+02:22 - And then you can apply some kind of clustering
+02:24 - algorithm like k-means to group them together.
+02:27 - And so here's an example of the kind of thing,
+02:30 - you train two generative models on MNIST,
+02:32 - and then you map the data points to a two-dimensional latent
+02:35 - space.
+02:36 - And here the colors represent the different classes.
+02:39 - I don't even remember exactly what is B and what is D,
+02:42 - but these are two different models,
+02:44 - and they produce two different kind of embeddings of the data.
+02:49 - And you know, which one is better?
+02:54 - Is B better?
+02:55 - Is D better?
+02:57 - It's unclear.
+02:59 - They both seem to be doing something reasonable or kind
+03:01 - of data points belonging to the same class end
+03:05 - up being grouped together in this latent space.
+03:09 - It's not obvious which one you would prefer.
+03:11 -
+03:15 - So for labeled data sets, again, there
+03:18 - is many quantitative metrics.
+03:19 -
+03:23 - So if you do have labels that you use to--
+03:29 - use unlabeled data to come up with the clusters,
+03:32 - and then you use labels to evaluate
+03:34 - the quality of the clusters, then
+03:36 - there's a bunch of metrics, things
+03:38 - like the completeness score, homogeneity score, V measures.
+03:42 - I'm going to go through them quickly.
+03:43 - But there is a bunch of measures that you can use.
+03:46 - If you have a label data set, you
+03:48 - pretend you don't have the labels, you get representations.
+03:53 - You check-- you do clustering, and then you
+03:55 - can use the labels to see how good the clusters that you get
+04:00 - are.
+04:00 - And intuitively, what you want to do
+04:02 - is you would like to be able to group
+04:04 - together points that belong to the same class.
+04:07 - And so maybe you care about making sure
+04:10 - that all the points that belong to the same class end up--
+04:14 - land in the same cluster.
+04:16 - Or maybe you care about homogeneity within the clusters,
+04:19 - so you would like to make sure that all the points
+04:21 - that land in the same cluster have the same label, or maybe
+04:25 - some combination of these two scores.
+04:30 - So there's different metrics that you can use.
+04:32 - And again, if your project kind of involves something like this,
+04:37 - you can look into this into more detail.
+04:40 -
+04:43 - Another thing you might want to do
+04:44 - is to check how well basically the latent
+04:48 - representations preserve information
+04:51 - about the original data points.
+04:53 - So to what extent, basically, you can reconstruct data
+04:57 - given the latent representations, which
+04:59 - is kind of the task you care about
+05:01 - if you're trying to do Lossy compression.
+05:03 - So you have data.
+05:05 - It might make sense to map it to a latent representation,
+05:07 - especially if that latent representation is
+05:10 - lower dimensional.
+05:11 - And in this case, maybe, you care
+05:12 - about being able to reconstruct the original data point as
+05:15 - accurately as possible.
+05:17 - And so here you see some examples
+05:19 - of different representations.
+05:23 - And you have the original images on the top,
+05:27 - and then you can-- what you see here
+05:28 - is what you get if you map them to the latent space,
+05:31 - and then you try to reconstruct the image from the latent
+05:34 - representation.
+05:35 - And so you would like the reconstructions
+05:37 - to be as close as possible to the original data,
+05:41 - while basically reducing the size of the latent space
+05:45 - as much as possible.
+05:46 - So here, for example, they are looking
+05:48 - at different kinds of representations,
+05:51 - where maybe if you compress using JPEG,
+05:53 - you would get something like a 17x compression in your images
+05:58 - with a small loss in accuracy or quality.
+06:01 - While there are these other representations
+06:03 - that you get from training a generative model,
+06:07 - where, maybe, you can get something
+06:09 - like a 90x compression, meaning that the latent vectors
+06:13 - that you get by mapping data to the latent space
+06:17 - are much smaller than the original data points,
+06:20 - and still you're able to do very well at reconstructing
+06:23 - the original data points as measured
+06:25 - by kind of reconstruction metrics
+06:27 - like mean squared error or PSNR or SSIM.
+06:30 - Yeah, so here, these have reconstruction loss
+06:33 - embedded in them.
+06:35 - So it would make sense that they do reasonably well at that.
+06:38 - But if you had a different model,
+06:40 - maybe you're looking at the representation
+06:42 - that you get from a GAN, and you want to know,
+06:44 - are those better than the ones I have from my VAE?
+06:46 - It depends on what you want to do with this representation.
+06:49 - Do you care about clustering?
+06:51 - Do you care about reconstruction quality?
+06:54 - So this is one aspect that you might care about
+06:59 - if you're trying to compare two different types
+07:01 - of representations that you get in generative models.
+07:05 - Now, the other thing that you might care about the latent
+07:08 - space is disentanglement, the idea
+07:10 - that we would like these latent representations, the latent
+07:14 - variables to kind of capture independent and interpretable
+07:19 - attributes of the observed data.
+07:21 - Something like, if you have a generative model of faces,
+07:27 - maybe if you change one of the latent variables,
+07:29 - you change the skin color of the image you produce,
+07:32 - or maybe there is another latent variable that
+07:35 - controls the age of the people you
+07:38 - generate through this generative model, and so forth.
+07:42 - And so, for example, maybe there is a latent variable Z 1
+07:51 - that is controlling the size of the objects you produce.
+07:54 - So if you don't change Z 1, then the size of the object
+07:57 - never changes.
+07:58 - And as soon as you change the Z 1,
+08:00 - then you change the sizes of the objects you produce.
+08:04 - Or yeah, that sort of would be the ideal outcome--
+08:08 -
+08:11 - kind of PCA, but in a non-linear way.
+08:18 - You find important aspects, latent factors of variation
+08:21 - in the data, and then you're able to control them separately,
+08:24 - essentially.
+08:26 - And again, there is many metrics that people have come up with,
+08:31 - for example, the accuracy of a linear classifier
+08:35 - that tries to predict a fixed factor of variation
+08:38 - and a bunch of others that I'm not going to go over.
+08:41 - But there are some libraries that
+08:43 - would allow you to compute these metrics.
+08:46 - So if you're doing a project around disentanglement,
+08:50 - this might be a good resource to look into.
+08:53 - And the kind of unfortunate aspect
+08:56 - here is that it's provably impossible
+08:59 - to learn a generative model that is disentangled if you only
+09:04 - have unlabeled data.
+09:06 - So if you never get to see the true kind of latent
+09:09 - factors of variation, there is no labels associated
+09:12 - with these factors that you're trying to discover from data,
+09:15 - it's actually provably impossible to do this.
+09:19 - So there has been some empirical success,
+09:22 - but it's not well understood why these methods work,
+09:25 - and there is some theoretical results showing that it's
+09:27 - actually not possible.
+09:28 - So I guess there are some limitations there.
+09:31 -
+09:35 - Cool.
+09:36 - Now the other thing that, of course, is very, very popular
+09:41 - these days is this idea that if you are working with a language
+09:47 - model, perhaps you don't care about going
+09:51 - through this process of, let's take the data,
+09:53 - let's map it to a latent space, and then
+09:55 - let's try to somehow use these representations to improve
+10:00 - performance in some kind of downstream task.
+10:03 - If you have a generative model of language,
+10:06 - then you might be able to directly use
+10:09 - the model to solve tasks that involve language
+10:12 - by basically asking--
+10:13 - by specifying the tasks in natural language.
+10:16 - So there are kind of two different ways
+10:17 - of using the generative model.
+10:19 - You could try to train the generative model
+10:22 - in an unsupervised way, and then try to leverage the knowledge
+10:25 - that it discovered by mapping data points in this latent
+10:28 - space, and then training classifiers
+10:30 - the usual way on these latent representations.
+10:32 - Or if you're working with a language model,
+10:38 - then there is this idea of pre-training the model,
+10:42 - using a lot of unlabeled data, and then trying
+10:45 - to adapt it, for example, through
+10:47 - prompts to actually get it to solve
+10:50 - a variety of different tasks.
+10:52 - So even though these models have been
+10:53 - trained by maximum likelihood, which
+10:55 - we know is just compression, we know that they are--
+10:59 - if they do well at compression, it
+11:01 - means they've learned something about the structure of the data,
+11:03 - they've memorized a lot of interesting things,
+11:06 - and then the hope is that we can leverage
+11:08 - that knowledge in different kinds of downstream tasks.
+11:12 - So for example, let's say that you
+11:15 - are doing sentiment analysis, where you're basically given,
+11:19 - let's say, a review, maybe of a movie,
+11:22 - and the goal is to predict whether the sentiment
+11:24 - of that review is positive or negative.
+11:28 - It's a classic NLP task.
+11:31 - How would you use a language model to solve this problem?
+11:35 - And the idea is that because we're working with natural
+11:38 - language, what you could do is you could try to-- so we have--
+11:42 - our interface is a model that takes a sentence
+11:44 - and predicts the next word.
+11:46 - Let's say it's an autoregressive model.
+11:47 - It takes up a piece of language, and then it
+11:50 - predicts the next word.
+11:52 - Then what you can do is you can craft the sentence here
+11:56 - such that this prediction is the only thing the model can do,
+12:00 - predict the next word, given the previous text is actually
+12:04 - solving the task for you.
+12:06 - And so what you can do is you can construct a sentence like,
+12:09 - classify the sentiment of the movies
+12:11 - below as either positive or negative.
+12:13 - Then you give it an example of a movie review,
+12:17 - which is positive maybe.
+12:18 - This has got to be one of the best episodes, blah, blah, blah,
+12:21 - with a positive sentiment, and then you
+12:23 - give it another example, maybe, with negative sentiment.
+12:26 - And then you have this review that you'd like to classify,
+12:29 - and then you fit in the text of the review,
+12:33 - and then you have sentiment, and then blank.
+12:37 - And then you use the model to predict the next word.
+12:39 - You use the model to predict what goes--
+12:42 - what should you replace blank with?
+12:44 - which is exactly consistent with the API of the model, which is,
+12:47 - predict the next word given some context.
+12:51 - Then if the model predicts positive,
+12:54 - then you're going to classify this as a positive example.
+12:56 - And if the model outputs negative there,
+12:59 - then they're going to classify it as a negative example.
+13:01 - And so this is an example of prompting.
+13:04 - And of course, there are many smarter ways of doing it.
+13:07 - There's a whole prompt engineering kind of job
+13:10 - where people supposedly are good at extracting knowledge
+13:13 - from the models by crafting smart prompts.
+13:17 - But that's the basic idea, getting the knowledge
+13:19 - from these generative models by kind
+13:23 - of crafting prompts such that that encode the kind of task
+13:29 - that you want to solve without actually
+13:31 - going through representations.
+13:33 - Of course, it's also possible to just fine-tune
+13:35 - the model, which is closer to the idea of getting
+13:38 - representations.
+13:40 - You could also just take the model
+13:42 - and then fine tune it to solve the tasks you care about.
+13:45 - So presumably, the pre-trained model
+13:48 - is already mapping the inputs like a sentence
+13:50 - here, to some representation that
+13:52 - is good for predicting the next word.
+13:55 - So you might be able to fine-tune the model
+13:56 - to do something interesting.
+13:58 - That's also quite successful.
+14:01 - I think prompting is perhaps nicer
+14:03 - because it doesn't involve any training that is somewhat
+14:06 - special for language models.
+14:09 - And it tends to work pretty well,
+14:11 - especially if the language model is a very powerful one.
+14:16 - And again, what kind of tasks are you going to consider?
+14:23 - That's still a pretty much a-- very much
+14:25 - an open problem in terms of, which generative model
+14:29 - of language is better?
+14:31 - There's many of them out there.
+14:33 - How can you say whether model A is better than model B?
+14:37 - And you have compute perplexity, which is the same as likelihood
+14:41 - but does not quite reflect what we care about.
+14:45 - Maybe what we care about is all these kind of scenarios
+14:48 - that we might want to be able to ask questions to the language
+14:53 - model, or we might want to ask it to do movie reviews for us,
+14:58 - or whatever it is that we care about, or do math,
+15:01 - or solve riddles for us, or do question-answering.
+15:05 - And so again, this is a space where it's not clear what
+15:09 - is the right task to consider.
+15:12 - And so one way to go about it is to consider
+15:15 - a lot of different tasks, a lot of different scenarios,
+15:17 - a lot of different metrics because maybe you
+15:21 - care about accuracy, but maybe you care about other things.
+15:24 - And you can try to see how these different models that exist out
+15:29 - there perform on all these different tasks.
+15:33 - So you can consider different scenarios.
+15:35 - You can consider different adaptation strategies,
+15:39 - let's say, different prompting strategies.
+15:41 - You can have different metrics, for example, accuracy,
+15:45 - or whatever it is when you use the model to solve
+15:47 - the task that way.
+15:48 - And then you can compare many of the existing
+15:51 - models that are out there with respect to all these metrics.
+15:54 - And that allows you to, maybe, say, in a more precise way,
+15:58 - this model is better than this other model with respect
+16:01 - to these metrics on these kind of scenarios.
+16:03 - So then there is different efforts out there.
+16:05 - There is one from Stanford, HELM, that
+16:08 - looked at a lot of different metrics,
+16:09 - a lot of different scenarios, a lot of different--
+16:12 - which is very thorough.
+16:14 - There is one that was led by Google, where they also--
+16:17 - was more like collaborative effort,
+16:20 - where they ask all the people around the world
+16:22 - to come up with tasks.
+16:23 - And then they are all part of this big benchmark where there
+16:28 - is over 200 tasks that you can ask your language
+16:32 - model to solve, and you can see the performance
+16:35 - that you get across these different tasks.
+16:38 - Yeah, I think it's a good question
+16:41 - that somehow the prompting idea has not quite
+16:45 - been applied so heavily to the-- so if you have a good generative
+16:49 - model of images, how can you use it
+16:52 - to solve tasks through prompts?
+16:54 - And it's not as natural because the output is an image.
+16:56 - And instead of-- it's easy to think of the output
+16:59 - to map, say, labels to text, or even bounding boxes to text.
+17:07 - And so if the API of your model has text as an output,
+17:11 - it's relatively easy to use it to solve a variety of tasks.
+17:15 - I think it's a bit less natural if you think
+17:17 - of-- if the API has images as an output,
+17:20 - but it might be possible.
+17:21 - I think it's an interesting kind of area
+17:23 - that people are still exploring.
+17:24 - And yeah, I don't think there's anything particularly good
+17:27 - there, but, yeah.
+17:29 - The underlying mechanics is just predicting the next word.
+17:33 - And then it has been probably done something
+17:37 - like instruction fine-tuning.
+17:38 - So it has been actually pre-trained
+17:41 - on a lot of unsupervised text, just predicting the next word.
+17:44 - That's just compression is not-- it wouldn't probably
+17:47 - do very well if you start asking questions in a zero shot way.
+17:51 - So what you have to do is you have to sort of fine-tune it
+17:53 - on a slightly different kind of data set that is emphasizing
+17:57 - more the sort of tasks that you might expect the model
+18:01 - to be asked at inference time.
+18:04 - And again, there is a little bit of a question
+18:06 - of what is the right way of--
+18:08 - what kind of task?
+18:09 - What is the right distribution?
+18:10 - Do we care about movie reviews?
+18:12 - Or do we care about question-answering?
+18:13 - And how do we weight those tools?
+18:16 - It's not clear what's the-- that seems to help,
+18:19 - but we don't yet have a good handle in terms of evaluating
+18:24 - or seeing what works and what doesn't.
+18:26 - It's very coarse at the moment.
+18:28 - We're doing actually like using similar things in--
+18:31 - like just right now we're basically working on applying--
+18:34 - I mean, now we're not the only ones.
+18:36 - But people are trying to do basically--
+18:40 - you train a model on all the images on the internet.
+18:43 - But then maybe you really have some--
+18:44 - there's some kind of underlying preference
+18:47 - that we would the model to generate images
+18:51 - with higher aesthetic value, or maybe we
+18:53 - would the model to be non-toxic, or we would the model
+18:56 - to be more fair, less biased, and how do you adapt the model
+19:00 - to that kind of downstream use.
+19:05 - And so what you can do is you can collect preference data,
+19:08 - and maybe you can show--
+19:09 - you can have a caption, you produce two images,
+19:13 - and you ask a user, which one do you prefer?
+19:15 - You get preference data on what we like and what we don't like.
+19:18 - And then you can fine-tune the diffusion model
+19:21 - to be more consistent with this kind of preference data.
+19:24 - So that's possible, too.
+19:26 - Yeah so prompting is great because you
+19:28 - don't have to actually-- you don't have to have access
+19:31 - to any compute, and you don't even
+19:33 - need to know how to program.
+19:34 - The only thing you need to do is you
+19:36 - need to be able to specify a natural language, what
+19:38 - you want the model to do.
+19:40 - And so it can be completely done in a black box way,
+19:44 - without even having to know what the model is
+19:46 - doing, what the weights are.
+19:49 - Fine-tuning requires you to actually train
+19:52 - the model for a little bit, at least, on some new data,
+19:56 - or some new task, or something new.
+19:58 - So the bar is a lot higher in terms of the cost
+20:02 - and the expertise that is required for that.
+20:05 - The takeaway, a very high-level messages,
+20:07 - is it's still a pretty much--
+20:09 - it's still a pretty open kind of area
+20:11 - how to evaluate generative models.
+20:14 - That is still a lot more than we don't.
+20:15 - We have some coarse ways of comparing models.
+20:19 - And we have a sense of, OK, we're
+20:20 - making progress over the years, but there is a lot more work
+20:25 - to be done in this space in terms of coming up
+20:27 - with better metrics.
+20:28 - And even if you have all these large-scale benchmarks,
+20:34 - we have a lot of tasks, a lot of metrics,
+20:36 - it's still not obvious how you weight them
+20:38 - and what is the right distribution of tasks you might
+20:40 - expect to use the model on.
+20:42 - And so, yeah, lots of work to be done in this space.
+20:46 - But hopefully this was helpful.
+20:47 - I know many of you are starting to get
+20:50 - into the weeds of the project.
+20:52 - And so I'm sure you have a lot of questions
+20:54 - on how to evaluate models.
+20:56 - And so hopefully, you got a sense of what's out there.
+20:59 - Unfortunately, we don't have any definitive answer yet,
+21:01 - but at least it gives you some ideas
+21:03 - of the kind of things you can use for the project.

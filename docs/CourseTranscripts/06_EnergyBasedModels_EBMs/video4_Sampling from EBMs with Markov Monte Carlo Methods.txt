@@ -1,1 +1,446 @@
-
+00:00 -
+00:05 - SPEAKER: Cool.
+00:05 - So the plan for today is to continue
+00:09 - talking about energy-based models which
+00:12 - is going to provide a lot of the foundation
+00:14 - also to discuss score based models and diffusion models.
+00:18 - Just as a recap, this is our usual slide kind
+00:22 - of providing an overview of all the different things we've
+00:26 - been discussing in this course so far.
+00:30 - Energy-based models provide you yet another way
+00:33 - of defining a very broad set of probability distributions
+00:38 - and it's like expanding that green set which potentially
+00:44 - would allow you to get closer to the true data distribution.
+00:49 - The nice thing about energy-based models
+00:51 - is that they are defined in terms
+00:54 - of this energy function f theta which can basically be anything.
+00:59 - So you can pick whatever neural network architecture you want.
+01:04 - And by using the expression that you see there,
+01:08 - you get a valid probabilistic model
+01:10 - where essentially you can get the likelihood of a data point
+01:15 - by looking at the unnormalized probability which
+01:18 - is what you get in the numerator of that expression
+01:20 - and then dividing by the total unnormalized probability that
+01:25 - exist and so which is just the sum
+01:28 - of the numerator over all possible things that can happen.
+01:30 - So kind of probabilities are defined
+01:35 - relatively to this partition function normalization
+01:38 - constant which depends on the parameters of the model, that's
+01:42 - like the crucial thing.
+01:44 - And the problem is that typically evaluating Z theta
+01:49 - is intractable because we are interested in modeling random
+01:54 - variables, so multiple random variables or random vectors x
+01:58 - with many different components, which
+02:00 - means that there is a huge number of possible x's
+02:04 - that you would have to consider in order
+02:06 - to compute the normalization constant
+02:08 - which means that evaluating the probabilities of data points
+02:13 - is generally going to be intractable.
+02:15 - You can always evaluate the numerator very easily
+02:18 - but it's very hard to evaluate the denominator
+02:20 - in that expression.
+02:21 - And the good thing is that comparing the probabilities
+02:26 - of two data points is actually easy
+02:28 - and this is important for sampling.
+02:30 - So if you want to know you have an x
+02:32 - and an x prime which could be two images for example.
+02:35 - You cannot easily evaluate how likely is any of the two
+02:40 - according to the model, but it's easy to figure out which one is
+02:43 - more likely because the ratios of two probabilities when you
+02:48 - take the ratio basically the two normalization constants,
+02:50 - they cancel.
+02:51 - And so it's easy to evaluate that expression in terms
+02:55 - of whatever energy function, whatever
+02:57 - neural network you use to represent theta.
+03:01 - And the price you pay is that once again,
+03:07 - evaluating likelihoods is expensive
+03:09 - and so if you wanted to train the model by maximum likelihood,
+03:13 - you would need to somehow be able to evaluate for every data
+03:16 - point this expression or the log of this expression which
+03:22 - would be something like this.
+03:23 - And the problem is that you have two terms that depend on theta
+03:27 - and so whenever you want to figure out how to adjust theta
+03:31 - or how to pick theta to maximize the probability of a training
+03:34 - data point, you need to figure out
+03:36 - how to adjust the parameters of your neural network
+03:38 - to increase the numerator, the unnormalized probability
+03:42 - of this training data point, which is always easy.
+03:45 - But then you have to worry about how does changing theta affect
+03:48 - the normalization constant?
+03:50 - So by how much are you changing the probabilities of everything
+03:53 - else that could have happened?
+03:56 - And so you need to figure out how to change theta so that this
+04:00 - increases while the partition function,
+04:02 - the log normalization constant ideally
+04:05 - also goes down so that the relative importance,
+04:08 - the relative weight of this training data point
+04:10 - goes up as much as possible.
+04:13 - And again, doing this is hard because we
+04:15 - don't know how to evaluate the normalization constant exactly.
+04:19 - So it's different from a likelihood based model,
+04:23 - like an autoregressive model where this partition function
+04:26 - Z theta is guaranteed to be 1 regardless of how you choose
+04:29 - the parameters of your conditionals
+04:31 - for example, in which case you don't have to worry about
+04:35 - if you were to change some parameters
+04:37 - in your neural network, how does the partition function change
+04:41 - because it's constructed by design
+04:43 - to be 1 regardless of how you choose your parameters.
+04:46 - So you basically only have the first term
+04:49 - when you train an autoregressive model and it's easy to optimize
+04:53 - and you don't have the issues that we have here.
+04:57 - What we've seen is that it's relatively straightforward
+05:00 - to come up with sample based way of describing an approximation
+05:12 - of the log partition function.
+05:14 - And in particular we've seen that there
+05:17 - is this contrastive divergence kind of algorithm that
+05:20 - will give us a way of evaluating gradients of the log likelihoods
+05:25 - which is what you will need if you wanted to update
+05:28 - your parameters to maximize the probability of a data point.
+05:31 - You will need to evaluate the gradient of this expression
+05:34 - here that we're maximizing and it turns out
+05:37 - that it's not too hard actually to figure out
+05:40 - how the gradient of the log partition function, how the log
+05:44 - partition function changes as a function of theta
+05:46 - or what's the gradient of the log partition
+05:48 - function if you have access to samples from the model.
+05:52 - And so if you can somehow sample from the model which
+05:57 - we know unfortunately is also relatively hard,
+05:59 - but if you have access to samples from the model,
+06:02 - then you can get an estimate for the gradient
+06:06 - of what you care about by basically looking
+06:09 - at the gradient of the energy on the training
+06:12 - data versus the gradient of the energy on the samples
+06:16 - that you generate from your model.
+06:18 - So this is a fairly intuitive explanation
+06:22 - where we're saying is we're trying to figure out
+06:25 - in which direction we should not update theta to increase
+06:28 - the probability of the training data
+06:31 - or decreasing the probability of some alternative fake synthetic
+06:38 - data that is produced by our model.
+06:41 - And by doing that you're actually figuring out
+06:46 - how the log partition function changes as a function of theta,
+06:49 - that's the right expression so to the extent
+06:51 - that you can generate samples from your model.
+06:53 - Then you have this contrastive divergence
+06:55 - and it's contrastive because you're comparing or contrasting
+06:58 - the real data and you're contrasting it
+07:02 - to samples from the model.
+07:03 - And so you just need to figure out
+07:05 - how to adjust your parameters to basically by following
+07:12 - that expression that contrasts real data
+07:15 - to fake samples from the model.
+07:18 - So the gradient of log Z theta would be the figuring out
+07:22 - if you were to change the parameters by a little bit,
+07:24 - how does the partition function change?
+07:26 - So how does the total unnormalized probability
+07:30 - that you have change?
+07:32 - So if you remember the analogy of the cake
+07:34 - that we're dividing up into slices,
+07:37 - this term is basically saying what is the size of the slice
+07:42 - that we assign to a particular data point.
+07:44 - The outer term is telling you how much
+07:46 - does the size of the whole cake change?
+07:49 - And because everything is relative to the size,
+07:53 - you have to figure out that, to figure out
+07:55 - how to push up the probability of a data point.
+07:57 - Because it's not the size of the slice that matters,
+08:00 - it's the relative size of the slice
+08:01 - versus the total cake, the total amount
+08:04 - of unnormalized probability.
+08:05 - And this is the gradient of the log partition function
+08:09 - which we can approximate with samples basically.
+08:14 - The log partition function would be
+08:16 - the log of this size of the whole cake basically.
+08:19 -
+08:21 - Cool.
+08:22 - So that was like a recap and so training energy-based models
+08:29 - by maximum likelihood is feasible to the extent
+08:32 - that you can generate samples.
+08:34 - And we've seen one recipe for generating samples
+08:38 - from an energy-based model, which is this idea of setting up
+08:41 - a Markov chain, so using this technique called Markov chain
+08:46 - Monte Carlo, where essentially the way to generate a sample
+08:50 - is to initialize the procedure by sampling x0
+08:59 - from some distribution.
+09:00 - Turns out it doesn't matter what that is,
+09:02 - but if you think about you're trying
+09:04 - to sample a distribution over images,
+09:06 - you start with some image.
+09:08 - Doesn't matter what that image is at time 0
+09:12 - and then you basically try to make changes to this image,
+09:17 - to this candidate sample that you have to essentially try
+09:21 - to make it more likely.
+09:22 - Like if you sample from this distribution pi, which
+09:26 - you initialize your algorithm with, this could be really bad.
+09:29 - It could be just set values of the variables
+09:32 - uniformly at random.
+09:34 - So you start with pure noise, and then you
+09:37 - need to figure out how to change the pixel values to go
+09:39 - towards high probability regions.
+09:42 - And there is a principle way to do
+09:43 - it, which basically involves trying to perturb,
+09:47 - try to change your data point a little bit.
+09:50 - If it's continuous you might want to add noise,
+09:52 - if it's discrete maybe you change
+09:54 - the value of a single pixel, something like that.
+09:57 - It turns out you can basically do many different things
+10:01 - and they all work.
+10:03 - And that way you propose a new sample x prime.
+10:09 - Sometimes making this little change by adding noise
+10:12 - is good in the sense that you go towards higher probability
+10:16 - regions and sometimes it's not.
+10:18 - And so what the algorithm does is
+10:20 - it checks basically how good this proposed sample is compared
+10:25 - to where you are right now.
+10:27 - And remember, this is good because in an energy-based model
+10:31 - although we cannot evaluate likelihoods,
+10:34 - we can always compare two data points.
+10:36 - So we can always check whether this sample x prime
+10:40 - that we generate by making some local small change
+10:43 - to the current best guess is better or worse than what
+10:47 - we have.
+10:48 - And if it's better, meaning that the unnormalized probability
+10:52 - of x prime is larger than a normalized probability
+10:55 - that we have before we did the perturbation.
+10:59 - Then we accept the transition and we say,
+11:01 - OK, we're making progress, the state at time t plus 1
+11:05 - is this new sample x prime that we generated.
+11:09 - And if not then with some probability which depends on
+11:14 - basically how bad this proposed sample x prime is we
+11:18 - accept the transition anyways.
+11:20 - In general, this machinery works regardless of how you do it.
+11:24 -
+11:27 - Meaning that in theory at least under some mild conditions
+11:32 - on how you add noise, if you were
+11:35 - to repeat this procedure for a sufficiently large number
+11:38 - of steps, what you get converges to a sample
+11:43 - from the true energy-based model.
+11:46 - So you can picture this in your head
+11:47 - as some local search or some stochastic hill
+11:52 - climbing procedure where you're trying to move around
+11:57 - this space of possible samples looking for high probability
+12:00 - regions.
+12:01 - And the way you do it is you always accept uphill moves
+12:06 - and with some small probability and occasionally you
+12:09 - accept downhill moves.
+12:11 - When the height of the hill would
+12:13 - be the likelihood or the log likelihood
+12:16 - or the unnormalized log probability assigned
+12:19 - by the model.
+12:21 - And the reason this works is because this operator satisfies
+12:27 - something called detailed balance,
+12:30 - meaning that if we denote Txx prime to be
+12:35 - the probability of transitioning from one state
+12:38 - to another state x prime, we have the following
+12:42 - condition and the probability of being
+12:44 - an x under the true distribution we're trying to sample from
+12:48 - and transition into x prime is the same
+12:50 - as the probability of being in x prime and doing the reverse move
+12:54 - going back to x.
+12:56 - You can see that this is true because either x or x prime is
+13:03 - going to have higher probability,
+13:04 - let's say x prime has higher probability than x,
+13:07 - then the transition from x to x prime is this t is 1
+13:11 - and the probability of going from x prime to x
+13:13 - is exactly the ratio of p theta x over p theta x prime which
+13:17 - is the probability with which we accept a downhill move.
+13:22 - And it turns out that if that condition is true,
+13:27 - then basically p theta is basically
+13:30 - a fixed point of this operator that we're
+13:33 - using to propose new states, meaning that if at some point xt
+13:40 - is distributed according to p theta,
+13:43 - then xt plus 1 is also distributed according
+13:46 - to p theta.
+13:48 - And what you can show is that under some condition,
+13:51 - you actually converge to this fixed point.
+13:55 - So p theta is a fixed point of this operator
+13:59 - and you get there regardless of where you start from.
+14:02 - So regardless of how you choose this pi,
+14:05 - how you initialize your sample, eventually
+14:07 - xt is going to be distributed as p theta which
+14:10 - is what you want because it's a fixed point of this operator.
+14:16 - And I'm not doing justice to this topic,
+14:20 - you could probably do a whole course on MCMC methods
+14:23 - but for our purposes, the important thing to note
+14:28 - is that there are ways of sampling from energy
+14:30 - based models namely MCMC.
+14:33 - In principle they work, in practice
+14:37 - what happens is that you typically
+14:38 - need a very large number of steps
+14:41 - before you get something good.
+14:43 - So you can imagine if you were to start
+14:46 - let's say x is an image, you start with random pixel values
+14:51 - and then you change them one at a time,
+14:53 - it's going to take a lot of changes
+14:54 - before you get to something that has the right structure
+14:59 - even though you have guidance provided by this f theta.
+15:02 - So you know when you're making mistakes
+15:04 - and when you don't, it's still going to take a lot of steps
+15:07 - before you get something that is good.
+15:11 - And so that's the problem of energy-based models
+15:15 - is that even if you have an energy-based model trained
+15:18 - somebody gives you the right f theta, generating a sample
+15:22 - is expensive.
+15:23 - So that's the price you pay, you have a very flexible model
+15:27 - but sampling from it is expensive.
+15:30 - Note that if you wanted to train a model
+15:33 - by contrastive divergence, you have to generate samples
+15:35 - over and over during training.
+15:37 - So it's not just something you have
+15:40 - to do during inference time, but even during training
+15:43 - if you wanted to use contrastive divergence you would have
+15:45 - to somehow use this procedure.
+15:48 - So very, very expensive, very, very difficult.
+15:53 - A slightly better version which was
+15:55 - kind of just proposed of this procedure
+16:00 - is something called Langevin dynamics
+16:02 - which is essentially a special case of what we've seen before.
+16:06 - And basically it works the same in the sense
+16:09 - that you start by initializing this process somehow,
+16:13 - let's say a random image, and then you still do your steps,
+16:20 - still an iterative procedure where
+16:21 - you're trying to locally change your sample into something
+16:25 - better.
+16:27 - But the way you do it is by trying
+16:31 - to go in a direction that should increase
+16:37 - the probability of your sample.
+16:39 - So what you do is the way you produce
+16:44 - this perturbed version of xt is by doing
+16:49 - a step of noisy gradient ascent where you modify xt
+16:57 - in the direction of the gradient of the log likelihood.
+17:00 - Here I'm assuming that x is continuous,
+17:02 - this only works on continuous state spaces.
+17:07 - And so the gradient of the log likelihood evaluated at xt
+17:12 - tells you in which direction you should perturb your sample
+17:16 - if you want it to increase the likelihood most rapidly.
+17:20 - And then you basically follow the gradient
+17:22 - but you add a little bit of noise.
+17:24 - And the reason is that just like before, we
+17:27 - don't want to be greedy, we don't
+17:29 - want to always optimize the likelihood,
+17:31 - we want to also explore.
+17:32 - So we want to occasionally take moves
+17:36 - that decrease the probability of our sample
+17:39 - just because we want to be able to move around
+17:41 - and explore the space of possible images.
+17:44 - But essentially it is really take your sample,
+17:48 - follow the gradient, and add a little bit of Gaussian noise
+17:51 - at every step rescaled in some way.
+17:54 -
+17:57 - And you always accept the transition
+17:59 - at least in this version of the algorithm.
+18:01 - There is also a version of this where you accept and reject
+18:05 - like the previous algorithm I described but it turns out
+18:09 - you don't even have to accept or reject,
+18:12 - you can always move to xt plus 1 regardless of
+18:16 - whether you land in a state that has higher or lower probability
+18:22 - than where you start from.
+18:23 - And you can prove that under some technical conditions,
+18:27 - again, this procedure converges to a sample
+18:30 - from the distribution defined by the energy-based model
+18:34 - in the limit of a large number of iterations.
+18:37 - So the reason we're using epsilon
+18:39 - is that, that controls the step size.
+18:42 - So it's kind of like the step size in gradient ascent
+18:45 - or descent and it turns out that for things to work,
+18:49 - you have to balance the amount of noise
+18:52 - that you add has to be scaled with respect to how much you
+18:59 - scale the gradient.
+19:01 - So it has to, basically you need to keep
+19:02 - the ratio between the amount of noise, the signal to noise,
+19:07 - gradient to noise ratio has to be scaled that way
+19:10 - to be able to guarantee this condition.
+19:14 - In theory, yes, so it's only guaranteed
+19:16 - to work in the limit of a basically stepsize
+19:21 - is going through 0.
+19:22 -
+19:24 - In practice, you would use a small stepsize
+19:27 - and hope that it works.
+19:30 - Because we're not doing accept and reject here,
+19:33 - so if you remember this version here,
+19:37 - sometimes we stay where we are and sometimes we
+19:41 - accept or reject based on that.
+19:42 -
+19:46 - Basically here I didn't really say
+19:49 - how I produced this perturbed version, I just said add noise
+19:55 - but in practice it turns out you can do it any way you want
+19:58 - and it still gives you a valid algorithm basically.
+20:02 - So if you define a way you add noise to it
+20:04 - by saying I follow the gradient and I
+20:06 - add a little bit of Gaussian noise, that
+20:09 - defines a valid procedure of proposing new data points.
+20:12 - And as long as you balance it, then you
+20:15 - would have a valid procedure regardless even when
+20:18 - epsilon is large.
+20:20 - You would still have the problem that basically you might accept.
+20:28 - Then you have accept and reject, so sometimes you get stuck
+20:31 - where you are, so you take too much if the stepsize is
+20:35 - too large, the Taylor expansion is no longer accurate
+20:40 - and so the probability might actually go down
+20:42 - and so then you might get stuck where you are.
+20:44 - So it's still nontrivial, I guess,
+20:47 - this is called the unadjusted version.
+20:50 - That is the adjusted version which is basically
+20:52 - you accept and reject and that one
+20:54 - can work with finite stepsizes.
+20:57 - In general, in theory can require a large number of steps
+21:02 - and the convergence is only guaranteed to be in the limit.
+21:06 - But in practice, you can imagine that it's a much better proposal
+21:10 - because you have a lot more information.
+21:13 - Before we were blindly making changes to the image, well,
+21:18 - now we're saying, OK, if you have access
+21:20 - to the gradient information, it can
+21:22 - be much more informed in the way you make proposed moves
+21:27 - and in practice this is much better
+21:30 - in terms of the number of steps that you need to converge.
+21:34 -
+21:37 - And the good thing is that even though the log likelihood
+21:43 - depends on the partition function
+21:45 - or maybe I don't have it here, but if you work out
+21:51 - the expression, you see that the partition
+21:57 - function depends on theta but does not depend on x.
+21:59 - So all x's have the same partition function.
+22:04 - So when you take the gradient with respect to x,
+22:06 - you just get the gradient of the energy of the neural network.
+22:10 - And so computing the gradient of the log likelihood
+22:14 - is actually easy even when you have an energy-based model.
+22:17 -
+22:20 - And so this sampling procedure is very suitable for EBMs.
+22:27 - And it's still problematic in theory
+22:31 - at least, the more dimensions you have,
+22:34 - the slower things tend to be.
+22:37 - And this thing is reasonable to do at inference time,
+22:44 - but even if you maybe need let's say 1,000 steps or maybe
+22:49 - 10,000 steps or something like that of this procedure
+22:52 - to generate a sample it might be something
+22:54 - tolerable at inference time
+22:58 - if you're generating let's say a million pixels,
+23:00 - it's fine to do 1,000 steps of this procedure
+23:03 - or might require you to evaluate a big neural network let's
+23:07 - say 1,000 times.
+23:08 - Might not be too bad but if you have to do it during training,
+23:13 - then things become very, very expensive.
+23:15 - So training energy-based models by sampling
+23:18 - in an inner loop where you're doing gradient ascent on the log
+23:21 - likelihood is actually very, very expensive.
+23:24 - And even though this is a reasonable way
+23:27 - of sampling from an energy-based model,
+23:29 - it's just not fast enough if you want to plug this in,
+23:34 - in this contrastive divergence subroutine where
+23:39 - for every training data point you have to generate
+23:41 - a sample from the model.
+23:42 - If to generate the sample you have to run a Langevin
+23:45 - chain with 1,000 steps, things will become
+23:48 - just too expensive basically.
+23:51 - So what we're going to see today are other ways
+23:54 - of training energy-based models that do not basically
+23:57 - require sampling.
+23:59 - When we have it here, this expression
+24:02 - here is the gradient of the log likelihood, sorry, just the log
+24:07 - likelihood, f theta minus log Z, which is just
+24:10 - the log of this expression.
+24:11 - Now if you take the gradient with respect to x of this thing,
+24:15 - log Z theta does not depend on x and so it's 0
+24:18 - and so it drops out.
+24:21 - And so that's why basically this is true.

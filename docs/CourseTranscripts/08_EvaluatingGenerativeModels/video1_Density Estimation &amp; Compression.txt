@@ -1,1 +1,664 @@
-
+00:00 -
+00:05 - SPEAKER: The plan for today is to talk about the evaluation,
+00:09 - so instead of talking about how to build
+00:14 - new types of generative models, we're
+00:16 - going to discuss how to actually evaluate how good they are.
+00:19 - And it's going to be--
+00:20 - It's a challenging topic, where there's not really a consensus
+00:25 - on what's the right way to do it,
+00:27 - but we'll try to cover at least some
+00:31 - of the ways that are out there.
+00:32 - Nothing is perfect at this point,
+00:34 - but we'll cover some of it.
+00:38 - So just as a brief recap, we've talked a lot about modeling.
+00:43 - We talked about different types of probability,
+00:48 - probabilistic models that you can use.
+00:50 - You can work directly with the probability density
+00:52 - or the probability mass function,
+00:54 - which case, we've seen autoregressive models,
+00:57 - normalizing flow models, latent variable
+00:59 - models, like the variational autoencoder.
+01:01 - We've seen energy-based models.
+01:04 - We've talked about probabilistic models or generative
+01:08 - models, where, instead of representing a probability
+01:11 - density function, you represent directly the sampling procedure.
+01:14 - So generative adversarial networks would be one example.
+01:18 - And then we've talked about score-based models, where
+01:21 - instead of representing the density,
+01:23 - you represent the score, which is just like the gradient,
+01:26 - essentially.
+01:27 - And that's yet another model family
+01:30 - that you can use to model your data.
+01:33 - And we've talked about a number of different training objectives
+01:36 - that you can use to fit a model to data.
+01:40 - We've talked about KL divergence,
+01:42 - which is the same as--
+01:43 - minimizing KL divergence is the same as maximizing likelihood,
+01:46 - which is a very natural objective
+01:48 - to use whenever the likelihood is accessible directly.
+01:52 - So if you're modeling directly the probability density
+01:55 - function, probability mass function,
+01:56 - this is a very reasonable kind of objective to use.
+01:59 - And so autoregressive models, flow models,
+02:02 - the ELBO in variational autoencoders
+02:04 - is also an approximation to the maximum likelihood objective.
+02:10 - And, to some extent, contrastive divergence
+02:12 - is also an approximation to--
+02:14 - or it's exact to the extent that you can get perfect samples
+02:18 - from the model.
+02:20 - We've seen f-divergences and two-sample tests,
+02:23 - which are very natural in the context
+02:25 - of generative adversarial networks,
+02:27 - if the only thing you have access
+02:28 - to our samples from the distributions.
+02:30 - Then this is a reasonable way of training a generative model.
+02:34 - And then we've seen fisher divergence,
+02:37 - which is essentially the same as score matching, which
+02:39 - makes a lot of sense whenever you have access to scores
+02:43 - or whenever you're working with energy-based models
+02:45 - because it allows you to bypass the normalizing constant.
+02:49 - And we've seen noise contrastive estimation, which
+02:53 - works for energy-based models.
+02:55 - And the question is, at this point,
+02:59 - there is a lot of different pieces,
+03:02 - a lot of different ingredients that you can use.
+03:04 - There is many different kinds of model families
+03:06 - that you can pick from.
+03:07 - There's different kinds of training objectives.
+03:09 - And a natural question is, how do you
+03:11 - pick which one you should use for a particular data set?
+03:15 - And eventually, this boils down to the question
+03:17 - of which model is better?
+03:20 - Should you train an autoregressive model
+03:22 - on your data?
+03:23 - Should you train a flow model?
+03:24 - So you train a GAN?
+03:25 - And in order to answer that question,
+03:27 - you need to be able to say model A is better than model B,
+03:31 - essentially.
+03:32 - And that requires you to be able to evaluate, basically,
+03:35 - the quality of a generative model.
+03:38 - And that's really, really important
+03:43 - because it allows you to make comparisons and pick
+03:47 - a model that is most suitable for your problem.
+03:50 - And if you think of it from a researcher perspective,
+03:54 - it's a super important ingredient.
+03:57 - We always want to make progress.
+04:00 - We want to build better models.
+04:02 - We want to get better and better.
+04:03 - But in order to do that we need to be able to measure
+04:07 - how good a model is, right?
+04:09 - And so we live in a world where it's pretty easy to just--
+04:13 - people make their models open source.
+04:16 - You can clone a GitHub repo.
+04:18 - You can improve, you can make a change to a model
+04:21 - or to a training objective.
+04:22 - You get something new out.
+04:24 - It's very important to be able to quantify your proposed
+04:27 - solution better than something that existed before.
+04:30 - And again, that requires you to be
+04:32 - able to evaluate different kinds of generative models.
+04:36 - And unlike the case of discriminative models,
+04:41 - typical machine learning models, evaluating generative models
+04:44 - is unfortunately pretty hard.
+04:46 - In the case of a typical machine learning model
+04:48 - that you would use for a discriminative task,
+04:50 - let's say you're training a classifier to label data,
+04:55 - to map inputs to labels, or pretty
+04:58 - low-dimensional simple output space,
+05:01 - that's a setting that is pretty well understood,
+05:03 - how to measure progress.
+05:05 - Somebody comes up with a new architecture for, let's say,
+05:08 - computer vision tasks.
+05:10 - You can train the models.
+05:11 - And you can check what kind of losses they achieve.
+05:14 - You can use it on--
+05:16 - you're going to define some kind of loss that quantifies
+05:19 - what is it that you care about?
+05:21 - Is it top one accuracy, top five accuracy, or whatever decision
+05:26 - problem you intend to use the predictions that you
+05:29 - get from the model in.
+05:31 - You can specify a loss function, and then you can try to--
+05:35 - given two models, you can evaluate the losses
+05:37 - that they achieve on held out unseen data.
+05:42 - And that gives you a pretty good handle
+05:47 - on the performance of the model that tells you essentially
+05:50 - if you were to at test time, when you deploy the model,
+05:54 - you were to fit in data that looks like the one
+05:56 - that you've been training on.
+05:58 - This looks like the one that you have in the test set.
+06:00 - Then that's the performance that you would expect.
+06:02 - And so that allows you to compare different models
+06:06 - and decide which one is better.
+06:08 - And unfortunately, things are not
+06:11 - so easy for a generative model.
+06:14 - It's not clear what is the task.
+06:16 - Essentially, that's the main challenge.
+06:19 - What is it that we care about?
+06:22 - Why are you training a generative model?
+06:24 - And there is many different options and many different--
+06:28 - and all of them are more or less valid.
+06:31 - Perhaps you're training a generative model
+06:33 - because you care about density estimation,
+06:35 - you care about evaluating probabilities
+06:37 - of, say, images or sentences.
+06:42 - Maybe you care about compression.
+06:44 - Maybe you care about generating samples.
+06:46 - At the end of the day, you're training a diffusion model
+06:50 - over images, and what you care about
+06:52 - is being able to generate pretty outputs that
+06:55 - are aesthetically pleasing.
+06:57 - Or maybe you're really just trying
+07:00 - to do representation learning or unsupervised
+07:05 - learning at the end of the day.
+07:06 - Like you have access to a lot of unlabeled
+07:08 - data, maybe large collections of images or text
+07:13 - that you've scraped from the internet.
+07:14 - You'd like your model to learn something
+07:16 - about the structure of this data,
+07:18 - and you'd like to be able to get representations out
+07:23 - of the models that then you can use to improve performance
+07:27 - on downstream tasks.
+07:28 - Instead of working directly on pixels,
+07:30 - maybe you can work on representations
+07:32 - obtained by a generative model.
+07:34 - And then you can get better performance.
+07:36 - You can reduce the amount of labeled data
+07:38 - that you need to train a model.
+07:41 - Or maybe you're thinking about many different tasks
+07:45 - that you need to be able to use your model for.
+07:49 - Perhaps you're trying to train a single good model over images
+07:56 - that then you can use to do compressed
+07:58 - sensing, semi-supervised learning, image translation.
+08:01 - Or if you're thinking about language models,
+08:05 - again, usually, you're trying to find a single model that
+08:09 - has been trained on a lot of text,
+08:11 - a lot of collected from the internet.
+08:13 - And what you really care about is
+08:14 - being able to leverage all the knowledge that
+08:17 - has been encoded in this big language model, an LLM.
+08:22 - And then what you really care about
+08:24 - is being able to prompt the model
+08:28 - to solve tasks using a small number of instructions
+08:32 - or examples.
+08:34 - So lots of different things you could do.
+08:37 - And these different things will lead--
+08:40 - and for each one of them or for some of them, at least,
+08:43 - there is many different metrics that you could use to--
+08:48 - even if you pick one of these one of these tasks,
+08:53 - it's not entirely obvious how you measure performance
+08:57 - on each one of them.
+08:59 - The simplest one is probably density estimation.
+09:02 - If you really care about density estimation,
+09:05 - if you really care about being able to accurately quantify
+09:09 - probabilities using a generative model,
+09:12 - then likelihood is a pretty good metric for that.
+09:16 - So what you can do is you can basically,
+09:19 - you can split your data into train, validation, and test.
+09:22 - You can fit your model using a training set.
+09:26 - Maybe you pick hyperparameters on the validation set.
+09:29 - And then you can evaluate the performance
+09:32 - on the test set, where the performance is just
+09:35 - the average log likelihood that the model assigns
+09:39 - on test data, which is a pretty good approximation
+09:42 - to the average log likelihood that you would expect the model
+09:49 - to assign to samples drawn from this data distribution.
+09:53 - And essentially, this is the same thing as compression.
+09:58 - We've seen that maximizing likelihood
+10:01 - is the same as minimizing KL divergence, which
+10:02 - is the same thing as trying to compress data, essentially.
+10:08 - So at the end of the day, what we're saying
+10:12 - is that if you use that as a metric,
+10:16 - you are comparing models based on how well they
+10:20 - compress the data.
+10:22 - And to see that, turns out that there
+10:29 - is a way to take a probabilistic model
+10:32 - and map it to a compression scheme, where what you would do
+10:35 - is you would encode a data point x to some string that can be
+10:42 - decoded back in a unique way.
+10:44 - And the length of the string basically
+10:46 - depends on the probability of the data point.
+10:48 - So if you have data points that are very likely,
+10:52 - that are very frequent, then you want to assign short codes.
+10:56 - And if they are very infrequent, then you
+10:58 - can afford to assign very long codes if are not
+11:01 - going to see them very often.
+11:04 - And that's a way to compress data using a code.
+11:12 - And it goes back to the intuition
+11:14 - that we had before if you think about the Morse code.
+11:17 - It's based on this principle, right?
+11:19 - So if you have vowels, like e and a, they are common.
+11:23 - So you want to assign a short code.
+11:25 - And then if you have letters that are less frequent,
+11:27 - then you want to assign a long code to that.
+11:30 - And if you train a generative model
+11:32 - based on maximum likelihood, you're
+11:33 - basically trying to do as well as you can at compression.
+11:37 - And if you compare models based on likelihood,
+11:39 - you are comparing how well they compress
+11:41 - data, which might or might not be what you care about.
+11:45 - And to see that, it's pretty clear
+11:48 - that if the length of the code that you assigned to a data
+11:52 - point x basically is proportional to--
+11:55 - it is very close to the log of 1 over p,
+11:59 - then you can see that the average code length that you get
+12:02 - is going to be this quantity, which is roughly,
+12:06 - if you get rid of the fact that the lengths have to be integers,
+12:14 - if you approximate it, it's roughly
+12:17 - equal to the negative log likelihood.
+12:19 - So if you try to maximize the likelihood,
+12:21 - you're minimizing the average length of the code that you get,
+12:26 - so you maximize the compression that you can achieve.
+12:29 - And in practice, if you use these kind of Shannon or Huffman
+12:36 - codes that you might have seen before, it's actually expensive.
+12:40 - And it's not tractable to actually build
+12:43 - one of these codes.
+12:44 - But there are ways to get practical compression schemes.
+12:48 - So to the extent that you can get a good likelihood,
+12:50 - there is an actual computationally efficient way
+12:53 - of constructing compression schemes that
+12:56 - will perform well as long as you get
+12:57 - good likelihoods on the data.
+12:59 - There's something called arithmetic coding, for example,
+13:01 - that you can actually use.
+13:02 - So if you're able to train a deep generative model that
+13:05 - gets you good likelihoods, then you
+13:07 - can potentially compress your data very well.
+13:09 -
+13:13 - And this is-- actually, if you've read papers
+13:18 - on language models, the GPTs and those kind of things, that's
+13:22 - essentially the same metric that they use when
+13:25 - they compare language models.
+13:27 - They call it perplexity in that setting.
+13:30 - But it's essentially a scaled version of the log likelihood.
+13:35 -
+13:38 - Now, the question is, why compression, right?
+13:41 - Is that a reasonable thing to do?
+13:43 - Is that what we really care about?
+13:46 - It's reasonable in the sense that, as we've
+13:50 - discussed, if you want to achieve good compression rates,
+13:54 - then you need to basically be able to identify patterns
+13:57 - in the data.
+13:58 - The only way you can achieve good compression
+14:01 - is by identifying redundancy, identifying patterns,
+14:04 - identifying structure in the data.
+14:06 - So it's a good learning objective,
+14:08 - and we know that if you can get the KL divergence to 0,
+14:11 - then it means that you've perfectly
+14:13 - matched the data distribution.
+14:16 - And this makes sense if you're trying to build--
+14:19 - train a generative model to capture knowledge
+14:22 - about the world.
+14:24 - This is a reasonable objective.
+14:27 - We're training the model to compress the data.
+14:29 - And by doing so, we're learning something
+14:31 - about how the world works, essentially,
+14:33 - because that's the only way to achieve compression schemes.
+14:36 - And so the intuition could be something like this.
+14:38 - And if you think about physical laws,
+14:40 - like Newton's law or something like that,
+14:42 - you can think of it as a one way of compressing data.
+14:45 - If you know there is some kind of relationship
+14:48 - between variables you care about, like F equals ma,
+14:52 - then knowing that relationship allows you to compress the data.
+14:56 - You don't have to store--
+14:57 - let's say if you have a sequence of accelerations and forces,
+15:00 - you don't have to store both of them.
+15:02 - You can store just the accelerations,
+15:04 - and you can recover the forces through the equation,
+15:06 - for example.
+15:07 - So any kind of pattern or structure in the data like this
+15:13 - allows you to achieve better compression rates.
+15:16 - And so, by training a model to compress,
+15:18 - you might be able to discover some interesting structure
+15:21 - in the data, including maybe knowledge about physical laws
+15:25 - and things like that.
+15:27 - And there's actually something called the Hutter prize.
+15:32 - It's actually-- there's a half million dollars
+15:36 - for developing a good compression
+15:39 - scheme for Wikipedia.
+15:41 - And the quote from the prize website
+15:44 - is "being able to compress well is closely related
+15:48 - to intelligence.
+15:50 - While intelligence is a slippery concept,
+15:52 - file sizes are hard numbers.
+15:54 - Wikipedia is an extensive snapshot of human knowledge.
+15:57 - If you can compress Wikipedia better than the predecessors,
+16:02 - your decompressor is likely going to be smarter," basically.
+16:05 - And the whole idea behind this prize
+16:08 - is to basically encourage the development
+16:10 - of intelligent compressors as a path towards achieving AGI.
+16:14 - So the hypothesis here is that if you can really
+16:17 - compress Wikipedia very well, then
+16:20 - you must achieve a very high level of intelligence.
+16:25 - And indeed, you can actually compare
+16:29 - how well humans do at this--
+16:31 - how good are humans at compressing text, right?
+16:35 - There's actually an experiment that Shannon did many years ago.
+16:39 - And he was very interested in this kind of topic, compression.
+16:44 - And he invented the whole field of information theory.
+16:47 - And he actually did experiments checking how good--
+16:51 - humans have a lot of knowledge, a lot of context.
+16:53 - If you see a string of text, you're
+16:55 - probably going to be pretty good at predicting what comes next.
+16:58 - And so he actually did an experiment
+17:01 - with getting human subjects involved
+17:04 - and trying to see how good are people basically
+17:06 - at predicting the next character in English text.
+17:10 - And what he found is that they achieve
+17:13 - a compression rate of about 1.2, 1.3 bits per character.
+17:17 - So there are 27 characters or something like that.
+17:24 - So there's a lot of uncertainty.
+17:26 - If you didn't know anything about it,
+17:27 - you would need maybe 4 or 5 bits to encode a character.
+17:33 - But people are able to do it with only 1 or 2.
+17:37 - So there's not too much uncertainty.
+17:38 - When you predict the next character in English text,
+17:41 - people are pretty good.
+17:42 - There's only-- if you think about one bit of information,
+17:46 - it encodes two possibilities.
+17:48 - And so that's the typical uncertainty that people have
+17:51 - when they predict the next character in text.
+17:55 - So one bit would correspond to, OK, there's two possibilities,
+17:58 - and I'm uncertain about them, about which one it is.
+18:03 - And you might ask how well do large language
+18:07 - models, neural networks?
+18:08 - They actually do better than humans already.
+18:11 - And you can get something like people
+18:13 - tried on Wikipedia on that Hutter prize data set,
+18:15 - and they were able to get something
+18:17 - like 0.94 bits per character, so even better than humans.
+18:23 - And again, this is a reasonable objective, a reasonable way
+18:27 - of comparing models.
+18:28 - That's what people use for training large language models.
+18:31 - They train them at maximum likelihood.
+18:33 - It makes sense to compare them based on perplexity
+18:35 - to some extent or try to forecast
+18:37 - how good the perplexity is going to be if you were to increase
+18:40 - data or you were to increase compute, scaling laws
+18:43 - kind of things.
+18:44 - But there are issues with compression,
+18:46 - and the main issue is that it's probably not a task we actually
+18:50 - care about or not entirely reflective of what
+18:53 - we care about.
+18:54 - And the issue is that basically not all bits of information
+18:57 - are created equal.
+18:58 - And so if you think about compression,
+19:02 - a bit that is encoding a life or death kind of situation
+19:07 - is worth exactly the same as something maybe less important,
+19:10 - like is it going to rain or not tomorrow?
+19:14 - So compressing or compressing the other gives you the same--
+19:18 - is the same from the perspective of KL
+19:21 - divergence or maximum likelihood.
+19:23 - But obviously, it doesn't reflect
+19:26 - the way we're going to use the information in downstream tasks.
+19:29 - So there are some serious limitations
+19:33 - of what you can say by just comparing models
+19:35 - in terms of compression.
+19:37 - Think about image data sets, same thing.
+19:40 - There is certain pieces of information
+19:43 - that are much less important to us.
+19:45 - You could think about a slight change in color
+19:48 - for a particular pixel.
+19:49 - It doesn't matter too much.
+19:51 - While there's information about what's the label of the image?
+19:58 - That is much more important.
+20:00 - But from this perspective, it is all the same, basically.
+20:03 - It doesn't matter.
+20:04 - So that's main limitation of density estimation
+20:08 - or compression.
+20:09 -
+20:12 - And yeah, we'll talk about this more later.
+20:16 - The other thing to keep in mind is
+20:18 - that compression or likelihood is
+20:21 - a reasonable metric for models which have tractable likelihood.
+20:26 - But there is a bunch of models that don't even have it.
+20:29 - So if you're working with VAEs or GANs or EBMs,
+20:33 - it's not even obvious how you would compare models in terms
+20:36 - of likelihood or compression.
+20:40 - For VAEs, at least you can compare them
+20:42 - based on ELBO values, which we know is a lower bound
+20:45 - on likelihood, so it's a lower bound on how well you
+20:47 - would compress data.
+20:51 - But if you have GANs, for example, how would
+20:54 - you compare, let's say, the likelihood
+20:56 - that you achieve with a GAN to the one
+20:58 - that you achieved with an autoregressive model or a flow
+21:02 - model?
+21:03 - You can't even compare them because there
+21:05 - is no way to get likelihoods out of a generative adversarial
+21:09 - network.
+21:10 - Do you really care about compression?
+21:11 - Maybe not.
+21:12 - But if you wanted to compare the compression capabilities
+21:15 - of a GAN to something else, you would not even
+21:18 - be able to do that.
+21:19 - And we'll see that, yeah, maybe that's not what you care about.
+21:22 - Maybe you care about sample quality,
+21:23 - and we'll see that there are other evaluation metrics that
+21:27 - maybe make more sense where you can say, OK,
+21:29 - is a GAN better than an autoregressive model
+21:31 - trained on the same data set?
+21:33 - But if you wanted to care about density estimation,
+21:36 - then you need to at least be able to evaluate likelihoods.
+21:40 - And it's not something you can directly do with a GAN.
+21:44 - And so in general, it's a pretty tricky problem
+21:49 - to figure out if you have a generative adversarial network.
+21:52 - And you have, let's say, an image,
+21:55 - and you want to know what is the probability
+21:57 - that the model generated this particular image,
+22:00 - it's pretty difficult to do.
+22:02 - Even if you can generate a lot of samples from the GAN,
+22:07 - it's actually pretty tricky to figure out
+22:09 - what is the underlying probability density function.
+22:12 - And typically, you have to use approximations.
+22:16 - And one that is pretty common it's called a kernel density
+22:21 - estimation that allows you to basically get
+22:24 - an approximation of what is the underlying probability density
+22:27 - function given only samples from the model.
+22:31 - So it would look something like this.
+22:33 - Suppose that you have a generative model for which you
+22:36 - are not able to evaluate likelihoods directly,
+22:39 - but you're able to sample from it.
+22:41 - Then you can draw a bunch of samples.
+22:44 - Here I'm showing six of them.
+22:46 - And just for simplicity, let's say that the samples
+22:49 - are just scalars.
+22:50 - So you generate six of them, and the first one is minus 2.1,
+22:54 - minus 1.3, and so forth.
+22:57 - And these are representative of what
+23:00 - is the underlying distribution that generated this data.
+23:05 - And the question is, what can we say about probabilities
+23:09 - of other data points?
+23:10 - So given that you have these six samples from the model, what
+23:15 - is the probability, let's say, that we should
+23:17 - assign to the point minus 0.5?
+23:19 -
+23:22 - And one answer would be, well, the model never generated 0.5.
+23:29 - Or 0.5 is not among the six samples that we have access to.
+23:34 - So we could say, since it doesn't belong
+23:36 - to this set of samples, maybe we should set the probability
+23:39 - to 0, which is probably not a great answer
+23:43 - because we only have six samples.
+23:45 - It could be just due to chance we
+23:47 - didn't see that particular data point in our set of samples.
+23:52 - So a better way of doing things is to do some kind of binning,
+23:55 - build some kind of histogram over the possible values
+23:59 - that these samples can take.
+24:01 - For example, you can build a histogram,
+24:04 - let's say, where we have bins with two here.
+24:08 - And then you basically count how frequently the data points
+24:12 - land in the different bins.
+24:15 - And then you sort of make sure that the object that you get
+24:22 - is properly normalized so that the area under the curve
+24:25 - is actually 1.
+24:28 - So because we had a bunch of--
+24:31 - we have two data points landing between minus 2 and 2, then
+24:35 - we have a little bit higher--
+24:36 - we assign a little bit higher probability to that region.
+24:40 - And then you can see the shape of this histogram
+24:44 - is related to where we're seeing the samples that we have access
+24:48 - to in this set.
+24:51 - And then, you can evaluate probabilities of new data points
+24:57 - by basically checking, in which bin does this test data point
+25:03 - land.
+25:04 - Minus 0.5 lands in this bin where there is two data points,
+25:09 - and so we assign probability density 1 over 6.
+25:13 - And then if you take, let's say, minus 0.99, 1.99,
+25:18 - I guess that's also in the first-- in this bin
+25:20 - where there's two data points.
+25:22 - And so it should also be 1/6.
+25:24 - And then the moment you step over
+25:27 - to the next bin on the left, then
+25:31 - the probability goes down to 1 over 12 or something like that.
+25:35 - So just basic histogram as a way of constructing
+25:39 - an approximation of the probability density
+25:41 - function based on samples.
+25:42 -
+25:45 - It's a reasonable thing, but you can kind of
+25:47 - see that these transitions are probably not very natural.
+25:52 - Perhaps there is something better we can do.
+25:54 - And indeed, a better solution is to basically smooth
+25:57 - these hard thresholds that we had because we were using bins.
+26:04 - And so the way a kernel density estimator works
+26:07 - is that when we evaluate the probability of a test data point
+26:12 - x, we basically check how similar this data
+26:16 - point is to all the samples that we have in our set.
+26:21 - And we do that using this function k, a kernel function.
+26:25 - And then we evaluate this probability
+26:28 - by basically looking at all the n samples
+26:32 - that we have access to, checking, evaluating the kernel
+26:35 - on the difference between the data point
+26:37 - that we're testing the density on and the samples
+26:40 - that we have access to.
+26:41 - And then the distance is scaled by this parameter
+26:46 - sigma, which is called the bandwidth of the kernel.
+26:50 - And to make things concrete, you can think of the kernel
+26:53 - as being just a Gaussian function that
+26:56 - has that functional form.
+26:59 - And so the similarity between two data points
+27:03 - decays exponentially based on that equation.
+27:09 - And if you do that, then you get a smoother interpolation.
+27:15 - Before, we had these bins that were not very natural.
+27:20 - Now what we're doing, if you're doing a kernel density
+27:23 - estimator using a Gaussian kernel,
+27:25 - is we're basically putting little Gaussians centered
+27:28 - around each data point that we have in the set of samples.
+27:32 - And then we're summing up basically all these Gaussians.
+27:36 - And we get an estimate of the density
+27:38 - that is now much more smooth.
+27:40 - Right?
+27:42 - And so essentially, the probability
+27:46 - is high if you are close to many data points,
+27:50 - kind of like before.
+27:52 - But now it's being close is smooth.
+27:54 - It's not only about whether you are in the bin or not.
+27:58 - Now there is some small effect even if you're very far away.
+28:06 - Although, the effect of a data point
+28:08 - decays according to that whatever function
+28:14 - you choose for the kernel.
+28:16 - OK, you choose the kernel.
+28:17 - The kernel is basically telling you
+28:19 - it should be a non-negative function that is normalized.
+28:25 - So it integrates to 1.
+28:26 - So that when you take the sum of n kernels,
+28:33 - the total area is going to be n.
+28:34 - And then you divide by n, and you get
+28:36 - an object that is normalized.
+28:38 - So you get a valid probability density.
+28:41 - And then I guess it has to be symmetric
+28:45 - because it's sort of intuitively like a notion of similarity
+28:50 - between a pair of data points.
+28:53 - And so the function value is going
+28:56 - to be high when the difference is close to 0.
+29:00 - And the bandwidth controls how smooth basically that
+29:05 - interpolation looks like.
+29:07 - So what you see here on the left are different kinds of kernel
+29:12 - functions you could choose.
+29:13 - You could choose Gaussian.
+29:14 - You could choose more like a square kind of kernel.
+29:19 - That determines how-- what you think
+29:25 - is the right way of comparing how similar two data points are.
+29:28 - So if you choose a Gaussian, you have
+29:30 - that sort of functional form.
+29:32 - If you choose some kind of square, kernel
+29:34 - that looks like that, then it's more back
+29:37 - to the histogram kind of thing where
+29:40 - two points are similar if their distance is relatively small.
+29:43 - After you're above this threshold,
+29:45 - then the distance becomes extremely high.
+29:47 -
+29:50 - The bandwidth controls the smoothness.
+29:52 - And so you can imagine that ideally you'd
+29:59 - like to pick a bandwidth such that you
+30:03 - get the distribution like the black one, the black curve
+30:09 - here, that is as close as possible to the true curve that
+30:11 - generated the data, which is shown in gray there.
+30:15 - But you can see that if you were to choose a value of sigma that
+30:19 - is too small, then you are going to get something
+30:25 - like the red curve, which is very jagged again.
+30:29 - And so it's kind of under smoothed.
+30:32 - And if you were to choose a very high value of sigma,
+30:35 - then everything is similar to each other.
+30:37 - Then you're going to get a very smooth kind of interpolation.
+30:42 - And you get something like the green curve, which again, is not
+30:45 - a good approximation of the density that actually generated
+30:49 - the data.
+30:50 - So back to the question, how do you choose sigma?
+30:53 - What you could try to do is you can
+30:55 - try to tune it by trying to do cross validation, where you
+30:58 - leave out some of your samples.
+30:59 - And then you try to see which kind of sigma
+31:01 - fits the samples that you've left out as best as possible.
+31:04 -
+31:08 - And so yeah, that's true at least in principle.
+31:13 - It's a way that would allow you to compute--
+31:17 - to get an estimate for the underlying density
+31:20 - given only samples.
+31:21 - Unfortunately, it's actually extremely unreliable
+31:25 - the moment you go in high dimensions
+31:28 - just because, of course, of dimensionality basically
+31:30 - you would need an extremely large number of samples
+31:33 - to cover the whole space and all the possible things that
+31:37 - can happen.
+31:38 - And so the more dimensions you have, the more samples you need.
+31:41 - And in practice, it's not going to work
+31:43 - very well if you're working on something like images.
+31:47 - So there are limitations of what you can do.
+31:49 -
+31:54 - Now, what if you have latent variable models?
+31:57 - If you have a latent variable model, again,
+32:00 - but you would like to somehow get the likelihood,
+32:04 - in theory, you can get it by integrating out
+32:08 - over the latent variable z.
+32:10 - We know that that's the expression
+32:13 - that you would need if you want to evaluate the likelihood
+32:15 - of a data point x.
+32:17 - You can, in principle, get it by looking
+32:19 - at all the possible values of the latent variables
+32:21 - and then checking the conditional probability
+32:23 - of generating that data point x given the different z's
+32:27 - that you're integrating over.
+32:29 - As we know, this can have very high variance,
+32:31 - sort of like if the distribution of the prior
+32:35 - is very different from the posterior, which basically means
+32:42 - that, again, you're going to need a lot of samples
+32:44 - to basically get a reasonable estimate of that likelihood.
+32:49 - And there are ways to basically make the estimate more accurate.
+32:55 - There is something called annealed importance sampling,
+32:57 - which is a procedure to basically do importance sampling
+33:02 - by constructing a sequence of distributions
+33:04 - to draw these z variables.
+33:07 - That is kind of interpolating between the bad or naive choice
+33:12 - of just sampling from the prior p of z
+33:14 - and the optimal thing that you would like to do,
+33:16 - which is to sample from the posterior.
+33:18 - And we're not going to go into the details.
+33:20 - Let me actually skip some of this stuff.
+33:22 - But if you have in your project you're working with latent
+33:26 - variable models, you have a VAE and somehow you
+33:29 - need to compute likelihoods, you might
+33:31 - want to look into these kinds of things
+33:33 - because they might help you get more accurate estimates
+33:37 - of the likelihoods that you get from
+33:39 - your variational autoencoder.

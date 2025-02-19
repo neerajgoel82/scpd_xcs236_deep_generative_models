@@ -1,0 +1,554 @@
+00:00 -
+00:05 - SPEAKER: The plan for today is to talk
+00:07 - about autoregressive models, which is
+00:09 - going to be the first type of--
+00:12 - first family of generative models
+00:15 - that we're going to consider in the class.
+00:18 - This is the kind of technology behind large language
+00:21 - models, things like ChatGPT.
+00:23 -
+00:29 - So, yeah.
+00:30 - Just as a recap, remember this high level overview
+00:34 - whenever you want to train a generative model, you need data.
+00:39 - So samples from some IID unknown probability distribution Pdata.
+00:45 - And then you need to define a model family, which
+00:48 - is going to be a set of probability
+00:51 - distributions over the same space over which your data is
+00:55 - defined.
+00:56 - And these probability distributions
+00:59 - are typically parameterized somehow, for example using--
+01:05 - it could be conditional probability tables
+01:07 - in the case of a Bayesian network,
+01:09 - as we have seen in the last lecture.
+01:12 - For the most part, we're going to be thinking
+01:14 - about probability distributions that are defined
+01:16 - in terms of neural networks.
+01:18 - So you can think of theta there in that picture
+01:21 - as being kind of like the parameters of the neural network
+01:24 - that you're going to use to define this probability
+01:27 - distribution.
+01:28 - And then you're going to define some sort of notion
+01:31 - of similarity or divergence between the data distribution
+01:35 - and your model distribution.
+01:36 - And then we're going to try to optimize
+01:38 - the parameters of the neural network
+01:39 - to make your model distribution as close as possible to the data
+01:43 - distribution.
+01:45 - The caveat being that you only have access
+01:47 - to samples from the data distribution, right?
+01:49 - So you don't you know-- you can't
+01:51 - evaluate the probability of an image
+01:53 - under the data distribution.
+01:54 - The only thing you have access to are a bunch of samples.
+01:58 - And once you have this probability distribution,
+02:01 - then you can do several things.
+02:03 - You can sample from it.
+02:05 - So you can choose a vector x with probability--
+02:10 - there's many different axes that you could choose from.
+02:13 - Each one of them is assigned a probability by your model.
+02:16 - And you can choose one with the probability
+02:21 - according to this probability distribution.
+02:23 - So you sample from it.
+02:25 - And this is what you need to generate new data.
+02:28 - We're going to be interested in evaluating probabilities
+02:32 - for several reasons.
+02:34 - One is that evaluating probabilities
+02:37 - is useful for training the models.
+02:39 - So if somehow you have a way of figuring out
+02:43 - how likely is any particular image according to your model,
+02:47 - then that gives you a pretty natural way
+02:49 - of training the model, solving this optimization problem
+02:53 - or trying to find the point that is as close as
+02:56 - possible to your data distribution.
+02:57 - And one way to do that is to just do maximum likelihood.
+03:00 - You can try to find the parameters of your model
+03:03 - that maximize the probability of observing a particular data set.
+03:08 - The other thing you can do if you have access to probabilities
+03:11 - is you can do things like anomaly detection.
+03:13 - So you can-- given an input, you can see,
+03:16 - is this input likely or not?
+03:19 - So what we discussed in the last lecture,
+03:22 - one advantage of generative models compared
+03:24 - to discriminative models is that you
+03:25 - can reason about the possible inputs
+03:28 - that you might be given access to.
+03:30 - So you might, for example, try to detect adversarial examples
+03:34 - because perhaps they are different from the kind
+03:37 - of natural images that you've used for training your model.
+03:40 - So if your generative model is good,
+03:42 - you might be able to identify that something is
+03:45 - odd about a particular input.
+03:47 - Maybe the likelihood is lower than it should be.
+03:50 - And so you can say, OK, this is perhaps an anomaly.
+03:53 - Maybe I shouldn't be very confident about the kind
+03:57 - of decisions or the kind of predictions
+03:59 - that I make about this particular data point.
+04:02 - And as we discussed, another thing you can do
+04:05 - is potentially unsupervised representation learning.
+04:09 - And so in order to do well at learning a good approximation
+04:14 - of the data distribution, you often
+04:16 - need to understand the structure of the data.
+04:18 - And so in some cases, it's going to be a little bit tricky
+04:21 - for autoregressive models, which is what we're
+04:23 - going to talk about today.
+04:24 - But for other types of models, it's going to be pretty natural.
+04:27 - There's going to be a pretty natural way of extracting
+04:29 - features as a byproduct basically
+04:33 - of training a good generative model.
+04:36 - So the first question is kind of like,
+04:40 - how to represent these probability distributions.
+04:43 - So how do you define this set in a meaningful way?
+04:47 - And today, we're going to talk about autoregressive models,
+04:49 - right, which are built on the idea of using chain rule,
+04:53 - essentially.
+04:55 - And next, we're going to talk about how to learn it.
+04:59 - So recall that there is this general result
+05:04 - that you can take any probability distribution defined
+05:07 - over an arbitrarily large number of variables n.
+05:11 - And you can always factor it as a product of conditionals.
+05:14 - So if you have four random variables x1 through x4,
+05:19 - you can always write it down as the probability
+05:21 - of x1, the probability of x2 given x1, and so forth.
+05:25 - And this is just fully general.
+05:28 - You don't need to make any assumptions on the distribution.
+05:32 - Every distribution can be factorized this way exactly.
+05:37 - And in particular, you can also use any ordering you want.
+05:41 - So in this case, I'm factorizing it
+05:44 - based on the ordering x1, x2, x3, and x4.
+05:47 - But you could choose a different ordering.
+05:48 - So you could decide you could write it down
+05:50 - as the probability of x4 times the probability of x3 given x4,
+05:54 - and so forth.
+05:56 - And here you start to see that in general, you
+05:59 - can always do it.
+06:00 - But perhaps some orderings might be better than others.
+06:05 - So if there is some kind of natural causal structure
+06:07 - in the data, then perhaps modeling the data along
+06:11 - that direction is easier.
+06:13 - But the chain rule doesn't care.
+06:15 - It works regardless of whatever ordering you're going to use.
+06:18 -
+06:21 - Bayes Net essentially exploit this idea.
+06:26 - And they make progress by basically
+06:30 - simplifying these conditionals.
+06:32 - So we've seen that in general, representing-- even
+06:35 - when the random variables are discrete,
+06:38 - representing those conditionals as tables doesn't scale,
+06:41 - doesn't work.
+06:42 - And so Bayesian networks essentially
+06:45 - make some kind of conditional independence assumption.
+06:48 - They assume that certain things that are conditionally
+06:50 - independent from other things.
+06:53 - And then that gives you potentially simpler factors
+06:57 - that you can represent as tables.
+07:00 - And the other way to go about it is
+07:02 - to use a neural model, where instead you're
+07:07 - going to give up on the tabular representation.
+07:10 - So it's no longer a lookup table.
+07:12 - Now it's going to be some kind of function parameterized
+07:15 - by a neural network that you're going
+07:17 - to use to map different kind of assignments to the variables
+07:23 - you're conditioning on to parameters
+07:27 - for the conditional distribution over the next variable
+07:32 - in this ordering that you're using.
+07:35 - So in this kind of neural models, what we're going to do
+07:38 - is we're going to start from chain rule
+07:40 - and then we're going to try to approximate
+07:42 - the true conditionals using neural networks.
+07:47 - And this works to the extent that the neural network
+07:51 - is sufficiently powerful that it can well
+07:54 - approximate these conditional probabilities, which could be
+07:58 - potentially very complicated.
+08:00 - If you think about those as tables,
+08:02 - there could be really complicated relationships
+08:04 - between the entries in the table.
+08:05 - And this kind of factorization using neural models
+08:08 - works to the extent that the neural network is sufficiently
+08:11 - flexible that it can capture the structure of what
+08:14 - you would get if you had a fully general tabular representation.
+08:21 - And the good news is that a sufficiently deep neural network
+08:26 - can in principle approximate any function.
+08:30 - And so that's kind of where the magic of deep learning comes in.
+08:34 - If you can use very deep neural networks,
+08:37 - there's a good chance you might be able to actually come up
+08:39 - with a decent approximation to these conditionals.
+08:42 - And that's why these models tend to work in practice.
+08:45 -
+08:48 - So remember that the machinery that we're going to use
+08:53 - is going to be the same as the one you use in regular let's say
+08:56 - classification.
+08:58 - So you want to predict a binary label given
+08:59 - a bunch of input features.
+09:02 - You just care about the conditional distribution
+09:04 - of a single variable given a potentially large number
+09:08 - of other variables.
+09:09 - But the important thing is that you're just trying
+09:11 - to predict one thing at a time.
+09:13 - A single variable y.
+09:14 - And so you can use things like logistic regression or neural
+09:18 - networks to do these kind of things.
+09:20 - And in particular, we've seen that logistic regression
+09:24 - is kind of assuming a relatively simple dependency
+09:28 - between the values of the covariates x or the features
+09:31 - that you are conditioning on and the conditional probability of y
+09:34 - given x.
+09:35 - It's basically assuming that there
+09:37 - is a linear dependency that then is fed through a sigmoid
+09:41 - to get a non-negative number that
+09:44 - has the right normalization.
+09:46 - And you can make things more flexible
+09:50 - by assuming some kind of non-linear dependence.
+09:53 - And that's where you use neural networks, right?
+09:56 - So you can take your inputs x, you can transform them
+10:00 - by applying linear transformations,
+10:02 - non-linearities.
+10:04 - You can stack them in any way you want.
+10:06 - And then at the end of the day, you still
+10:08 - have some transformation that gives you
+10:09 - the parameters of this conditional distribution
+10:13 - over what you're trying to predict
+10:15 - given what you have access to.
+10:16 - And so maybe at the end, you use some kind of sigmoid function
+10:22 - or a softmax function to basically normalize the output
+10:26 - to a probability distribution.
+10:28 - So it's more flexible.
+10:29 - You have more parameters, which is good because the model--
+10:34 - you can capture a richer set of dependencies
+10:37 - between the variables.
+10:39 - The price you pay is that you have more parameters to learn.
+10:41 - You need more memory.
+10:42 - And you might imagine that you might need more data.
+10:46 -
+10:50 - Cool.
+10:51 - So that's the building block.
+10:52 - And then basically, the whole idea of autoregressive models
+10:56 - is that once you know how to predict one thing using
+10:59 - a neural network, you can kind of combine them
+11:02 - and you can always think of a high dimensional output,
+11:06 - let's say an image as a number of individual components.
+11:12 - And chain rule gives you a way of predicting
+11:15 - the individual components given the previous ones.
+11:18 - And so then you can plug in your neural network
+11:20 - to get a generative model.
+11:22 - And that's what neural autoregressive
+11:24 - models essentially do, right?
+11:28 - So for example, let's say that you
+11:31 - wanted to learn a generative model over images.
+11:35 - So just for simplicity, let's say
+11:37 - that you wanted to work with the binarized MNIST.
+11:41 - So MNIST is kind of a classic data set of handwritten digits.
+11:46 - So if you binarize them so that every pixel is
+11:50 - either 0 or 1, black or white, then they might look like this.
+11:54 - So you see that they kind of look like handwritten digits.
+11:58 - And each image has 28 by 28 pixels.
+12:02 - So you have 28 times 28 random variables to model.
+12:07 - And the variables are binary, 0 or 1, black or white.
+12:13 - And the goal is to basically learn a probability distribution
+12:16 - over these 784 random variables, such
+12:22 - that when you sample from it, the images
+12:25 - that you get hopefully look like the ones
+12:27 - that you have in the training set, or that in other words,
+12:30 - you're hoping that the distribution that you learn
+12:34 - is a good approximation to the data distribution
+12:37 - that generated these samples IID,
+12:41 - independent identically distributed samples
+12:43 - that you have access to in the training set.
+12:46 - And again, this is challenging because there's
+12:48 - a lot of possible images.
+12:49 - You need to be able to assign a probability to each one of them.
+12:53 - And so recall the recipe is you define a family of probability
+13:00 - distributions parameterized by theta, which we're
+13:03 - going to see in this lecture.
+13:04 - And then you define some kind of learning objective
+13:06 - to search over the parameter space
+13:09 - to do some kind of optimization, reduce the learning problem
+13:12 - to optimization over theta over the parameters that define
+13:16 - the distribution to try to find a good approximation of the data
+13:20 - distribution, which is going to be the next lecture.
+13:23 -
+13:26 - So the way to use an autoregressive model
+13:29 - to define this probability distribution
+13:32 - is you first need to pick an ordering.
+13:35 - So remember if you want to use chain rule,
+13:37 - you have to pick an ordering.
+13:39 - And for an image, is not even obvious
+13:41 - what the ordering should be.
+13:44 - There is not an obvious causal structure.
+13:46 - Like you're not modeling a time series where you might expect
+13:49 - that there is some causal structure
+13:52 - and maybe predicting the future given
+13:55 - the past is easier than going backwards.
+13:58 - But any ordering works in principle.
+14:01 - And so for example, you can take a raster scan ordering.
+14:04 - And so you can go from top-left to bottom-right.
+14:09 - You can order the 784 pixels that way.
+14:12 - And then you can apply chain rule to this probability
+14:15 - distribution.
+14:17 - And so you always-- you know that without loss of generality,
+14:21 - there is always a way to write down this distribution that way.
+14:25 - Basically as the probability of choosing an arbitrary value
+14:29 - for the first random variable.
+14:31 - And then choosing a value for the second given the first,
+14:33 - and so forth.
+14:34 - And so that's how you break down a generative modeling
+14:37 - problem that is tricky to a sequence--
+14:42 - a small number of classification regression, something
+14:46 - we know how to handle.
+14:48 - Each one of these conditionals is only
+14:50 - over a single random variable.
+14:53 - And that's the kind of setting you know how to deal with from--
+14:57 - or you typically consider when you
+14:59 - think about classification regression,
+15:01 - those kind of problems.
+15:03 - And you cannot do tabular form.
+15:08 - So a Bayesian network is out of the question here.
+15:11 - And so instead we're going to try to basically model
+15:15 - these conditionals using some kind of neural model, some kind
+15:19 - of functional form that will allow
+15:23 - us to map the different configurations of the pixels
+15:27 - we are conditioning on to a probability
+15:29 - distribution over the next pixel that we
+15:31 - need to work with in this particular ordering that we've
+15:34 - chosen.
+15:36 - And so in particular, I mean, if you
+15:39 - think about the first probability distribution,
+15:42 - you can represent it as a conditional probability table.
+15:45 - That's just a binary random variable.
+15:47 - You just need one parameter for that.
+15:49 - So that's what I'm saying PCPT here means that you can actually
+15:53 - store that one separately.
+15:55 - But the other ones become complicated.
+15:58 - And so you kind of have to make some approximation.
+16:02 - And one simple thing you can do is to just use
+16:05 - logistic regression.
+16:07 - So you can try to use logistic regression to basically predict
+16:10 - the next pixel given the previous pixels.
+16:12 - And that gives you a generative model, basically.
+16:17 - And if you do that, notice that you
+16:21 - don't have a single classification problem.
+16:24 - You have a sequence of classification problems,
+16:27 - like you need to be able to predict the second pixel given
+16:30 - the first one.
+16:31 - You need to be able to predict the third pixel given
+16:33 - the first two.
+16:35 - You need to be able to predict the last pixel,
+16:37 - the one in the bottom right given everything else.
+16:40 - So all these classification problems
+16:42 - are basically different and separate.
+16:45 - Do you even have a different number
+16:46 - of covariates or variables that are conditioning on?
+16:50 - And so in general, you're going to-- you can potentially
+16:52 - use different parameters, different models
+16:55 - for each one of them.
+16:58 - And this is what I'm alluding here.
+17:00 - There is a different vector of coefficients
+17:03 - alpha for your logistic regression
+17:04 - model for each classification problem.
+17:07 - And so more explicitly, for example,
+17:10 - you would have the first prior distribution
+17:14 - over the first pixel, which is just a single number.
+17:17 - It tells you, how often do you choose the first pixel
+17:20 - to be white versus black?
+17:23 - So if you think about the structure
+17:25 - of these images, the top--
+17:28 - this pixel here, the top-left is almost always black.
+17:31 - So you probably would want to choose this number
+17:35 - to be close to zero, assuming zero means black.
+17:39 - You want that pixel to be often black.
+17:44 - And then you need to be able to specify
+17:46 - a way of predicting the second pixel given the first one.
+17:50 - And you can do it using a simple logistic regression model.
+17:54 - And so forth, right?
+17:55 -
+17:58 - And that's a modeling assumption.
+18:02 - Whether or not this type of generative model works
+18:05 - well depends on whether or not it's
+18:07 - easy to predict the value of a pixel given
+18:10 - the previous ones in this particular arbitrary order
+18:14 - that I've chosen for the pixels.
+18:15 -
+18:18 - And whether this works again it depends on how good this--
+18:25 - how good this approximation is.
+18:26 - So it might work well or might not
+18:28 - work well, because maybe these dependencies are too simple,
+18:32 - maybe regardless of how you choose these alphas, there
+18:35 - is not a good way of figuring out how you should choose
+18:39 - the value, whether or not a pixel is
+18:41 - white or black in this case.
+18:43 -
+18:47 - But you can think of it as an autoregressive model.
+18:50 - And that's what-- because essentially what you're doing
+18:52 - is you're trying to regress, you're
+18:55 - trying to predict the structure of the data itself.
+19:01 - So you're regressing on yourself,
+19:05 - like you're trying to predict parts of each data point given
+19:09 - other parts of the data point.
+19:11 -
+19:14 - And this kind of modeling assumption
+19:21 - has been tried before.
+19:24 - This kind of model is called a fully visible sigmoid belief
+19:29 - network.
+19:30 - It's kind of a relatively simple early type of generative model
+19:35 - that as we'll see is not going to work particularly well,
+19:38 - but it's useful to work it through so
+19:42 - that you get a certain level of understanding of exactly what it
+19:45 - means to model a joint distribution in terms
+19:48 - of simple classification models.
+19:52 - So when you think about what we're doing here
+19:54 - when you think about chain rule, we
+19:57 - have all these individual pixels that we're
+20:00 - modeling conditionally on all the ones that
+20:02 - come before it in the order.
+20:04 - And so when you model the probability of xi
+20:10 - given all the variables that come before it in the ordering,
+20:12 - let's say using a logistic regression model,
+20:18 - you're basically outputting the conditional probability
+20:21 - of that pixel being on or off given the values
+20:25 - of the previous pixels.
+20:27 - And we're often going to denote this using this symbol here,
+20:32 - x minus i--
+20:34 - smaller than i, which basically means
+20:37 - given all the indexes i that are strictly smaller than--
+20:42 - all the indexes i that are strictly smaller than i.
+20:45 -
+20:48 - Which in the case of logistic regression,
+20:51 - that conditional probability is given
+20:53 - by this relatively simple expression, linear combination,
+20:56 - and then you pass it through a sigmoid.
+21:00 - Now how would you evaluate--
+21:02 - if somebody gives you a data point,
+21:03 - and you want to know how likely is this data point according
+21:07 - to my model, which is the computation you would have
+21:10 - to do if you want to train a model by maximum likelihood, how
+21:14 - would you--
+21:15 - how would you evaluate that joint probability
+21:18 - given that somehow you have all these values for alpha?
+21:22 -
+21:28 - So what you would have to do is you would go back to chain rule.
+21:31 - So you basically just multiply together all these factors.
+21:35 - And so more specifically, the first pixel x1
+21:39 - will have a value.
+21:40 - Well, I guess here I have an example with let's say imagine
+21:44 - that you only have four pixels, there is four random variable.
+21:48 - And let's say that we are observing the value 0, 1, 1, 0.
+21:51 -
+21:54 - Then you basically need to multiply together
+21:58 - all these values, which are basically
+22:02 - the predicted probability that a pixel takes a particular value
+22:05 - given the others.
+22:07 - And these predicted probabilities
+22:09 - depend on the values of the previous pixels
+22:12 - in the ordering here, right?
+22:14 - And so they depend on--
+22:17 - so x hat i which is the predicted probability
+22:20 - for the ith pixel depends on all the pixels
+22:22 - that come before it in the ordering.
+22:25 - So a little bit more explicitly, it
+22:28 - would look something like this, where
+22:30 - you would have to compute the conditional probability
+22:33 - of the second pixel when the first pixel is 0.
+22:37 - You would have to compute the conditional probability
+22:39 - of the third pixel being let's say on in this case given
+22:43 - that the previous two are 0 and 1 and so forth.
+22:47 - And then you would basically replace that expression here
+22:49 - for x hat with the standard sigmoid logistic function thing.
+22:55 - And that would give you the number.
+22:59 - How would you sample from this distribution?
+23:02 - So let's say that somehow you've trained the model
+23:05 - and now you want to generate images according to this model.
+23:08 -
+23:11 - The good thing about an autoregressive model
+23:13 - is that you can basically-- it also gives you
+23:15 - a recipe to sample from it, like in general, it might not
+23:19 - be obvious how you do this.
+23:21 - You have a recipe to evaluate how
+23:24 - likely different samples are.
+23:26 - But then how do you pick one with the right probability,
+23:29 - right?
+23:31 - You could use generic inference schemes
+23:33 - if you have a way of evaluating probabilities,
+23:35 - you could try to even brute force and kind of invert the CDF
+23:39 - and try to do something like that, of course,
+23:43 - would never scale to the situation
+23:46 - where you have hundreds of random variables.
+23:49 - The good news is that you can basically do it--
+23:52 - you can use chain rule again and kind of
+23:55 - decide the values of the pixels one by one.
+23:59 - So what you would do is we know what
+24:02 - is the prior essentially probability that the first pixel
+24:05 - is on or off.
+24:06 - And we can just pick a value for the first pixel.
+24:09 - Now once we know the value of the first pixel,
+24:11 - we know how to figure out a value probabilistically
+24:16 - for the second pixel.
+24:17 - So we can plug it into the previous expression.
+24:19 - You could do something like this just to be very pedantic.
+24:22 - You have-- there is some prior probability
+24:24 - and perhaps you always choose it to be black
+24:26 - because all the images are like that.
+24:29 - But then you pick a value.
+24:32 - And then you basically sample the second random variable given
+24:36 - the conditional distribution.
+24:39 - And this conditional distribution,
+24:40 - you can get the parameter by fitting it
+24:42 - by using this expression.
+24:43 - So the logistic regression model will
+24:46 - try to predict the second pixel given the first one.
+24:50 - And you're going to get a number from this,
+24:52 - and then you can sample from it.
+24:55 - Then you can pick--
+24:56 - you're generating-- you have two pixels now
+24:59 - that you've chosen values for.
+25:01 - And then you can fit it to the next logistic regression model
+25:04 - and you can keep generating the image one pixel at a time.
+25:07 -
+25:11 - So that's the recipe.
+25:13 - And it's good news because sampling is to some extent easy.
+25:21 - I mean, it's not great because you
+25:24 - have to sequentially go through every random variable
+25:26 - that you're working with.
+25:27 - But it's better than alternatives
+25:29 - like having to run using a Markov chain Monte Carlo
+25:33 - methods or other more complicated techniques
+25:36 - that we might have to resort to for other classes of models.
+25:40 - The good news is that for these kind of models,
+25:42 - sampling is relatively easy.
+25:45 -
+25:48 - Conditional sampling might not be.
+25:50 - So if you wanted to sample pixel values based on--
+25:56 - if you wanted to do inpainting because you have some--
+25:59 - you already have a piece of the image,
+26:01 - you want to generate the rest, depending
+26:03 - on what you know about the image, it might be easier,
+26:06 - it might be hard.
+26:07 - So it's not straightforward, the fact
+26:09 - that you can do this efficiently is a nice benefit
+26:12 - of these type of models.
+26:13 - OK.
+26:14 -
+26:17 - Now how many parameters do we have?
+26:20 -
+26:22 - So do we have a bunch of alpha vectors?
+26:24 - These alpha vectors, they have different lengths
+26:26 - because they are different-- they are logistic regression
+26:29 - models of different sizes basically.
+26:31 - Any guess?
+26:34 - It's one 1 plus n roughly squared, right?
+26:37 - So potentially not great, but maybe manageable.
+26:42 -
+26:45 - Cool.
+26:46 - Now as I kind of mentioned before,
+26:49 - this doesn't actually work particularly well.
+26:52 - So now I don't have the results on MNIST.
+26:55 - But if you train it on this data set of like, Caltech 101.
+26:59 - So the samples are on the left.
+27:02 - And you can see that they kind of have shapes,
+27:05 - like there is like objects of different types.
+27:10 - And then you can kind of train this simple model
+27:14 - based on logistic regression classifiers
+27:17 - that you can sample from it and you get these kind of blobs.
+27:21 - So not great.
+27:24 - And the reason is that basically the logistic regression
+27:27 - model is not sufficiently powerful to describe
+27:31 - these potentially relatively complicated dependencies
+27:34 - that you have on the pixel values.

@@ -1,1 +1,558 @@
 
+0:00 -
+00:05 - SPEAKER: The plan for today is to continue talking
+00:08 - about normalizing flow models.
+00:11 - So recall that in the last lecture,
+00:15 - we've introduced this idea of building a latent variable
+00:19 - model that will allow us to evaluate likelihoods exactly.
+00:24 - So without having to rely on variational inference.
+00:27 - And so it's going to be similar to a variational autoencoder
+00:32 - in the sense that there's going to be two sets of variables.
+00:35 - There's going to be observed variables x and latent variables
+00:39 - z.
+00:40 - And the key difference is that the relationship
+00:43 - between these two sets of random variables is deterministic.
+00:47 - So in a VAE, you would say sample x
+00:52 - given z by using some simple distribution,
+00:56 - like a Gaussian where the parameters of x given z
+00:59 - might depend on the particular value of the latent variables.
+01:02 - In a flow model, the relationship
+01:05 - is deterministic and invertible.
+01:07 - So you obtain x by applying this transformation, which
+01:12 - we denote f theta here.
+01:15 - And because the mapping is invertible,
+01:17 - you can also go back.
+01:19 - So inferring the latent variables given the observed one
+01:24 - only requires you to somehow be able to compute
+01:28 - the inverse of this mapping.
+01:30 - And here we are denoting these mappings f theta
+01:33 - because they are going to be parameterized
+01:35 - using neural networks.
+01:37 - And what we'll see today is that we're
+01:39 - going to think about ways to parameterize
+01:43 - this kind of invertible transformations
+01:45 - using neural networks and then learn them
+01:47 - from data, essentially.
+01:50 - And the nice thing recall of using
+01:54 - an invertible transformation is that the likelihood
+01:58 - is tractable.
+01:59 - So you can evaluate the probability
+02:02 - that this particular model generates
+02:04 - a data point x by essentially using
+02:07 - the change of variable formula, which is fairly intuitive,
+02:11 - especially the first piece is very intuitive.
+02:13 - You're saying if you want to evaluate
+02:15 - the probability of generating an image let's say x, what you do
+02:19 - is you invert to compute the corresponding z.
+02:23 - And then you evaluate how likely that z
+02:25 - was under the prior, which is this distribution pz.
+02:30 - And then recall that this is not enough.
+02:34 - If you just do that, you're not going to get a valid probability
+02:37 - density function to get something that is normalized.
+02:41 - So it integrates to 1 if you go through all possible xs.
+02:45 - You have to rescale things by this absolute value
+02:49 - of the determinant of the Jacobian of the inverse mapping.
+02:54 - And that's basically telling you intuitively
+02:58 - what you do is you linearize the function locally
+03:01 - by looking at the Jacobian.
+03:04 - And then the determinant of the Jacobian tells you how much
+03:08 - or how little that transformation expands
+03:13 - or shrinks like a unit volume around the data point x.
+03:18 - And so it's very similar.
+03:19 - Remember, we worked out the example of the linear mapping
+03:22 - in the last lecture where we define a random variable
+03:26 - by transforming a simple random vector through
+03:32 - by multiplying it by a matrix.
+03:34 - Essentially this is what's going on here.
+03:36 - And you have the same expression.
+03:39 - And so the key thing to note is that this
+03:42 - can be computed exactly.
+03:45 - And basically without introducing any approximation
+03:51 - to the extent that you can compute these things.
+03:53 - You can invert the mapping, you can compute the determinant
+03:56 - of the Jacobian, you can do those things,
+03:58 - then you can evaluate likelihoods exactly.
+04:01 - So you don't have to rely on variational inference
+04:03 - where you had to use this encoder to try to guess the z
+04:08 - given an x.
+04:09 - And you had to do that integral because there
+04:12 - is many possible zs that could give you any given x.
+04:15 - So you don't have to do any of this.
+04:17 - And so this is as nice as having something
+04:20 - like an autoregressive model where
+04:22 - you can evaluate likelihoods exactly just
+04:24 - using this equation.
+04:27 - And one of the various limitations
+04:33 - of this kind of model family is that x and z
+04:38 - need to have the same dimensionality.
+04:40 - And so that's different from a variational autoencoder,
+04:43 - where we've seen that z could be very low dimensional and you can
+04:47 - use it to discover some compact representation of the data ,
+04:52 - that's no longer possible in a flow model,
+04:55 - because for the mapping to be invertible,
+04:58 - z and x need to have the same dimensionality.
+05:03 - Cool.
+05:03 - So now how do we actually do this?
+05:07 - I mean, how do we turn this math, this general idea
+05:11 - into a model that you can actually use in practice?
+05:16 - Well, the idea is the usual story
+05:19 - like in deep learning is to combine
+05:23 - relatively simple building blocks to define
+05:26 - flexible architectures.
+05:28 - And so a normalizing flow is essentially a generative model
+05:34 - based on what we are going to use essentially neural networks
+05:38 - to represent these mapping, f theta,
+05:40 - which is really the only thing.
+05:42 - And you have the prior over z, and the f theta
+05:44 - mapping, that's the only thing you can really change.
+05:47 - And It's called a normalizing flow
+05:50 - because the change of variable formula
+05:52 - gives us a normalized density if you
+05:54 - account for the determinant of the Jacobian.
+05:58 - And it's called a flow, exactly what
+06:00 - I was saying because it's like this deep learning
+06:02 - idea of defining the mapping that we need
+06:06 - by composing individual blocks, which
+06:10 - could be relatively simple.
+06:12 - So we're going to essentially define an architecture where
+06:19 - there's going to be multiple layers of invertible mappings
+06:24 - where we essentially start with a random vector z0, which could
+06:31 - be let's say described by the prior, a Gaussian or something
+06:35 - like that.
+06:36 - And then what we do is--
+06:39 - or it could even be, Yeah, depending which way
+06:41 - you want to see it, we start on one end with a random vector z0,
+06:46 - and then we apply these transformations f1, f2, f3, fn
+06:53 - all the way through m in this case.
+06:55 - And essentially what this notation means
+07:00 - is that what we do is we take z0,
+07:04 - we pass it through the first neural network,
+07:07 - and then we take the output of that
+07:09 - and we pass it through the second neural network,
+07:11 - and so forth.
+07:12 - And we denote this architecture that we
+07:17 - get by stacking together multiple invertible
+07:20 - layers f theta.
+07:22 - And it's pretty easy to see that as long as each individual layer
+07:25 - is invertible, the combination of multiple layers that you
+07:30 - get by doing this kind of operation is also invertible.
+07:36 - And so to the extent that we are able to come up
+07:39 - with reasonable neural network architectures that
+07:42 - define an individual layer, we're
+07:44 - going to be able to stack them together and get something
+07:47 - more flexible.
+07:48 - This notation is a little bit overloading here,
+07:51 - the meaning of theta.
+07:53 - The parameters of the individual mappings
+07:55 - are going to be different.
+07:56 - So they are not necessarily tied together.
+07:59 - There's going to be--
+08:00 - we're going to use theta to denote
+08:02 - the union of all the parameters that you need to specify
+08:06 - each individual layer.
+08:07 -
+08:10 - And so that's the story of this flow of transformations.
+08:15 - You start with a simple distribution for z0.
+08:18 - The first let's say at the topmost level of your flow,
+08:22 - for example by sampling from a Gaussian distribution,
+08:25 - this is the usual prior, the same thing
+08:27 - you had in a variational autoencoder.
+08:29 - And then you apply this sequence of invertible transformation
+08:34 - to obtain your final sample.
+08:37 - And so you feed it through all these different layers.
+08:41 - And then let's say after m of them,
+08:43 - you get your final sample x.
+08:47 - And the good thing is that if each individual mapping is
+08:51 - invertible, then the combination is also going to be invertible.
+08:54 - And you can actually work out what's
+08:58 - the corresponding kind of change of variable formula.
+09:00 - And to the extent that you understand the determinant
+09:04 - of the Jacobian of each individual layer, then
+09:08 - you can work out the corresponding determinant
+09:14 - of the Jacobian of the combination of these mappings.
+09:17 - So all you have to do is you have
+09:19 - to be able to invert this function f theta
+09:23 - that you get by combining all these neural networks.
+09:26 - And if you can invert each individual layer,
+09:28 - you can of course invert the full function.
+09:32 - And to the extent that you can linearize basically
+09:35 - and you understand how each of the individual layers
+09:38 - behave locally, so you understand
+09:40 - how that determinant of the Jacobian looks like, then
+09:45 - you can get the determinant of the Jacobian
+09:47 - of the full mapping.
+09:50 - And this is because, yeah, basically the determinant
+09:52 - of the product equals the product of determinants,
+09:56 - or equivalently you can also get this rule,
+09:58 - like if you recursively apply a change of variable formula,
+10:01 - you get this expression.
+10:03 - Or to figure out by basically by how much the full mapping
+10:10 - distorts the volume locally, you just
+10:13 - need to figure out by how much the individual layers distort
+10:18 - the space, and then you just combine the cumulative effect
+10:22 - of all these various layers.
+10:25 - And so what this is saying is that we are in a good place
+10:30 - if we can somehow define classes of neural networks
+10:34 - that are invertible, ideally that we can invert efficiently,
+10:38 - and that we can compute the determinant of the Jacobian
+10:43 - also efficiently.
+10:44 -
+10:47 - And here is a visualization of this,
+10:52 - how a normalizing flow works.
+10:54 - This is a particular type of normalizing flow called a planar
+10:57 - flow.
+10:58 - It's not super important.
+11:00 - But to give you the intuition, you
+11:02 - start on one end with this random variable z0,
+11:05 - which let's say is Gaussian.
+11:07 - And then you get a new random variable z1
+11:09 - by transforming it through the first layer and z2
+11:13 - by transforming the z1 by another simple layer
+11:16 - and so forth.
+11:17 - And you can see the effect of these transformations.
+11:20 - So you start let's say with a two-dimensional random variable
+11:23 - z0, which is just a unit Gaussian.
+11:26 - So this is just a Gaussian with spherical covariance, which
+11:30 - basically has a density that sort of looks like this, that
+11:33 - is the mean in the middle and the probability mass
+11:36 - has a relatively simple shape.
+11:38 - It's not something you can use to model complicated data sets.
+11:42 - But then you apply let's say a first invertible transformation
+11:45 - and you get a new random variable
+11:47 - z1 which now has a more complicated kind of density.
+11:52 - Then you apply another one and you get something even more
+11:54 - complicated.
+11:55 - And after 10 layers, after 10 individual,
+12:01 - after 10 invertible transformations,
+12:03 - you can get something that is much more interesting.
+12:06 - And it has the flavor of a mixture distribution, where
+12:10 - you can spread out the probability mass in a much more
+12:14 - flexible way.
+12:15 - There is certainly a mapping that
+12:19 - could be an invertible mapping that would get you
+12:22 - from the beginning to the end, which
+12:23 - is just the composition of these neural networks.
+12:27 - The beauty of the deep learning strategy
+12:30 - is that the individual layers are
+12:31 - going to be relatively simple.
+12:33 - So the individual f theta i that we will see
+12:38 - are actually relatively simple transformations.
+12:40 - Think about it's not quite linear, but something almost
+12:44 - linear.
+12:45 - And even though that's simple by stacking them together,
+12:48 - you can get some very flexible transformations.
+12:51 - So it's similar to a deep neural network
+12:53 - and maybe the individual layers are not
+12:54 - particularly complicated.
+12:56 - Maybe it's just a linear combination or a non-linearity.
+12:59 - But if you stack them together, you can get a very flexible map.
+13:03 - And that's what's going on here.
+13:06 - The question I think is, how do you
+13:08 - ensure that if you learn these thetas,
+13:11 - you get a mapping that is invertible?
+13:13 - And so what we will have to do is
+13:14 - we will have to design architectures
+13:16 - in a very special way, such that you are guaranteed that
+13:20 - regardless of how you choose the parameters,
+13:22 - the mapping is invertible.
+13:23 - And not only that, we'll also need
+13:25 - to be able to invert it efficiently, ideally
+13:28 - because if you want to-- you need to be able to go both ways.
+13:31 - And that's also not enough.
+13:33 - You also need to be able to compute
+13:35 - that determinant of the Jacobian relatively efficiently
+13:38 - because naively, it could take you
+13:40 - n cube, where n is the number of variables,
+13:43 - the number of dimensions, the number of pixels
+13:45 - that's horrible basically.
+13:47 - So that's what's going to come up
+13:48 - next, kind of ways of defining these mappings,
+13:51 - and then how to learn them from data,
+13:53 - which is going to be trivial because we have access
+13:55 - to the likelihood.
+13:55 - Right.
+13:56 -
+14:00 - And so here's another example.
+14:02 - This is a different what you see at the bottom.
+14:05 - Same idea.
+14:06 - But the prior is uniform.
+14:09 - So here the prior is Gaussian and we transform it to something
+14:12 - like this.
+14:13 - Here the prior is a uniform random variable,
+14:15 - again two-dimensional.
+14:17 - So all the probability mass is let's say between 0,1, 0, 1.
+14:22 - So it's like a square.
+14:24 - And then by applying these invertible transformations,
+14:27 - you are able to map it to, again, something much more
+14:31 - interesting.
+14:33 - And you can see, so it's normalizing
+14:36 - because each individual random variable that you
+14:39 - get by applying an invertible transformation
+14:41 - is automatically normalized by the change of variable formula.
+14:44 - And it's a flow because you're applying many transformations
+14:49 - one after the other.
+14:50 - So the probability mass is flowing around
+14:53 - through these transformations.
+14:56 - So this is a planar flow which is
+14:58 - one way of defining an invertible layer
+15:01 - through a neural network.
+15:02 - And so the functional form is the same at every layer,
+15:07 - but the parameters are different,
+15:08 - what was asked before.
+15:09 - So it's like the same transform-- the same layer
+15:14 - but with different parameters.
+15:15 -
+15:19 - And yeah, so you can see the takeaway
+15:22 - is this is this sort of intuition.
+15:24 - This is the only thing that is easy to visualize.
+15:26 - But you can imagine we're going to try
+15:28 - to do something similar over a much higher dimensional space,
+15:32 - where we're going to try to model let's say images
+15:36 - on the right hand side.
+15:40 - Cool.
+15:40 - So how do we do?
+15:42 - The first thing is, well, we need to parameterize somehow
+15:45 - this mapping.
+15:46 - And that's going to be the main topic of this lecture.
+15:50 - The other thing that we need to do
+15:52 - is we need to be able to do learning.
+15:53 - So once you've defined a space of invertible mappings,
+15:57 - how do you choose these parameters theta ideally
+16:01 - to fit some data distribution?
+16:03 - And it turns out that that's very easy.
+16:06 - Because we have access to the likelihood,
+16:08 - we can basically do the same thing
+16:09 - that we did for autoregressive models.
+16:11 - So the most natural way of training a flow model
+16:15 - is to just pick parameters theta that
+16:18 - maximize the probability of a given data set or the log
+16:23 - probability of a particular data set.
+16:26 - Or equivalently you go through your data set D
+16:29 - and you try to find parameters that
+16:31 - maximize the probability assigned to
+16:34 - or the log-- the average log probability across all the data
+16:37 - points in your data set.
+16:39 - So intuitively, you're trying to find--
+16:43 - you have a bunch of data points which you can
+16:45 - think of points in this space.
+16:47 - And then you're trying to find the parameters of the flows
+16:50 - to put as much probability mass around the data
+16:54 - points that you have in the training set.
+16:58 - And the good thing, again, is that
+17:01 - unlike a variational autoencoder,
+17:04 - we can actually evaluate this likelihood.
+17:06 - We can figure out what was the probability of generating
+17:10 - any particular data point x.
+17:12 - All you have to do is you use the usual formula of the change
+17:15 - of variable formula.
+17:17 - So you take the data point, you invert it,
+17:19 - you find the probability with respect
+17:22 - to the prior, which is whatever something simple, pz
+17:26 - is again what you have here on the left.
+17:28 - It could be a Gaussian.
+17:29 - It could be uniform.
+17:30 - Something simple.
+17:32 - And then you account for that determinant of the Jacobian.
+17:37 - And because it's a log of product,
+17:39 - it becomes a sum of logs.
+17:41 - So again, all you have to do is to basically--
+17:46 - well, maybe it's on the next.
+17:48 - No.
+17:48 - It's not on this slide.
+17:49 - But basically you have to figure out
+17:51 - how much what is the log determinant of the Jacobian
+17:55 - for the full transformation, which can also be broken down
+17:58 - into the log determinant of the Jacobians
+18:01 - of the individual pieces that define your flow model.
+18:04 -
+18:07 - And then what you do is if you can evaluate this loss
+18:12 - or I guess this is not a loss because we're
+18:14 - trying to maximize this.
+18:15 - But if you can evaluate this function as a function of theta,
+18:21 - then you can take gradients and you can try
+18:23 - to optimize it, essentially.
+18:28 - So to the extent that you can invert this function
+18:31 - and to the extent that you can evaluate those Jacobian,
+18:36 - determinant Jacobian term efficiently,
+18:38 - we have a loss that we can try to optimize
+18:41 - as a function of theta.
+18:42 -
+18:46 - So you can do exact loss likelihood evaluation
+18:50 - by using this inverse mapping.
+18:52 - So go from data to prior.
+18:54 - And then after you've trained the model,
+18:56 - you can generate new samples.
+18:58 - So you want to generate new images or you want
+18:59 - to generate new speech or sound or whatever
+19:04 - you're trying to model.
+19:05 - Then we know how to do it.
+19:06 - It's just basically just the forward direction,
+19:08 - just like in a VAE.
+19:10 - That has not changed.
+19:11 - You sample z from the prior and then
+19:14 - you transform it through your mapping
+19:18 - and that produces an output.
+19:19 -
+19:24 - And if you care about getting latent representations, kind
+19:28 - of in VAE, in VAE, you would use the encoder
+19:32 - to try to infer z given x.
+19:34 - In a flow model is relatively again
+19:36 - easy to figure out what is the corresponding z
+19:39 - for any particular x.
+19:41 - All you have to do is you have to invert the mapping.
+19:45 - But again, it's questionable whether this
+19:47 - can be thought as a latent variable
+19:48 - because it has the same dimension as the data.
+19:51 - And so it's not going to be compressed in any way.
+19:55 - So I'll show you that training models on images,
+19:57 - then you can do interpolation in the latent space
+20:00 - and you get reasonable results.
+20:02 - So it's certainly doing something meaningful.
+20:04 - But it might not be compressive as you would expect a VAE,
+20:09 - for example.
+20:10 - So it's a different kind of latent variable.
+20:11 - But it's still a latent variable for sure.
+20:14 - So good question.
+20:15 - Do we parameterize f theta or do we parameterize f theta inverse?
+20:19 - You only parameterize one because the other one
+20:22 - is obtained directly by hopefully
+20:26 - it's really invertible.
+20:27 - And so hopefully you can actually do it.
+20:30 - But it's a good question, whether you should parameterize
+20:33 - f theta, like the direction that you need for sampling,
+20:38 - or should you directly parameterize the inverse
+20:41 - because that's what you need during training.
+20:43 - And so those are two valid choices.
+20:46 - And there might be--
+20:48 - I mean, if you have to let's say numerically invert a--
+20:51 - maybe it's invertible.
+20:52 - But maybe it's not cheap.
+20:55 - And that may be computing an inverse requires
+20:57 - you to solve a linear system of equations or something.
+21:02 - It's invertible.
+21:03 - It's possible to compute this f theta minus inverse.
+21:07 - But it's maybe too expensive if you
+21:09 - have to do this over and over during training.
+21:12 - Maybe depending on what you want to do,
+21:15 - you might want to parameterize one or the other
+21:17 - or you might choose an f theta that
+21:18 - can be inverted very quickly.
+21:21 - And so we'll see some kind of trade-offs
+21:24 - that you get by doing one or the other.
+21:27 - So the question is, well, what if it's not quite fully
+21:30 - invertible or could you parameterize both and try
+21:32 - to make them one the inverse of the other?
+21:34 - People have explored these kind of things, where then they
+21:37 - try to make sure that you can do both directions.
+21:41 - And we'll see other way of distilling models
+21:44 - that can be efficiently evaluated in one direction
+21:48 - into ones that can be efficiently evaluated
+21:50 - in the other direction.
+21:51 - So yeah, we'll talk a little bit about this.
+21:53 -
+21:57 - Cool.
+21:58 - All right.
+21:58 - So what do we want from a flow model?
+22:01 - We have a simple prior that you can sample from efficiently.
+22:04 - And you can evaluate probabilities
+22:06 - because we need that pz here.
+22:09 - When you do this formula, you need
+22:11 - to be able to evaluate probabilities under the prior.
+22:14 - So typically something like a Gaussian is used.
+22:18 - We need invertible mappings that can be tractably evaluated.
+22:22 - So if you want to evaluate likelihoods,
+22:25 - you need to be able to go from let's say x to z efficiently
+22:30 - or as efficiently as possible.
+22:32 - But if you want to sample, then you need to do the opposite.
+22:34 - So again kind of going back to what we were just talking about,
+22:38 - two things depending on what you want to do
+22:39 - or depending which one you want it to be as fast as possible,
+22:43 - you might want to do one or the other.
+22:45 - And then the other big thing is that we
+22:47 - need to be able to compute this determinant of Jacobians.
+22:51 - And these Jacobian matrices are pretty big.
+22:54 - They are kind of n by n, where n is the data dimensionality.
+22:59 - And if you recall computing the determinant of a generic n
+23:06 - by n matrix takes order of n cube operations.
+23:10 - So even if n is relatively small, like 1,000,
+23:16 - this is super expensive.
+23:19 - So computing these kind of determinants naively
+23:21 - is very, very tricky.
+23:23 - And so what we'll have to do is we'll
+23:26 - have to choose transformations, such
+23:27 - that not only they are invertible,
+23:29 - but the Jacobian has a special structure.
+23:32 - So then we can compute the determinant more efficiently.
+23:36 - And the simplest way of doing it is
+23:40 - to choose matrices that are basically triangular,
+23:44 - because in that case, then you can compute the determinant
+23:48 - in basically linear time.
+23:50 - You just multiply together the entries
+23:52 - on the diagonal of the matrix.
+23:56 - And so one way to do it is to basically define the function
+24:03 - f such that basically the Jacobian--
+24:06 - we want to make sure-- we want to define a function
+24:08 - f basically, which again has n inputs and n
+24:12 - outputs, such that the corresponding Jacobian, which
+24:16 - is this matrix of partial derivatives is triangular.
+24:21 - So there needs to be a lot of zeros basically in the matrix.
+24:26 - And one way to do it-- and recall the Jacobian
+24:28 - looks like this.
+24:29 - So this is a function--
+24:33 - f is a vector valued function.
+24:35 - It has n different outputs.
+24:37 - So there is n functions, f scalar functions, f1 through fn.
+24:41 - And the Jacobian requires you to compute basically the gradients
+24:45 - with respect to the inputs of each individual function.
+24:49 - So you can think of each of these columns
+24:52 - as being the gradient of a scalar valued function
+24:54 - with respect to the inputs-- no, with respect to the parameters.
+24:59 - And a triangular matrix is basically
+25:02 - a matrix where all the elements above the diagonal
+25:07 - let's say are 0.
+25:08 - And so how do we--
+25:11 - any guess on how do we make let's say the derivative
+25:15 - of f1 with respect to zn 0?
+25:19 - Yeah, that doesn't depend on it.
+25:21 - And so if you choose the computation graph, such
+25:24 - that the ith output only depends on the previous kind of inputs,
+25:31 - kind of in an autoregressive model, then by definition,
+25:35 - all the derivatives-- a lot of the derivatives
+25:38 - are going to be 0.
+25:39 - And you get a matrix that has the right kind of structure.
+25:43 - So it's lower triangular.
+25:46 - And if it's lower triangular, you
+25:48 - can get the determinant just by multiplying together
+25:51 - all the entries on the diagonal.
+25:55 - And there is n of them.
+25:56 - And so it becomes linear time.
+25:57 -
+26:01 - And so that's one way of getting efficient efficiency
+26:07 - on this type of operation is to choose the computation graph,
+26:11 - such that it reminds us a little bit of autoregressive models
+26:17 - in the sense that there is an ordering, and then
+26:19 - the ith output only depends on the all the inputs that come
+26:25 - before it in this ordering.
+26:26 -
+26:32 - Yeah.
+26:33 - And of course, you can also make it upper triangular.
+26:35 - So if xi, the ith output only depends on the entries of--
+26:43 - the inputs that come after it, then you're
+26:45 - going to get a matrix that is going to be upper triangular.
+26:47 - And that's also something that you can evaluate
+26:49 - the determinant in linear time.
+26:52 -
+26:55 - So just to recap.
+26:59 - Normalizing flows transform simple distribution to complex
+27:03 - with a sequence of invertible transformations.
+27:06 - You can think of it as a latent variable
+27:08 - model with exact likelihood evaluation.
+27:11 - We need invertible mappings and somehow
+27:16 - Jacobians that have special structure so that we can compute
+27:19 - the determinant of the Jacobian and the change
+27:21 - of variable formula efficiently.
+27:24 - And what we're going to see today
+27:25 - is various ways of achieving it.
+27:27 - There is a lot of different kind of neural network architectures
+27:31 - or layers that you can basically use that sort
+27:34 - of achieve these properties.

@@ -1,1 +1,490 @@
-
+00:00 -
+00:04 - PROFESSOR: The plan for today is to talk
+00:07 - about latent variable models.
+00:09 - So just as a recap, what we've seen so far
+00:12 - is the first kind of family of generative models--
+00:16 - the autoregressive ones where the key idea
+00:20 - is that we use chain rule to describe a joint probability
+00:24 - distribution as a product of conditionals.
+00:28 - And then we essentially try to approximate the conditionals
+00:32 - using some kind of neural network.
+00:35 - And we've seen several options for doing that, including
+00:40 - RNNs, CNNs, transformers.
+00:43 - At the end of the day, the core underlying idea
+00:47 - is really this autoregressive factorization of the joint.
+00:52 - And we've seen that the reason that the autoregressive models
+00:55 - are good because they give you access to the likelihood.
+00:59 - It's relatively easy to evaluate the probability of any data
+01:02 - point.
+01:03 - You just multiply together the conditionals.
+01:06 - And what this means is that you can train them
+01:08 - by maximum likelihood.
+01:10 - You have a training data set, you
+01:12 - can evaluate the probability assigned by your model
+01:14 - to the data, and you can optimize the parameters
+01:17 - of your probability distribution to maximize the probability
+01:21 - of the data set you are given.
+01:24 - And you can use the likelihood to do other things--
+01:27 - for example, anomaly detection.
+01:31 - The cons of autoregressive models is that--
+01:33 - well first of all, you have to pick an ordering.
+01:35 - And sometimes it's straightforward to do it.
+01:38 - Sometimes it can be it can be tricky to figure out
+01:41 - what is the right ordering that you're
+01:42 - going to use to kind of construct the chain rule
+01:45 - factorization.
+01:46 - Generation is slow.
+01:49 - So even if you use an architecture that
+01:51 - allows you to compute all the conditionals, basically,
+01:55 - in parallel with, like, a transformer,
+01:59 - the challenge is that at generation, you
+02:01 - have to generate basically one variable at a time.
+02:04 - And so that can be slow.
+02:07 - And another thing is that it's not obvious
+02:09 - how you can get features from the data in an unsupervised way.
+02:14 - And that, we'll see, is one of the things
+02:15 - that we're going to be able to do using latent variable models.
+02:20 - And so the plan for today is to start talking
+02:23 - about latent variable models.
+02:24 - We'll start from simple ones like mixture models,
+02:27 - and then we'll start the discussion
+02:31 - of the variational autoencoder, or the VAE.
+02:33 - And we'll see how to do inference
+02:34 - and learning when you have latent variables.
+02:38 - So the kind of high-level motivation for building or using
+02:43 - a latent variable model is that when
+02:46 - you're trying to model a complicated data set--
+02:51 - for example, a data set of images of people like this one,
+02:56 - the problem is typically hard because there
+02:58 - is a lot of variability that you have to capture.
+03:02 - For example, in this case, there might be a lot of variability
+03:08 - because people have different age,
+03:10 - people have different poses, people have different hair
+03:13 - colors, eye colors.
+03:15 - And so all these things lead to very different values
+03:19 - for the pixels that you have in the data set.
+03:23 - And so the problem is that-- and if you somehow had access
+03:28 - to these sort of annotations, perhaps it
+03:32 - would be easier to model the distribution
+03:34 - because you could sort of build separate models where you're
+03:38 - conditioning on hair color or the eye color or the age
+03:42 - or whatever attribute you have access to.
+03:44 - But unless you have sort of annotations,
+03:50 - all you have access to is a bunch of images.
+03:51 - And although you believe that you can kind of see that there
+03:54 - is this latent structure, it's not annotated
+03:58 - so it's not obvious how you take advantage of it.
+04:01 - And so the idea of latent variable models
+04:05 - is to essentially add a bunch of random variables,
+04:09 - which we're going to denote z, which
+04:13 - are supposed to capture all these latent
+04:16 - factors of variation.
+04:18 - So even though we only care about modeling pixels
+04:20 - in the images, we're going to incorporate
+04:23 - a bunch of other random variables in our model.
+04:26 - And we're going to call these random variables
+04:28 - latent or hidden because they are not
+04:31 - observed in the data set.
+04:34 - We only get to see the pixel values, the x part,
+04:36 - but we don't get to see the corresponding values
+04:40 - for the latent factors of variation.
+04:43 - And by doing this-- so we get several advantages.
+04:47 - We're going to get more flexible kind of model families.
+04:51 - And if you can fit a model reasonably well,
+04:55 - then we might also be able to kind of extract
+04:59 - these latent variables given the pixel values.
+05:03 - And if you're doing a good job at modeling
+05:05 - these common characteristics that the different data
+05:09 - points have, then you might use these features
+05:11 - to do other things.
+05:13 -
+05:17 - If you have a classification task,
+05:18 - it might be easier to train a model that
+05:22 - works at the level of these latent variables as opposed
+05:25 - to the direct pixel values, because often you
+05:30 - might need a small number of latent variables
+05:33 - to describe a much more kind of high-dimensional kind of data
+05:39 - set like images, for example.
+05:42 - So at the high level--
+05:46 - I'm sort of trying to formalize a little bit this intuition--
+05:49 - what we want to do is we want to have a joint probability
+05:52 - distribution between the x, which are basically
+05:54 - all the pixel values that we have in an image,
+05:57 - and these latent variables z.
+05:59 - And so here I'm showing the x shaded,
+06:02 - meaning that it's observed.
+06:03 - And the z variables are white and they're not
+06:07 - shaded because this basically means for every data point,
+06:10 - see we don't get to see-- we don't
+06:12 - have annotations for the corresponding latent variables.
+06:15 - And conceptually you can think of a Bayesian network that
+06:19 - might look something like this, right,
+06:21 - where there is the pixel values that you get to see,
+06:23 - and then there is a bunch of latent factors of variation
+06:25 - that would be helpful in describing
+06:30 - the different types of images that you might have access
+06:34 - to in your data set.
+06:37 - And these latent variables-- again,
+06:41 - they might correspond to these high-level features.
+06:43 - And if z is chosen properly, you get several advantages
+06:50 - because it might be a lot easier to model
+06:53 - p of x given z as opposed to the marginal distribution p of x.
+06:57 - And if you somehow are able to cluster the data points
+07:00 - and divide them into different groups,
+07:03 - then modeling the images that belong to every particular group
+07:07 - separately, which is kind of like what this p of x given z
+07:10 - would do, could be much easier, because at that point
+07:14 - there is a lot less variation that you
+07:15 - have to capture once you condition on these latent
+07:19 - features.
+07:21 - And the other good thing that you
+07:23 - have access to if you do this is that,
+07:27 - if then you try to infer the latent variables for a new data
+07:31 - point x, then you can sort of identify these features.
+07:36 - And so, again, this is sort of going towards the representation
+07:40 - learning angle, or the computer vision as inverse graphics.
+07:46 - Somehow if you have a good generative
+07:47 - model that can produce images based
+07:49 - on a set of latent variables, if you can then infer these latent
+07:53 - variables, then you might be discovering features,
+07:57 - structure that you can use for different sort of problems.
+08:02 - And the problem is that it might be
+08:06 - very hard to specify a graphical model like this
+08:10 - and specify all the conditionals.
+08:12 - And so as usual, instead of taking the graphical model
+08:14 - view or the Bayesian network view that we have here,
+08:18 - we're going to try to use deep neural networks
+08:22 - to do the work for us, right?
+08:24 - And so what we're going to do instead is,
+08:27 - we're still going to keep that kind of structure
+08:29 - where we have a set of observed variables x and latent variables
+08:33 - z, but we're not going to have anything interpretable in terms
+08:36 - of how the random variables are related to each other
+08:39 - or what they mean.
+08:41 - We're just going to assume that there
+08:43 - is a set of random variables z that are somewhat simple.
+08:49 - For example, they might be distributed
+08:51 - according to a simple Gaussian distribution.
+08:54 - And then we model the conditional distribution
+08:58 - of x given z, again using basically some kind
+09:02 - of deep generative model where we have a simple distribution--
+09:08 - let's say a Gaussian, but the parameters of this distribution
+09:12 - depend, on some potentially complicated way,
+09:16 - on the latent variables through, let's say,
+09:19 - a couple of neural networks--
+09:20 - mu theta and sigma theta that are basically giving us
+09:24 - the mean and the standard deviation
+09:27 - that we're expecting for x given that the latent variables take
+09:32 - a particular value.
+09:34 - And so again, because at this point
+09:38 - the latent variables-- they don't
+09:40 - have any pre-specified semantic, then
+09:44 - we're sort of hoping that by fitting this model,
+09:49 - let's say by maximum likelihood, we
+09:52 - end up somehow discovering interesting latent structure.
+09:56 - And as usual, this is an unsupervised learning problem,
+10:01 - so it's kind of ill-defined.
+10:03 - Because what does it mean that the structure is meaningful?
+10:07 - What is it that we're actually after here?
+10:10 - It's not obvious, but the intuition is that hopefully,
+10:15 - by trying to model the data using these latent
+10:18 - variables we might discover some interesting structure.
+10:21 - Some interesting correspondence between x and z that then
+10:28 - would first of all make learning easier
+10:32 - because we are able to model a distribution over images
+10:35 - x using something like a Gaussian.
+10:38 - And then by inferring the latent variables
+10:41 - given the observed one, given the x,
+10:44 - we're hopefully going to discover interesting features
+10:48 - that then we can use to analyze the data
+10:51 - or to do transfer learning or whatever you want.
+10:56 - So the question is, how do we change z
+10:59 - when we fit the neural network?
+11:00 - Yeah, so we'll see how we do learning.
+11:02 - That's the challenge.
+11:03 - So the challenge is that the z variables are not
+11:05 - observed during training, and so it's not obvious
+11:08 - how you should update the parameters
+11:10 - of this neural network that gives you
+11:12 - essentially the x as a function of z
+11:16 - when you don't know what z was.
+11:17 - And so intuitively, you're going to have
+11:19 - to guess what is the value of z for any given x,
+11:23 - and you're going to use some kind of procedure
+11:26 - to try to fit this model.
+11:28 - So if you've seen em, it's going to have the flavor of sort
+11:31 - of an em-like procedure where we're
+11:33 - going to try to guess a value for the latent variables,
+11:36 - and then we're going to try to fit the model.
+11:38 - The question is, is x being represented autoregressively?
+11:42 - In this case, there is no autoregressive structure.
+11:45 - So x given z is just a Gaussian distribution-- so
+11:49 - something very simple.
+11:51 - The parameters of this Gaussian are
+11:53 - determined through this potentially very complicated
+11:56 - non-linear relationship with respect to z.
+11:59 - And as we'll see, even though p of x given z is very simple--
+12:03 - it's just a Gaussian, and you would never
+12:05 - expect that a single Gaussian is sufficiently flexible
+12:08 - to model anything interesting because you have these latent
+12:13 - variables.
+12:14 - As we discussed before, if you somehow
+12:16 - are able to cluster the data points in a reasonable way,
+12:19 - then within the cluster which is kind of what this object is,
+12:23 - you might be able to get away with a very simple kind
+12:26 - of distribution.
+12:26 - And that's kind of the idea behind a latent variable model.
+12:31 - Yeah, so the question is, I guess what sort of mu's and z--
+12:38 - what kind of functions do we use here,
+12:41 - and are they different for every z?
+12:44 - In this case, the functions are the same.
+12:47 - So there's a single function that
+12:49 - is then going to give you different outputs when
+12:51 - you fit in different z values.
+12:54 - So the functions are fixed.
+12:56 - The other question is, well, does it have to be a Gaussian?
+13:00 - Not necessarily.
+13:01 - You can use an autoregressive model there if you wanted to.
+13:06 - The strategy behind the latent variable model
+13:08 - is to usually choose these conditionals to be simple
+13:12 - because, again, you have this clustering kind of behavior
+13:15 - and so you might be able to get away
+13:16 - with a simple p of x given z.
+13:18 - But you can certainly--
+13:20 - this is for the mix-and-match part of this course.
+13:25 - You can get a different kind of generative model
+13:28 - by replacing this p of x given z with a autoregressive model.
+13:32 - And that gives you even more flexibility.
+13:35 - But the story behind the variational autoencoder
+13:38 - is to keep that simple.
+13:40 - So the question is, why do we need p of x given z and p of x?
+13:43 - So the goal is to always just model
+13:45 - p of x so that's the same as in the autoregressive model.
+13:48 - You want to be able to fit a probability distribution
+13:51 - over these x variables, which are the ones you have access to.
+13:53 - The pixels.
+13:54 - Whatever.
+13:55 - The motivation for using the z variable is that--
+13:58 - well one, it might make your life easier in the sense
+14:02 - that if you somehow are able to cluster
+14:04 - the data using the z variables, then learning becomes easier.
+14:10 - The second one is that being able to infer the latent
+14:14 - variables might be useful in itself because really,
+14:17 - maybe what you're after is not generating images
+14:20 - but kind of understanding what sort of latent factors
+14:24 - or variations exist in your data set.
+14:26 - The prior in this case is very simple.
+14:28 - It's just a Gaussian.
+14:29 - But yeah, you could have more complicated priors versus.
+14:33 - You just hope that you discover something meaningful.
+14:36 - You can certainly test.
+14:37 - Once you've trained a model, you can certainly change, let's say,
+14:40 - one of the z variables and see how that affects
+14:44 - the images that you generate.
+14:46 - And so you can certainly test whether you've discovered
+14:48 - something meaningful or not.
+14:49 -
+14:53 - It might not be--
+14:54 - whether you discover something meaningful or not
+14:57 - is not guaranteed by the learning objective.
+15:00 - So the question is, yeah, is the number of latent variables
+15:02 - a hyperparameter?
+15:03 - Yes.
+15:04 - So the question is, if you use this kind of model,
+15:06 - how do we sample?
+15:07 - How do we do density estimation?
+15:09 - So sampling is easy because what you do is you first sample--
+15:13 - you can think of it as an autoregressive model where two
+15:16 - groups of variables, the z's and the x's-- and so what you would
+15:19 - do is you would first choose a latent factor variation.
+15:22 - So you sample z from a Gaussian, which we know how to do.
+15:25 - It's trivial.
+15:26 - Then you feed z through these two neural networks
+15:29 - and you get a mean and a covariance matrix
+15:33 - that defines another Gaussian.
+15:34 - Then you sample from that Gaussian.
+15:36 - So sampling is very easy.
+15:39 - Evaluating the p of x, as we'll see, that's the challenge.
+15:42 - That's kind of the "no free lunch" part.
+15:44 - Everything seems great except that evaluating
+15:47 - p of x which, is kind of doing density estimation,
+15:49 - becomes hard.
+15:50 - And that's what's going to come up next.
+15:53 - So the question is, is this in the end differentiable,
+15:55 - how do we train it?
+15:56 - Yeah, that's going to be the topic of this lecture.
+16:01 - All right, so let's see first as a warm-up, the simplest
+16:06 - kind of latent variable model that you can think of, which
+16:10 - you might have seen before.
+16:11 - That's the mixture of Gaussians, right?
+16:13 - So again, we have this simple Bayes net, z pointing to x.
+16:19 - And you can think of a mixture of Gaussians
+16:23 - as being a shallow latent variable
+16:25 - model where there is no deep neural network involved.
+16:29 - In this case, z is just a categorical random variable
+16:32 - which determines the mixture component.
+16:35 - Let's say there is k mixtures here.
+16:37 - And then p of x given z again is a Gaussian.
+16:41 - And then you have some kind of lookup table here
+16:43 - that would tell you what is the mean
+16:46 - and what is the covariance for mixture component k?
+16:51 - There's k mixtures, so you have k means and k covariances,
+16:55 - and that defines a generative model.
+16:58 - So to sample, again you would sample first
+17:00 - a mixture component, a z.
+17:01 - And then you would sample x from a Gaussian
+17:04 - with the corresponding mean and covariance.
+17:08 - And so it would look something like this.
+17:10 - So if x is two-dimensional-- so there is x1 and x2--
+17:15 - then each of these Gaussians would
+17:18 - be a two-dimensional Gaussian.
+17:20 - And these Gaussians will have different means--
+17:23 - say mu1, mu2, and mu3.
+17:24 - And they will have different covariances,
+17:27 - and so it might look something like this.
+17:29 -
+17:34 - And so the generative process again is, you pick a component
+17:37 - and then you sample a data point from that Gaussian.
+17:39 - So maybe you uniformly pick, or whatever is the prior over z--
+17:43 - maybe you sample k.
+17:46 - You can sample z.
+17:47 - You get 2, and then you have to pick a point distributed
+17:50 - according to a Gaussian with mean here
+17:52 - and covariance shaped like that and so forth.
+17:56 -
+18:01 - This is useful, again--
+18:02 - if you think about the clustering interpretation,
+18:04 - you can think of this kind of model
+18:07 - as giving you one way of performing clustering
+18:13 - which is a basic kind of unsupervised learning task.
+18:18 - This is an example where you have a data set collected
+18:23 - for the Old Faithful geyser in Yellowstone National Park,
+18:28 - and then each data point here corresponds
+18:30 - to an eruption of the geyser.
+18:32 - And then you can see there's two features here--
+18:35 - the duration of the eruption and the time between two eruptions.
+18:39 - And now the data set looks like this.
+18:41 - So you can there is some kind of relationship between these two
+18:43 - things.
+18:44 - And the larger the interval between two eruptions,
+18:47 - the longer then the following eruption is.
+18:51 - And you could try to model this using a single Gaussian.
+18:54 - If you fit the parameters, it's going to look like this.
+18:57 - You're going to put the mean here
+18:59 - and you're going to choose a covariance that kind of captures
+19:01 - that correlation between the features.
+19:03 - And you can see it's not doing a great job.
+19:06 - You're putting a lot of probability mass
+19:08 - here where there is no actual data,
+19:11 - but that's the best you can do if you're forced to pick
+19:14 - a Gaussian as your model.
+19:16 - But if you look at the data, it kind of
+19:18 - looks like there IS two types of eruptions.
+19:20 - There is type 1 that behaves like this and type 2 that
+19:23 - behaves like this, And so you're going
+19:25 - to get a much better fit to the data
+19:27 - if you have a mixture of two Gaussians that kind of look
+19:31 - like that.
+19:34 - And if you can somehow fit this model automatically,
+19:37 - then by inferring the z variable given the x, figuring out
+19:42 - if a point belongs to the blue or the red mixture,
+19:46 - you can identify which type of eruption you're dealing with.
+19:51 - So again, this is really this idea of identifying features
+19:54 - based on the observed data.
+19:58 - And again, you can see that this is kind of ill-posed
+20:00 - because it's unsupervised learning
+20:02 - and we're hoping to discover some meaningful structure,
+20:06 - but it's not clear that this is always possible.
+20:09 - It's not clear what it means to find good structure
+20:12 - or what's a good clustering, right?
+20:16 - You might have different definitions
+20:17 - of what a good clustering is, and this
+20:20 - will give you a clustering.
+20:22 - Whether it is the one that you want or the best one
+20:25 - is not guaranteed.
+20:26 -
+20:30 - And so, yeah, you can imagine that you can use
+20:32 - it to do unsupervised learning.
+20:33 - You can have it show more mixture components.
+20:35 - You have a data set that looks like this,
+20:37 - then you might want to model it, let's say,
+20:40 - using a mixture of three Gaussians.
+20:42 - And again, identifying the mixture component which
+20:46 - is the color here would tell you sort of which component
+20:51 - the data point is coming from, and it tells you
+20:53 - something about how to cluster the data
+20:55 - points in different ways.
+20:57 - So the question is, will this fail very hard on image?
+21:00 - Probably you wouldn't expect unless k is extremely large.
+21:08 - If you have, say, a mixture of two Gaussians, then you would--
+21:11 - let's say if you have a single Gaussian,
+21:12 - then you would kind of choose the mean
+21:15 - to be the mean of all the images.
+21:16 - And then you put some kind of standard deviation,
+21:18 - and you can imagine you're going to get a blob.
+21:20 - It's not going to be very good.
+21:21 - Even if you are able to divide your training set into two
+21:23 - groups and fit two separate Gaussians,
+21:26 - it's still not going to work very well.
+21:28 - If k becomes extremely large, in theory you
+21:31 - can approximate anything, and so eventually it would work.
+21:34 - But yeah, in practice it would require
+21:36 - a k that is extremely large.
+21:38 -
+21:42 - Cool.
+21:44 - And here is actually an example on image data.
+21:48 - Again, this is on MNIST and this is the latent space z.
+21:53 - This is a projection of that, but you
+21:55 - can imagine that one axis is z1, another axis is z2.
+22:01 - And then you take your MNIST data set and then you try
+22:05 - to figure out where it lands--
+22:07 - in each data point where it lands in z space.
+22:11 - And you can kind of see that, again, it's
+22:14 - able to do some reasonable clustering in the sense
+22:16 - that data points that actually belong to the same class, which
+22:21 - was not known to the generative model--
+22:24 - for example, red points here corresponds to digits 2,
+22:28 - and you can see that they are all grouped together.
+22:30 - They all have similar z values after training this model,
+22:35 - and so there's not a single cluster here for the 2s.
+22:40 - There is kind of two of them.
+22:42 - Maybe the points in this cluster have a slightly different style
+22:47 - than the points in this cluster.
+22:48 - I mean, it's hard to say exactly what the clustering is
+22:51 - doing here.
+22:51 - And again, it hints that the fact that unsupervised learning
+22:55 - is hard.
+22:56 - But this is the intuition for what you might hope to get.
+23:00 - If you try to do this on an image data set,
+23:02 - you might hope to be able to discover different classes.
+23:05 - You might be able to do different styles.
+23:07 - And you're hoping to discover that automatically
+23:10 - by fitting a latent variable model
+23:12 - and just looking at the kind of z's that you discover.
+23:15 - The question is, how do you learn them?
+23:16 - And I haven't talked about it.
+23:18 - It's going to be that--
+23:19 - we're going to go through that in this lecture.
+23:22 - So there is no mixture of Gaussians learned here.
+23:25 - So this is more like the results of training
+23:30 - a deep generative models where the z's are actually not
+23:33 - even categorical.
+23:35 - Like, the z variables here are Gaussian or real valued.
+23:40 - And so what I'm plotting here is for each data
+23:44 - point, what is the corresponding inferred value of z?
+23:49 - which is no longer a number.
+23:50 - It's kind of a point in this two-dimensional space.
+23:53 - And it just so happened that it's
+23:55 - finding something reasonable.
+23:59 - But again, it's not guaranteed.
+24:01 - So I think the question is whether, I guess
+24:04 - in the model I had here, the p of z
+24:07 - was a simple distribution like a Gaussian?
+24:11 - And perhaps if you look at this latent space,
+24:13 - for example, which is actually not a VAE
+24:15 - I think-- but that's why it might not look like a Gaussian.
+24:18 - It has a bunch of holes, so you might be better off
+24:20 - having a mixture of Gaussians, for example, for p of z,
+24:24 - and you might actually try to learn the p of z
+24:26 - as part of the model.
+24:27 - And you can certainly do that.

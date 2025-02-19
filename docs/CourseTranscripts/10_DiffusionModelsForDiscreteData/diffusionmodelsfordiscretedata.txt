@@ -1,0 +1,1369 @@
+00:00 -
+00:05 - STEFANO ERMON: All right, so we're ready to get started.
+00:07 - Today, we're going to continue talking about diffusion models,
+00:10 - but we're going to see how we're going
+00:14 - to-- how we can use diffusion models to model discrete data,
+00:18 - any particular text.
+00:19 - And we have a guest lecture by Aaron,
+00:21 - who is a PhD student in my lab.
+00:23 - And he did some groundbreaking work
+00:25 - in this space of using diffusion models for discrete data
+00:29 - and language.
+00:30 - And so take it away, Aaron.
+00:32 - AARON LOU: Thanks, Stefano, for the introduction.
+00:35 - And glad to get started.
+00:36 - Let's get started.
+00:39 - To start, I'd like to talk a bit about the general framing
+00:43 - of our generative model problem and how things work generally.
+00:47 - So typically, we're given a data set
+00:50 - x1 to xn, which we assume is sampled iid from some data
+00:54 - distribution p data.
+00:57 - Our goal is to fit a parameterized model p
+01:00 - theta often parameterized by a neural network that
+01:03 - approximates our ground truth data distribution p data.
+01:07 - And assuming we can learn our p theta well enough,
+01:10 - we can generate new samples, maybe new interesting samples
+01:13 - would be the interesting part, using our parameterized p theta.
+01:18 - And now, if we can do everything together
+01:22 - and everything works out, we profit.
+01:24 - But there's kind of a bit of math
+01:26 - that goes in between as you all know.
+01:29 - So in this class, you guys have learned
+01:32 - a lot about different generative modeling paradigms,
+01:35 - such as GANs, VAEs, and diffusion models.
+01:40 - And the thing that you'll notice for all
+01:42 - of these different models or most of these models
+01:44 - that you've learned is that whenever
+01:46 - they draw a schematic diagram about what you should be doing,
+01:49 - they normally have a picture--
+01:51 - they normally use an image as your most common data modality.
+01:56 - So here we have a picture of a dog, a picture of a number,
+01:59 - and a picture of a smaller, cuter dog.
+02:01 - And this type of coincidence actually isn't--
+02:05 - it's not just a coincidence.
+02:06 - There's actually a very fundamental reason
+02:08 - why we do this.
+02:09 - And the reason why is because all of our different data--
+02:13 - all of these different generative models,
+02:15 - they're building in the fact that we're working
+02:18 - over a continuous data space.
+02:20 - So here, our data space x is equal to some R
+02:23 - d, where you can think of R as each pixel value and d
+02:26 - as a total number of pixels, like pixel
+02:29 - and the values of the pixels.
+02:31 - And if we visualize this using some spectrum,
+02:34 - like as follows, then what's nice is
+02:37 - that we can sample points like here, here, or there.
+02:41 - And these three different samples are all valid images,
+02:44 - so to speak.
+02:45 - And this is a fundamental property
+02:47 - of continuous spaces and the fact that we can interpolate.
+02:51 - Now, what I and a lot of other people
+02:52 - are interested in, which is a bit
+02:54 - converse to this type of setup, is a discrete data space,
+02:58 - as follows.
+02:59 - So instead of having x equals R d,
+03:01 - we have x is equal to 1 to N to the power of d, where
+03:04 - N is the total number of--
+03:05 - or is the vocabulary size, so to speak,
+03:07 - and d is the number of dimensions.
+03:11 - We replace our data points with data
+03:14 - points x, where x is just a sequence of tokens x1 to xd.
+03:19 - And then if we have this setup, we
+03:21 - can visualize it with another diagram.
+03:23 - This is a lattice, which is the simplest
+03:25 - version of a discrete space.
+03:29 - And while it's true we can generate samples like here
+03:32 - and here, which are valid discrete data point samples,
+03:36 - we can't really generate samples here or there.
+03:38 - We can't generate samples in between or outside
+03:40 - of the values, because that just doesn't
+03:42 - make any sense for discrete data distribution.
+03:45 - And as such, this makes discrete data fundamentally
+03:48 - a harder problem, as we'll see.
+03:51 - So now, you might be asking yourself the question,
+03:53 - OK, Aaron, we've learned about GANs, diffusion models, VAEs.
+03:57 - These all work pretty nice.
+03:58 - Why do we have to go to a completely different regime?
+04:01 - Why do we have to go to discrete data?
+04:03 - And why does this matter?
+04:04 - And I would be remiss if I didn't mention our good friends
+04:07 - at OpenAI, who have released these big large language
+04:13 - models like ChatGPT, which have really
+04:16 - like transformed the world in the last couple of years.
+04:18 - Also, I would be remiss if I didn't
+04:20 - mention other competitors.
+04:21 - But fundamentally, we have this new novel paradigm
+04:24 - of large language modeling, which is perhaps
+04:28 - arguably the largest advancement in computer science
+04:32 - machine learning in the last couple of years.
+04:34 - And what's interesting about this data domain
+04:37 - is that sentences are fundamentally discrete.
+04:40 - So for sentences, it's a sequence
+04:42 - of discrete tokens or discrete words that we build up.
+04:46 - So as such, it would make the most sense
+04:48 - to have a probabilistic model that can generate discrete data,
+04:52 - like sentences as such.
+04:54 - And in particular, if you are familiar
+04:57 - with the LLM, large language-- like natural language
+05:00 - processing in general, you may have
+05:01 - heard of something called language model pre-training.
+05:03 - This is kind of the core step for many of these models, where
+05:06 - you learn a distribution over all of your input sentences.
+05:11 - And really, what they mean by language
+05:13 - model pre-training is you're just
+05:15 - fitting a discrete probabilistic model to your internet scale
+05:19 - data.
+05:19 - So we can see that this idea is pretty fundamental here.
+05:24 - And other applications include stuff
+05:26 - in natural biology and natural sciences more broadly.
+05:31 - We have data modalities, such as DNA, molecules, and proteins.
+05:37 - And all of these different data modalities
+05:39 - are fundamentally discrete.
+05:40 - And it would make the most sense to try to generate a new novel
+05:45 - DNA sequences, novel molecules, and novel proteins, which
+05:48 - can have a big impact in our day-to-day lives.
+05:51 - And it's all requires a discrete generative model.
+05:53 - And finally, and this is a bit kind of counterintuitive,
+05:58 - we also see a return to discreteness
+06:00 - for stuff like images.
+06:02 - So this is the schematic for a VQVAE backbone,
+06:05 - a VQVAE or VQGAN is one of the many building blocks in systems
+06:11 - like Stable Diffusion.
+06:12 - And in the middle, we have this discretized representation,
+06:15 - these discretized latent space vectors.
+06:18 - And more recent work-- and this is like extremely recent,
+06:21 - like in the last couple of months out of Google and CMU,
+06:25 - it has shown that if you just throw away
+06:28 - any continuous notion of your discrete latent space--
+06:30 - you only have the discrete component,
+06:32 - this actually leads to a broader improvement in results.
+06:35 - And results like these tend to show that maybe in the future
+06:38 - it's possible to reconcile images into this broadly
+06:42 - discrete paradigm as well.
+06:46 - So now, we why discrete data is important.
+06:49 - So let's ask the question, why is it so hard?
+06:51 - And you might say something, like, hey, Aaron, this
+06:54 - is all very interesting.
+06:55 - Why can we just adapt an existing continuous space
+06:58 - model, like a flow or a GAN?
+07:00 - Why can we just take that and just
+07:02 - adapt it to the discrete case?
+07:05 - And, well, we have something like this.
+07:06 - So we have this diagram.
+07:07 - We take some random noise.
+07:08 - We push it through some f theta neural network,
+07:11 - and it generates an image.
+07:12 - And this is a good way to do our sampling and whatnot.
+07:16 - And the intuitive idea here would
+07:18 - be like, why can we just parameterize f theta to output
+07:21 - only discrete values?
+07:23 - And since it only outputs discrete values,
+07:25 - then we can generate something like text.
+07:27 - And we can go through like some examples here.
+07:29 - But let's say for flows, we have this kind of core.
+07:33 - We have this coupling where we take noise
+07:36 - to data, data to noise through our f theta or f theta inverse
+07:40 - that you guys have seen.
+07:42 - And the way that this works is that you can stretch and pull
+07:45 - your space.
+07:47 - And this allows you to take your--
+07:49 - model complex data distribution with a simple base distribution
+07:53 - and a change of variables formula as such.
+07:57 - Now if we replace all of this type of stuff
+07:59 - with discrete data, so let's say we
+08:01 - go from a discrete random sequence to--
+08:04 - we map it bijectively to another real sequence
+08:08 - that we want to model, well, do we have a change of variables?
+08:11 - Well, we don't really have a change of variables.
+08:13 - In fact, the best that we can get
+08:15 - is this type of setup, where our x has the same probability
+08:18 - as this other x.
+08:20 - And because of this, your base distribution
+08:24 - has to be as expressive as your data distribution, which
+08:27 - is why this type of setup struggles really hard.
+08:30 - For this question, we have this flow.
+08:32 - It doesn't really generalize.
+08:34 - Also, we have, let's say, GANs.
+08:36 - OK, we have-- we take a noise.
+08:38 - We map it to an image.
+08:39 - We have a discriminator, and then
+08:41 - the idea here is we can backpropagate
+08:43 - gradients to update our f theta from our discriminator.
+08:47 - And if we replace the components with discrete values
+08:51 - so we have--
+08:53 - we parameterize it to only allow for discrete outputs,
+08:57 - then these gradients don't really back
+08:59 - propagate through a discrete valued input.
+09:01 - And the reason why this doesn't work
+09:03 - is because we don't have calculus.
+09:05 - So from these two examples, we can broadly see that our--
+09:08 - we'll get through this slide quickly.
+09:10 - But our conclusion is that our models are currently
+09:12 - too reliant on calculus and it's hard to extend it.
+09:15 - But for transformers, this is kind of a modeling question,
+09:17 - not like-- it's kind of an architectural problem, not
+09:20 - a modeling problem if that makes sense.
+09:22 - So for transformers, when you map it,
+09:25 - the input sequence to a discrete or a continuous value, really
+09:30 - the reason why this works and the reason why people do it
+09:32 - is because it takes your 50,000 or whatever token space
+09:36 - down to 700, which is much more amenable for computation.
+09:40 - But you don't really have to do it.
+09:41 - So this is kind of an architectural decision
+09:43 - and has nothing to do with the modeling-- fundamental modeling
+09:47 - component or probabilistic modeling part.
+09:49 - Why can't we just embed the tokens into continuous space
+09:52 - and do this type of-- we embed the tokens in continuous space,
+09:55 - and then when we generate we just generate the values
+09:58 - and we discretize kind of?
+10:00 - And actually, this is kind of a--
+10:02 - people actually do this for some things.
+10:04 - In particular, we can take a look at something like images,
+10:06 - right?
+10:07 - For images, in images, we don't actually
+10:10 - store like the whole continuous values of an image,
+10:13 - because that would be impossible in a computer.
+10:15 - We only have finite precision.
+10:17 - Generally speaking, we discretize it up to 0 to 255.
+10:21 - We have this discretized representation.
+10:23 - This is what we store as our, quote unquote,
+10:26 - "ground truth image."
+10:28 - And the idea here is that for our generative modeling,
+10:31 - what people do use for some a system like Stable
+10:33 - Diffusion or any generative model
+10:34 - broadly is a 2-step procedure.
+10:36 - First, you have your continuous generative model.
+10:40 - You generate a continuous image, and then you discretize it
+10:43 - to the nearest value and this becomes your discrete image,
+10:46 - which is kind of what people do generally speaking.
+10:49 - So this is how they kind of get around
+10:51 - the discrete nature of images and use continuous models here.
+10:56 - And the reason why this works for images in particular
+10:59 - is because if we have the images values 0 to 255,
+11:02 - this is a typical range for an image pixel value,
+11:06 - and then we can just embed this into some continuous space
+11:09 - directly.
+11:09 - So we just embed it on the real number line.
+11:12 - And if we generate, like--
+11:13 - I only want one of these three different generations.
+11:16 - Well, what we can do is that we can just easily
+11:19 - discretize because we just round to the nearest number.
+11:21 - This is very simple.
+11:22 - Now if we have something like tokens,
+11:24 - let's say, for a natural language, OK,
+11:28 - there's no way we embed this into a continuous number line
+11:31 - like that.
+11:32 - And generally, the way that people
+11:33 - do this is something very high dimensional.
+11:36 - This is two dimensions.
+11:37 - People generally do much higher dimensions
+11:39 - than this when we try to do our embeddings.
+11:42 - And if we try to generate stuff here and try
+11:44 - to generate and discretize something here,
+11:47 - what you're going to end up with is like, OK, yes,
+11:49 - sometimes, your generations will be good.
+11:51 - So if we have generated tokens in the green x marks there,
+11:55 - it's all good.
+11:56 - But if we are--
+11:58 - most of the space is empty, so we end up
+12:00 - having a lot of empty room between tokens.
+12:04 - Maybe it's possible though to discretize it
+12:06 - into a nearest neighbor token, but it's kind of much more--
+12:09 - it's much more not--
+12:12 - it's much less obvious why this would work.
+12:15 - Sometimes, when we go between tokens,
+12:17 - it doesn't really make sense.
+12:18 - And this is kind of a fundamentally hard problem
+12:20 - in graph theory is actually the reality.
+12:23 - So this would work if your model is perfect.
+12:26 - And it would work if your model is perfect.
+12:29 - But in practice, this is kind of not the inductive bias we
+12:33 - want to build into our model.
+12:34 - It makes it very--
+12:36 - it typically makes it pretty hard to learn for instance.
+12:38 - So for something like, let's say, the diffusion model,
+12:41 - and there's language diffusion models that
+12:43 - do this exact same procedure, you continuously
+12:46 - embed your tokens.
+12:47 - You take a diffusion process there.
+12:49 - The issue that we'll see for those models--
+12:51 - that we've seen for those models is that it's kind
+12:53 - of-- they're not really competitive with your standard
+12:55 - autoregressive model, and also they take way too long
+12:58 - because you have to--
+12:59 - you can't have any error whatsoever.
+13:01 - If you have any error whatsoever,
+13:03 - you're just kind of lost.
+13:04 - It doesn't work.
+13:05 - For autoregressive modeling, we model the probabilities,
+13:08 - which is a different quantity than modeling the actual value.
+13:11 - So we can model the probabilities of, let's say,
+13:14 - the probability of the word "the"
+13:15 - or versus the probability of the word "times."
+13:18 - And this is a very continuous quantity.
+13:20 - But if we were to say like, hey, let's just take a transformer.
+13:24 - We push it through a linear layer, and you select one value.
+13:27 - This will be the setup.
+13:28 - We would select one value from your continuous space.
+13:31 - Not like a-- you don't have probabilities
+13:33 - for all the other tokens.
+13:34 - You just select one value.
+13:35 - This will become more difficult. We
+13:37 - try to generate something that's in distribution, so something
+13:40 - near one of these tokens.
+13:42 - But this is the case.
+13:43 - Basically, we're modeling a probabilistic model.
+13:44 - We try to discretize.
+13:45 - And this is just a lot of empty space.
+13:47 - This is not a good inductive bias to learn over.
+13:50 - And so because of these various issues,
+13:52 - we only have one really good discrete probabilistic model.
+13:57 - You notice that it's autoregressive model,
+14:00 - transformers.
+14:01 - This is very typical.
+14:03 - The idea here is that instead of--
+14:05 - the idea here is you model the probability of each
+14:07 - of your sequences x by decomposing it by token.
+14:11 - So you model the first token here,
+14:13 - and then you take the second token given the first token.
+14:16 - That's the next probability.
+14:17 - And you just multiply it out to get the probability
+14:19 - of the last token given every token beforehand, which
+14:22 - is your typical setup.
+14:26 - And for language in particular, this
+14:28 - decomposes as the idea of context in green.
+14:31 - So you have a context tokens, and you have a next word
+14:34 - prediction in purple basically.
+14:37 - And this is the reason why this works so well.
+14:41 - And there's several good upsides to this autoregressive modeling
+14:45 - paradigm.
+14:45 - So in particular, it's very scalable.
+14:48 - The idea here is that when you compute
+14:51 - each next token probability, you only
+14:54 - need to compute a probability over your D total
+14:57 - tokens or your N total values.
+15:00 - And this is very scalable.
+15:02 - This is-- it's very easy to do this as long.
+15:05 - As you can build your architecture sufficiently good,
+15:08 - this should work out pretty well.
+15:10 - Another thing is that if you have
+15:12 - a very strong neural network, if you have a neural network that
+15:14 - is sufficiently powerful, then you can theoretically
+15:17 - represent any probability over your sequences
+15:19 - by this decomposition, which is counterintuitive,
+15:22 - but it actually works itself out due to this decomposition
+15:26 - nature.
+15:27 - And finally, it's actually a pretty reasonable inductive bias
+15:31 - for stuff like natural language.
+15:32 - So for natural language, we speak.
+15:34 - We write from left to right.
+15:35 - So it's pretty natural that we would do
+15:38 - so here for modeling language--
+15:42 - for modeling languages, this makes sense as well.
+15:45 - There are several downsides, though,
+15:47 - which have been largely unaddressed
+15:48 - by most people because of this over-reliance
+15:52 - on autoregressive modeling.
+15:54 - One famous argument that's been--
+15:56 - that people like Yann LeCun have really
+15:59 - been proponents of is the idea that sampling
+16:02 - in autoregressive modeling tends to drift.
+16:05 - So when you sample from an autoregressive sequence,
+16:07 - you just generate new tokens, but you can accumulate an error.
+16:10 - And as you continuously accumulate the error,
+16:12 - this will cause your generation to veer off course.
+16:16 - This is a very famous argument for why
+16:18 - we're not going to get AGI through autoregressive modeling.
+16:20 - And another issue is that for non-language tasks,
+16:24 - like let's say DNA sequence, well, there's DNA sequencing.
+16:27 - There's no reason why DNA sequences
+16:29 - have to be generated from left to right.
+16:31 - This is not very--
+16:33 - this doesn't make sense as an inductive bias.
+16:36 - Furthermore-- and this is something
+16:38 - that people haven't really been like thinking of.
+16:40 - But actually, when we have an autoregressive transformer,
+16:43 - there's actually a lot of constraints
+16:45 - that we need to place on our autoregressive transformer.
+16:48 - In particular, making sure that the attention mask is causal,
+16:51 - that people haven't really been like a cognizant of,
+16:55 - but there are definitely still-- there
+16:56 - are definitely still problems for like this probabilistic
+16:59 - modeling paradigm.
+17:01 - And finally, because we sample iteratively
+17:04 - in autoregressive models, we generate next tokens,
+17:07 - this is actually a pretty slow technique because of the fact
+17:11 - that it's like rather iterative.
+17:12 - You have to generate tokens one at a time, which is not great.
+17:18 - So we have all these problems and benefits
+17:21 - of autoregressive modeling.
+17:22 - So the question that we need to ask ourselves is that,
+17:25 - is there is there something more to this?
+17:28 - And we can think about it in terms of score matching, which
+17:30 - I'm sure you're all aware of.
+17:32 - And the key idea behind like, why we can't just
+17:35 - model p theta of x directly instead of-- what we have to do
+17:38 - is autoregressive decomposition is because p theta of x, we
+17:42 - have to make sure that as we sum over
+17:44 - all the different sequences, we have to sum up to be 1.
+17:46 - And this is impossible, because there's
+17:48 - an exponential number of sequences
+17:50 - that we need to sum over.
+17:52 - And so this is very similar to this idea of score
+17:56 - matching that we've just been talking
+17:57 - about for the last couple of lectures,
+17:59 - where we model this gradient log probability function.
+18:02 - And when we do that, we don't have to make--
+18:04 - when we do that, we don't have to sum up
+18:06 - over all the possible numbers.
+18:08 - We don't have to integrate out--
+18:09 - we don't have to integrate out the distribution
+18:11 - to be 1, which tends to work pretty well with--
+18:14 - when you combine it with stuff like diffusion models.
+18:16 - So the real question here and the thing
+18:18 - that we'll talk about for the rest of the lecture
+18:20 - is how we can generalize these techniques from auto--
+18:25 - from score matching to our more discrete case.
+18:28 - And that is the real question of this lecture.
+18:30 - Can we do it?
+18:31 - And how well does it work?
+
+00:00 -
+00:04 - SPEAKER: So let's take a look at the outline of how
+00:07 - we can get about doing this.
+00:09 - There's three steps.
+00:10 - The first is how do we extend score matching
+00:12 - to discrete spaces.
+00:13 - This is not like a very well-known--
+00:15 - this is a pretty well-known problem.
+00:17 - And there haven't been really many good solutions that
+00:20 - have been proposed previously.
+00:22 - The next question is that once we
+00:24 - learn to score, which in the discrete case
+00:26 - is called the concrete score, how do we generate new samples
+00:29 - using concrete scores.
+00:31 - And finally, when we build this generative model
+00:34 - to generate new sequences, can we evaluate likelihoods.
+00:37 - And the reason why-- the reason why we want to evaluate
+00:39 - likelihoods is to compare fairly with autoregressive modeling
+00:43 - on a lot of perplexity like tasks.
+00:46 - And so yeah, first point.
+00:48 - Can we look at generalizing score matching
+00:51 - to discrete spaces?
+00:53 - So when we think about--
+00:55 - when we think about the core building
+00:58 - block of the score matching, we really think about the gradient.
+01:01 - And the gradient actually has a nice way that we can build it.
+01:06 - There's a nice generalization of the gradient
+01:08 - to a discrete space.
+01:10 - So the idea here is that our gradient
+01:11 - of a function of f when we evaluate at a position x, this
+01:16 - is actually like a finite difference.
+01:17 - Because a finite difference is the generalization
+01:19 - of a derivative if we assume that we don't-- if we assume
+01:22 - that a space is not continuous.
+01:24 - So yeah, so instead--
+01:25 - so this gradient becomes fy of minus fx.
+01:28 - When we just index over all other y's.
+01:31 - And this is the generalization of a gradient.
+01:34 - And using this, we can build a generalization
+01:36 - of a score function.
+01:38 - So the score function is a gradient
+01:40 - at position x of the log probability.
+01:43 - And really what this is is a gradient
+01:45 - of the probability over the probability when we do chain
+01:48 - rule to get out the logarithm.
+01:50 - And then when we substitute our definition
+01:52 - of our finite difference instead of the gradient
+01:55 - in this second line there.
+01:58 - What we actually get is that this is the collection
+02:00 - of all py over px minus 1.
+02:03 - So this py over px index over all y,
+02:06 - this is our what we'll learn.
+02:08 - This is called the concrete score.
+02:10 - And it's directly generalizes the score
+02:12 - function from continuous space to discrete space, which
+02:15 - is nice.
+02:16 - But how do we learn this?
+02:20 - And, well, there's one thing which
+02:22 - is that for py over px, when we try to model all py's
+02:25 - over px's, this doesn't make a lot of sense computationally.
+02:30 - So in this case for y, if we just
+02:32 - let y be any other neighbor of x, any other value that's not x,
+02:36 - then we end up with this issue where
+02:38 - we have the model too many quantities, O of N
+02:40 - to the power of 2d exponential.
+02:41 - It doesn't work.
+02:43 - But instead, if we model these sequence, these ratios,
+02:48 - we model the ratios between two sequences that
+02:51 - differ by only one position.
+02:53 - So instead, let's model the ratios between any two sequences
+02:56 - that only differ at one point or at one position, which is
+02:59 - a much more local construction.
+03:01 - And if we do this, this is only complexity of O of N times d.
+03:06 - So this is like very much more like computationally feasible.
+03:10 - Thats only the size of our sequence.
+03:13 - And when we model these ratios between two sequences that
+03:16 - differ only at one position, we can actually--
+03:19 - but we'll normally write it out with this first value,
+03:23 - this py over px for all of our derivations.
+03:26 - But all the derivations can generalize pretty easily
+03:29 - to this multi-dimensional case here,
+03:31 - just like as a precursor for the rest
+03:33 - of the talk because it's simpler to write it out this way.
+03:36 - But yeah, we can also model our these ratios pretty easily
+03:42 - with a neural network.
+03:44 - So if we feed into the neural network a sequence x1 to xd,
+03:47 - we push it through a sequence of sequence neural network.
+03:50 - And then we can get out another sequence
+03:52 - with another dimension attached to it as such.
+03:56 - And we can have probability of 1x2 all the way to xd over
+04:00 - probability of x1 all over xd.
+04:03 - And we have these.
+04:04 - We can directly model these ratios
+04:06 - of all successive neighbors, which differ only
+04:10 - at one point this way.
+04:11 - Sequence to sequence.
+04:12 - So you just go from this sequence--
+04:13 - this one-dimensional sequence to a d dimensional-- or d
+04:16 - dimensional sequence.
+04:17 - So we just push it through a neural network in parallel.
+04:19 - So you can think about it as a non-autoregressive Bert style
+04:22 - transformer.
+04:24 - So yeah, this is the idea.
+04:25 - We have a sequence to sequence model.
+04:27 - We can generate the ratios of places that
+04:30 - differ only at one position.
+04:32 - So how do we learn it as is a very obvious question?
+04:36 - How do we learn this concrete score?
+04:40 - How do we do this?
+04:42 - So yeah, our goal here is to learn a neural network as theta
+04:44 - x, such that when we parameterize
+04:47 - x theta of x at a position y, then
+04:49 - we can get the relative ratio py over px.
+04:52 - And this we need to find a way to do
+04:56 - this in a very principled manner,
+04:57 - as in we can't allow negative values for our s theta.
+05:01 - And also, when we have enough data,
+05:03 - we should also be able to recover
+05:04 - a ground truth, or enough data, enough model capacity.
+05:07 - And so the way that we do this is
+05:09 - very similar to score matching, which is the following loss
+05:12 - function.
+05:14 - We're calling a score entropy because it's
+05:17 - based off of a very--
+05:18 - it's very related to stuff like cross entropy.
+05:20 - But I guess the idea here is that it's very--
+05:23 - the idea here is that it's a discrete generalization of score
+05:26 - matching, in the sense that we first
+05:28 - sample-- we take an integral over all x in our probability
+05:31 - function p.
+05:32 - And then we sum over all of our y that are neighbors.
+05:36 - And then we minimize this type of new type
+05:39 - of divergence function in the middle
+05:42 - here in order to optimize it.
+05:44 - And yeah, the reason why this is in such a way
+05:48 - as we'll see it-- we'll see why we
+05:50 - need to do this type of construction soon.
+05:53 - But the idea here is that we have this score entropy.
+05:55 - It's a generalization of score matching,
+05:57 - but for our discrete scores instead.
+06:00 - And you might not believe me.
+06:02 - But actually, this score entropy function actually
+06:04 - does recover our ground truth.
+06:06 - So if we just get rid of all the x and y,
+06:09 - if we simplify our notation a bit,
+06:11 - and we want to minimize the following quantity.
+06:14 - Well, this quantity is minimized when our derivatives-- we just
+06:18 - set the derivative to be 0.
+06:20 - And we get this 1 minus py over px times 1 over s equal to 0.
+06:26 - And then we move it back over.
+06:27 - We multiply it out.
+06:28 - And we get that.
+06:29 - When we minimize it correctly, this s value
+06:32 - should be equal to py over px.
+06:35 - And we can also visualize the loss function for something
+06:38 - like a ground truth ratio of 0.2.
+06:40 - And we can clearly see that it satisfies
+06:42 - all of our requirements.
+06:43 - Basically it's convex.
+06:46 - It will recover the true value if we just minimize this.
+06:49 - And finally, we can do this between for all pairs x and y.
+06:54 - So we can just do this independently
+06:56 - for all of our x and y, which means
+06:58 - that if we learn everything correctly,
+07:00 - we should recover the ground truth for every pair x and y,
+07:04 - basically.
+07:05 - So yeah, we have this score entropy
+07:08 - loss function and how do we actually optimize it,
+07:11 - very similarly to score matching.
+07:14 - Here's the issue.
+07:15 - We have this loss function, but this py over px
+07:18 - is ground truth value is not known to us at all.
+07:21 - I mean, if we knew it, we could just use it.
+07:22 - So it would make sense that we have
+07:24 - to find a different way around this in order to learn it.
+07:28 - And we have two different ways of doing this.
+07:32 - One of these is-- one of these alternative loss
+07:35 - functions, which we're calling implicit score entropy.
+07:37 - This is a natural generalization of implicit score matching.
+07:40 - But we won't be covering it in this lecture, but just
+07:42 - nice to know that exists.
+07:44 - And we also have another loss function
+07:45 - called de-noising score entropy or de-noising score entropy.
+07:49 - And this is analogous to de-noising score matching
+07:51 - for our score entropy case to look at denoising score entropy.
+07:58 - Here's the idea.
+07:59 - If we assume that our px is equal to a convolution
+08:03 - between a base distribution po and some kernel p,
+08:10 - well, then we can write out our probability
+08:12 - as this summation over all x0.
+08:15 - And when we do that, we can take a look at our initial score
+08:20 - entropy loss.
+08:23 - Yeah, the idea here is that we can just remove the expectation
+08:26 - as first.
+08:26 - So we instead, we just move in to px.
+08:28 - And this gets rid of the px in the denominator.
+08:31 - But do summation over all x.
+08:34 - Then in order to look at things more concretely,
+08:38 - we take a look at this decomposition above.
+08:40 - And we just apply it to this py term
+08:43 - to get out this following decomposition, which
+08:45 - is basically, we add in an expectation over x0.
+08:51 - We can basically move around our values a bit.
+08:54 - So we can move the summation term to the front
+08:56 - by Fubini's theorem.
+08:57 - And we can also add in a p of x given x0 given--
+09:03 - over p of x given x0.
+09:04 - So we can rework it here.
+09:07 - And then once we have everything in this setup,
+09:11 - then we can basically just take the last two terms
+09:13 - into our expectation.
+09:15 - We just move those terms.
+09:16 - Take them away from the summation.
+09:18 - And move it into our expectation.
+09:19 - And it just gives us an equivalent form.
+09:21 - And the nice thing that we'll notice for this equivalent form
+09:24 - here is that we only have this relative ratio of p of y given
+09:29 - x0 over p of x given x0.
+09:32 - Not like p of y over p of x.
+09:34 - And as such, this is possible to compute.
+09:38 - And this is something that's possible to compute
+09:40 - because we can assume that our transition kernel
+09:42 - p is tractable.
+09:45 - But we can't assume that our data distribution
+09:47 - p is tractable, basically.
+09:50 - This x0 is how you base the data point.
+09:53 - And this transition kernel, it can be anything, basically.
+09:56 - It can be anything.
+09:57 - So much more than just this type of noise.
+10:00 - But in the continuous case, you would also
+10:02 - write out like this, like this.
+10:04 - But for practical reasons that's why
+10:07 - people choose to use a small Gaussian addition in order
+10:11 - to do this same exact thing.
+10:13 - But this is basically the same exact thing.
+10:15 - So we have this way to get rid of the py over px.
+10:20 - And as such, we have the following de-noising score
+10:23 - entropy loss function.
+10:24 - And it's like particularly scalable
+10:26 - because we can sample an x0.
+10:28 - We can sample through this--
+10:30 - we can sample through the perturbation kernel.
+10:32 - And then we only need to compute this s theta of x
+10:35 - once for this summation value because we were only
+10:38 - using s theta of x.
+10:40 - And then finally, we can compute this ratio
+10:43 - of transition kernels, by just the way that we define it.
+10:47 - So everything becomes computationally tractable.
+10:49 - And we can optimize this loss.
+
+
+00:00 -
+00:05 - SPEAKER: So now, now that we have
+00:07 - a way of learning the concrete score,
+00:08 - the next question is, how can we sample using a concrete score?
+00:11 - We have this way of estimating the concrete score,
+00:14 - learning the ratio of the data distribution,
+00:17 - how do we generate new samples?
+00:19 - And this is really diffusion oriented.
+00:21 - So in order to do this, we have to define a diffusion process
+00:25 - for our discrete tokens.
+00:30 - And as we all know, diffusion is just
+00:32 - a probabilistic evolution, a way to go from p 0 to some p t.
+00:36 - So we can work off of this direction directly Our p t now
+00:40 - is just a big vector.
+00:41 - We can think about it as a big vector
+00:44 - because each of-- our probability
+00:47 - at a certain sequence is basically just some number that
+00:50 - is greater than or equal to 0, and everything sums up to be 1.
+00:53 - So we can think about it as a big vector.
+00:57 - And in a way that we evolve our distribution
+00:59 - is with an ordinary differential equation.
+01:01 - This is the most natural way of doing things.
+01:04 - So our p t is a vector.
+01:06 - We take a time derivative with respect to that,
+01:09 - and then we can compute the transition based off
+01:11 - of this matrix Q t times our initial vector, p t.
+01:17 - So we do a matrix vector multiplication.
+01:20 - And some things about this diffusion matrix
+01:23 - that are not obvious but these are just hard requirements,
+01:27 - we need to make sure that this diffusion matrix has
+01:30 - columns, which sum up to be 0.
+01:32 - And also, we need to make sure that this diffusion
+01:34 - matrix is non-negative at all non-diagonal points, basically.
+01:40 - And the idea here is that Q t controls
+01:42 - how often we go-- if we jump from one state to another.
+01:45 - And we can do this pretty directly here.
+01:48 - So basically, if we want to jump from a state i
+01:50 - to state j over a period of delta t,
+01:53 - then basically we just take a look at whether or not
+01:56 - we stay at the current function and then we just add
+01:58 - the following matrix term times delta t.
+02:00 - And then we have some second order-like term
+02:02 - that we get rid of for practical purposes.
+02:04 - This is kind of the analog of Euler--Maruyama sampling
+02:08 - for diffusion models, this time discretization of our sampling
+02:12 - process.
+02:13 - And so we clearly see here that our Q t is--
+02:17 - these matrix entries are the jump transition rates between i
+02:21 - to j.
+02:24 - Yeah.
+02:24 - And so once we have this setup, we
+02:27 - can let's take a look at a couple of examples.
+02:29 - This is not a very intuitive thing.
+02:31 - But let's take a look at the following Q t.
+02:33 - Our Q t is given by this matrix, this negative 2, negative 2,
+02:37 - negative 2 on the diagonal 1, 1, 1, everywhere else matrix.
+02:41 - And let's say we take an initial distribution of 0.5, 0.2, 0.3.
+02:46 - When we multiply this stuff out, we
+02:49 - get a transition rate of negative 0.5, 0.1, 0.4.
+02:54 - And what's interesting about this
+02:56 - is that the values sum up to be 0, which is important, in order
+03:00 - to maintain the fact that our probability is always sums up
+03:03 - to be one, and also it's always a valid transition
+03:07 - rate between different states.
+03:11 - For this type of setup, we can actually
+03:13 - compute the intermediate densities p t
+03:15 - by just exponentiating out this matrix times this 0.5, 0.3,
+03:19 - 0.2 initial vector, which allows us
+03:22 - to compute intermediate densities by solving the ODE,
+03:24 - basically.
+03:27 - And if we do this, we can actually
+03:30 - also check to make sure that the transition actually
+03:33 - satisfies this above statement, basically.
+03:35 - Or for the first value, you're losing mass
+03:38 - at a rate of negative 0.5, and then the other two
+03:41 - are gaining mass 0.1, 0.4.
+03:44 - So the total mass remains the same,
+03:45 - but the relative ratios change.
+03:48 - Building off of that, basically generally speaking, yeah,
+03:51 - we'll take a Q t is equal to a sigma--
+03:54 - a noise level times a Q matrix.
+03:57 - And then once we have that, this becomes a linear ODE.
+04:00 - Everything linearizes.
+04:02 - We have a linear ODE.
+04:03 - And in order to solve--
+04:05 - basically just very general, we can
+04:07 - solve the intermediate densities by solving
+04:09 - this-- doing this matrix exponentiation in order
+04:12 - to solve the linear ODE.
+04:13 - Basically here in many ways to compute this exponentiation,
+04:17 - but simpler is better.
+04:18 - And the idea here is that we can calculate the transition rates,
+04:21 - with a long horizon transition rates, through this--
+04:24 - by taking column--
+04:26 - by taking entries of our exponentiated matrix, basically.
+04:32 - So yeah, this is great.
+04:34 - And another thing that's also important for diffusion
+04:37 - is that as t goes to infinity, our p t will go to p base,
+04:41 - basically.
+04:42 - So this is just making sure that we approach like a nice base
+04:45 - distribution, basically.
+04:48 - I guess the other thing to--
+04:49 - I mean, in this case, we can take a look at the following
+04:52 - matrix as negative 2 matrix.
+04:53 - We exponentiate out with respect to some t,
+04:56 - and we get this thing, basically.
+04:58 - It's not as bad as it looks.
+05:00 - And then as we go to infinite time,
+05:03 - we just go to a random value, basically.
+05:05 - So this is a uniform transition matrix.
+05:06 - We just go from an initial point to any other point, randomly,
+05:10 - eventually.
+05:12 - Similarly, we have this masking thing
+05:14 - where we add a new dimension.
+05:16 - We add a new dimension to our three-dimensional case.
+05:18 - And basically, we only have transitions to this new state.
+05:22 - And our exponentiated matrix looks like this.
+05:25 - And as we take infinite time, the diagonal disappears,
+05:29 - and everything goes to MASK, basically.
+05:31 - This is a MASK transition.
+05:33 - Well, the first case, basically, the idea
+05:35 - here is you just randomly go from your initial value
+05:39 - to any other random value.
+05:40 - And the second case is you randomly
+05:43 - go from your initial value to a MASK value, basically.
+05:46 - It just determines where you're moving.
+05:49 - We have this continuous time Markov chain setup.
+05:52 - And generally, if we're looking at sequences,
+05:55 - the idea here is a set of perturbing from sequence
+05:57 - to sequence, which would be very expensive because we have
+06:00 - to consider the transitions between our sequence
+06:04 - to any other sequence.
+06:06 - And this is computationally intractable.
+06:08 - We instead go from token to token.
+06:10 - So instead, we just flip one token at a time,
+06:12 - kind of would be the idea.
+06:14 - And as such, this is O of d squared because we only
+06:18 - have to consider one token.
+06:20 - And because of this, when we do our overall transition
+06:23 - between sequences, this becomes the overall transitions
+06:26 - between tokens.
+06:27 - So it factorizes, basically.
+06:28 - This is just like another point there.
+06:33 - And what's nice about this is that we
+06:36 - can change this with our score entropy
+06:38 - to estimate the intermediate density ratios.
+06:41 - So if we assume that our samples are from--
+06:43 - assume we have some samples x 0 given from p 0,
+06:47 - then we can learn our s theta.
+06:49 - We now add a t value in order to estimate the p t over--
+06:54 - p t values, p t ratios.
+06:55 - We have another extra t input, but it's the same setup.
+06:59 - And then we have our denoising score entropy loss function.
+07:03 - And the idea here is like, yeah, now
+07:07 - we can take these transition values, this transition
+07:09 - between two different states.
+07:11 - This is all given by our initial rate matrix Q, basically.
+07:16 - So more or less what this is saying
+07:17 - is that we can optimize our denoising
+07:20 - score entropy using this Q setup,
+07:23 - using this diffusion setup.
+07:24 - It's all very natural.
+07:27 - And so the question here is that, OK,
+07:29 - now we have a way of going from data to noise,
+07:32 - where we also have a way of estimating
+07:34 - the intermediate ratios, what can we do with this?
+07:36 - Well, the idea here is we can reverse the diffusion process.
+07:40 - So if we go from p 0 to p t, which
+07:42 - is p data to p base, roughly speaking--
+07:46 - the idea here is, can we go back from p base back to p data?
+07:50 - And actually, there is a way of doing this.
+07:52 - So there is this other type of diffusion, reverse diffusion
+07:56 - process, where basically we take the time derivative.
+07:59 - But in here, like we were going backwards in time,
+08:02 - and we have a new matrix Q bar, which is like a bit
+08:05 - more different.
+08:07 - And the idea behind Q bar is that q bar is like--
+08:10 - an input j and I, this is equal to the density ratio p
+08:14 - t of j over p t of i and times this initial Q t i j.
+08:18 - For any i and j not equal, basically we
+08:21 - have this following like relationship
+08:24 - between the forward and reverse diffusion matrices,
+08:26 - which is pretty neat.
+08:28 - And also, I guess the other thing to note here,
+08:30 - I won't write it out, is that for Q t i of i
+08:32 - or bar Q t i of I. I'm not going to write that out
+08:36 - because you just need to make sure the columns sum to 0.
+08:38 - So we just assume it's just some--
+08:41 - we can extract it from the other values, basically.
+08:44 - This i and j represents like an index basically.
+08:47 - So I mean, for our purposes, it will be like a sequence,
+08:50 - but this is hard to write out.
+08:51 - But you can think about, in matrix,
+08:53 - you just take the a matrix and vector.
+08:55 - So the matrix, you just take the j-th row, i-th column entry,
+09:01 - and then you take the ratio between-- the ratio
+09:04 - between the two corresponding entries
+09:06 - in the vector, which is the probability vector, but yeah.
+09:10 - So yeah, we have this reverse setup.
+09:12 - And again, what's nice is that we
+09:14 - have this appearance of our ratio,
+09:18 - basically, of our concrete score.
+09:21 - So in particular, we can approximate it
+09:23 - with our learned concrete score function-- or score
+09:25 - network s theta.
+09:27 - And what's holding this--
+09:28 - this kind of goes back to the reason why
+09:30 - we like parametrize everything this way,
+09:33 - is that the way that we do it is that we have initial state i,
+09:36 - and then we basically compute the concrete score of s theta i
+09:40 - t, and this goes over all the various j indices.
+09:44 - And if we do this, it allows us to, in parallel,
+09:46 - jump to any of the other like states
+09:48 - that we want to jump in because of the way
+09:50 - that we parameterize things.
+09:52 - So everything kind of works its way together in this setup.
+09:55 -
+09:57 - As an example, we can have this initial matrix here.
+10:00 - We multiply it out.
+10:01 - This is the rate, negative 0.5, 0.1, 0.4.
+10:05 - And then we can construct the corresponding reverse matrix
+10:09 - here.
+10:09 - This reverse matrix, if you work itself out,
+10:12 - it looks something like this, basically,
+10:13 - where we add in the ratios of the data--
+10:17 - the data vector at the time.
+10:19 - And then we multiply this reverse matrix
+10:22 - by this probability vector.
+10:24 - And actually, what you'll get out
+10:25 - is like the exact reverse-- it's like the exact reverse--
+10:28 - the 0.5, negative 0.1, negative 0.4.
+10:31 - So here we can see that just it works, basically.
+10:36 - And as an example, we also we can visualize as
+10:39 - follows between the uniform, where we, basically,
+10:41 - just go to other random values and eventually the noises
+10:44 - to some like initial sequence.
+10:46 - And also, we have it for the MASK,
+10:48 - basically, where we can go from MASK to our initial tokens.
+10:53 - So this is all pretty nice, and we have this nice setup.
+10:57 - And well, there's only one other problem that we kind of have,
+11:01 - which is basically when we try to actually do
+11:04 - this reverse sampling, when we try to go through the various--
+11:07 - when we try to simulate the reverse, it's pretty slow.
+11:10 - The reason why it's like so slow is because we are jumping
+11:14 - from-- this is all fundamentally comes down
+11:16 - to our computational consideration.
+11:19 - Basically, our x 1 to x d, we're only
+11:22 - jumping between that and another sequence, which
+11:25 - only differs at one point, or at one position.
+11:28 - And so when we construct the reverse,
+11:31 - we can only also jump between sequences that differ only
+11:35 - by one position, which you can imagine
+11:37 - would be like very expensive, especially
+11:39 - if you need a jump-- if you need to continuously refined
+11:42 - the individual position as such.
+11:46 - And so we cheat, basically.
+11:47 - That's how we sample.
+11:48 - We basically allow multiple steps within--
+11:51 - we allow one to sample multiple jumps in one sample step,
+11:56 - basically.
+11:57 - So instead of going individually, individually
+11:59 - unmasking the tokens, let's say, it was the MASK of MASK,
+12:03 - we just unmask both of these tokens simultaneously.
+12:05 - We can do it as pretty easily, given our setup.
+12:08 - But it's more or less kind of a way we can do this.
+12:12 - And we can just--
+12:13 - instead of sample, it was the best of times in one step,
+12:16 - allowing us to go through two different jumps at once.
+12:22 - So yeah, we can put everything together.
+12:23 - We have an entire setup built so the first idea is
+12:27 - that we get some samples from our desired data distribution
+12:29 - that we want the model.
+12:31 - We define a forward diffusion process,
+12:33 - whether it be the uniform, or the MASK, or whatever, or maybe
+12:37 - something more exotic for diffusion process,
+12:41 - given the transitions.
+12:43 - Now we can learn the ratios using our score entropy loss
+12:47 - function that we've defined.
+12:50 - And then we can use these ratios to reverse the diffusion
+12:53 - process, including some adding and some discretization
+12:56 - to make sampling faster.
+12:58 - And let's see how this works.
+13:00 - So this is like an example of a text sequence
+13:02 - that we were able to generate just randomly from our corpus.
+13:06 - This is like a GPT-2-level sampling procedure,
+13:11 - or GPT-2-level data set and model set, model size.
+13:15 - And yeah, it's reasonably coherent,
+13:18 - and everything is like it works.
+13:22 - That's kind of an idea, it works.
+13:24 - But the idea here is, how does it
+13:25 - compare with autoregressive modeling
+13:27 - on the scale of data set?
+13:30 - So we can compare samples as such.
+13:33 - And we have a GPT-2, we're calling our model
+13:35 - like score entropy discrete diffusion, so SEDD, "sedd."
+13:38 - And so we have the GPT-2 model at the top.
+13:41 - We have an SEDD model with an absorbing transition.
+13:44 - Which is you go to the masked token, and we have a uniform--
+13:49 - set with a uniform transition set
+13:51 - u, which means that you go from your token
+13:53 - to another random token whenever you transition.
+13:56 - And generally, we're able to see that our SEDD, "sedd," models,
+14:01 - tend to outperform GPT-2 in terms of coherence,
+14:04 - when we do this baseline sampling
+14:06 - method, when we try to sample from the distribution.
+14:09 - And we can also visualize this more
+14:11 - like as a function of number of sampling steps versus quality.
+14:16 - So in this graph on the right here, we have our GPT-2 models.
+14:22 - And if we try to generate out long sequences,
+14:25 - it tends to look something like this, where we generate out--
+14:27 - it takes 1024 network evaluation,
+14:30 - functional evaluations in order to generate
+14:32 - one of these outputs.
+14:34 - And yeah, it tends to be pretty high--
+14:37 - when we like feed in these generated sequences
+14:40 - into another larger model, they tend to say,
+14:44 - hey, these sequences are very high perplexity,
+14:46 - these sequences are kind of very low likelihood.
+14:49 - These sequences don't make sense, basically.
+14:51 - So we can see here that as GPT-2 tends to pretty--
+14:56 - it tends to be pretty bad in terms of our evaluation
+14:59 - as such, even from both the small and the medium.
+15:02 - But these lines which are the our SEDD models, basically,
+15:05 - we can trade off the compute versus the number of-- we
+15:09 - can try to trade off quality and compute, basically.
+15:11 - So if we only take 64 steps, which
+15:13 - means that we're doing a lot of discretization,
+15:16 - we take a lot of simultaneous jumps,
+15:18 - we end up with this kind of a model that kind of matches GPT-2
+15:22 - in terms of its generated quality,
+15:24 - but it's much faster, basically.
+15:27 - And also, if we really crank up the number of iteration steps--
+15:31 - so we take, let's say, 1024, or even 2048 sampling
+15:34 - discretization steps, what we see here
+15:37 - is that our quality gets progressively better and better
+15:39 - in a log-log-linear type of fashion.
+15:42 - So basically, we're able to generate sequences that are just
+15:46 - significantly lower in terms of generative perplexity, which
+15:49 - means that they're much better sequences if we like just
+15:52 - crank up the number of steps.
+15:54 - We can't do it with GPT-3 or GPT-4, mostly because
+15:56 - of model size.
+15:58 - In this case, our model sizes are like pretty small,
+16:00 - like 100 million parameters, 400 million parameters.
+16:03 - So we're matching the models by color, so blue models are small,
+16:08 - orange models are medium.
+16:09 - For GPT-3 and GPT-4, the other issue
+16:11 - is that data set is private, basically.
+16:13 - But for our GPT-2 the data set is like web text or open web
+16:18 - text, which is why we can do an apples to apples comparison.
+16:22 - Yeah.
+16:24 - So the conclusion here is that-- yeah, so quite surprisingly,
+16:27 - and pretty nice--
+16:30 - and this is a pretty strong motivating factor
+16:33 - is that this discrete diffusion model with score entropy
+16:36 - tends to outperform autoregressive transformers,
+16:39 - at least for generation quality and speed.
+16:41 - And I guess another interesting thing,
+16:43 - and this is another important thing
+16:44 - is, that for this type of generative modeling
+16:47 - technique, what we need to do is we need
+16:49 - to have controllable generation, we
+16:50 - need to be able to control how we generate.
+16:53 - And at least in this case, we can do this something similar.
+16:56 - We can do prompting.
+16:58 - But the new and interesting thing
+17:00 - is that we can prompt from an arbitrary location.
+17:02 - So if we have this top one here, we
+17:05 - can take our blue prompt text.
+17:07 - And the idea here is that when we
+17:08 - like generate our new sequence, we just generate a random.
+17:10 - We just don't we don't change the prompt text,
+17:12 - but we just generate everything else around it.
+17:14 - This actually is principled if you go through the math.
+17:17 - And it allows you to fill in the rest of the information there.
+17:21 - So we also have something like in the middle, where
+17:24 - we have these two prompt tokens, sequences
+17:26 - of prompt tokens in the middle we just generate around it,
+17:29 - and this allows us to infill.
+17:31 - And yeah, it typically tends to produce
+17:33 - pretty coherent statements, basically,
+17:36 - which means that we're able to control the generation process
+17:39 - in a new more interesting way.
+17:43 - And which this is not-- yeah, you
+17:44 - can't do this with a typical autoregressive model.
+
+00:00 -
+00:04 - SPEAKER: Yeah.
+00:05 - So now that we have our generation quality,
+00:07 - the last thing that we need to look at is,
+00:09 - how do we actually evaluate likelihoods
+00:11 - of this generative process?
+00:13 - So we've shown how we can learn.
+00:14 - We've shown how we can generate, how can we
+00:16 - evaluate for likelihoods.
+00:19 - So the typical metric that people
+00:21 - use for evaluating likelihoods is perplexity.
+00:24 - The perplexity of an input sequence x
+00:26 - is basically just this e to the power of negative one
+00:28 - over d times the log probability of x 1 to x d.
+00:31 - So this is a very typical metric for use
+00:35 - for autoregressive modeling.
+00:36 - The reason why is because it's a relatively principled way
+00:40 - of measuring the model ability.
+00:41 - So if we can have a very low perplexity on some other data
+00:44 - set, it means that we're generalizing pretty well,
+00:48 - we're compressing things, which is typically a good sign.
+00:51 - Also, we can directly compare-- this
+00:53 - is directly computable for autoregressive modeling
+00:55 - because we can compute this p theta directly.
+01:00 - And finally, we also tend to optimize with respect
+01:03 - to something like this because at least
+01:04 - for autoregressive modeling, we optimize
+01:06 - with respect to this negative log probability
+01:08 - and just take an exponential or effectively
+01:11 - optimizing this something similar,
+01:13 - so which is why we can report something like this, basically.
+01:16 - Yeah, and so for diffusion models,
+01:20 - you know, long story short, we can also do something similar.
+01:23 - The math actually tends to be kind of a bit involved.
+01:26 - But the key insight here is that we can take this
+01:29 - under some mild conditions, like some very mild conditions
+01:31 - on our base distribution, how long we like diffuse for.
+01:35 - Our generative process has the following likelihood
+01:38 - bound, basically.
+01:38 - So our negative log likelihood is
+01:41 - bounded above by this integral, and with this expected value,
+01:44 - and all this stuff, when we also add some known constant C. The C
+01:49 - constant is known a priori.
+01:51 - And what's interesting here is that this integral, or whatnot,
+01:55 - this is exactly our denoising score entropy loss,
+01:59 - if we recall back to a couple of slides ago.
+02:02 - And yeah, the only new thing is that we
+02:04 - have to wait about this Q t of x t y, which
+02:08 - is kind of this other waiting.
+02:09 - It doesn't really affect anything
+02:11 - and for any of the computations, basically.
+02:13 - It's just this other weighting, but yeah, we can just--
+02:16 - yeah, which means we can basically train with respect
+02:19 - to this loss, this upper--
+02:21 - this log likelihood bound loss.
+02:22 -
+02:25 - And so yeah, we end up getting a perplexity bound
+02:28 - because we can just take the perplexity of the input
+02:29 - sequence.
+02:30 - We just feed it through this denoising score entropy
+02:32 - loss with this weighting.
+02:34 - And yeah, we basically get an upper bound just by the fact
+02:36 - that things are--
+02:38 - the e is monotonic, basically, which
+02:41 - allows us to report like perplexity values as well.
+02:44 - How does it work in practice?
+02:46 - Well, across these different models,
+02:49 - we do this whole GPT-2 train on open web text,
+02:52 - evaluate on other types of data sets type of setup.
+02:56 - And what we see here pretty consistently
+02:58 - is that our GPT-2 model does tend to produce the best
+03:03 - likelihood values.
+03:04 - But SEDD with the absorbing-- masking transition,
+03:09 - it tends to be very close, basically.
+03:12 - So for most of these data sets, if we
+03:14 - have a pretty close value within plus 10% or so, we underline it.
+03:19 - And the reason why we have this plus 10% cut off
+03:21 - is because of the fact that we're only
+03:23 - reporting a bound and not the true ground
+03:26 - truth non-bound likelihood perplexity.
+03:29 - But yeah, we have this underline here,
+03:32 - and we also have the best results bolded.
+03:35 - And what we consistently see is that our SEDD model,
+03:38 - it can basically match on WikiText2 to WikiText103.
+03:42 - It has to fall within this perplexity bound.
+03:44 - And for something like PTB, it actually
+03:46 - outperforms the existing model, an existing GPT-2 pretrained
+03:50 - model, and sometimes by a pretty considerable margin,
+03:53 - as shown in this middle bar here, basically,
+03:56 - this middle line here.
+03:58 - And yeah, so this is great because now we
+04:00 - can show that basically we can challenge
+04:02 - autoregressive modeling not only on generation quality, which
+04:06 - is a bit more of--
+04:09 - there's more moving parts there, but also
+04:12 - on perplexity, which is a more streamlined,
+04:14 - more compact way of comparing between two
+04:18 - different autoregressive models.
+04:20 - Well, what you would do here is you would just generate up
+04:22 - to a end-of-text token, and you just like post-process it.
+04:27 - And typically for this open web text data,
+04:30 - sequences are pretty long, like 700 or so tokens
+04:33 - out of the 1024.
+04:34 - So it's pretty comparable, basically.
+04:36 - Yeah.
+04:39 - But yeah, OK, just to summarize, yeah,
+04:43 - so first thing is that-- yeah, it's
+04:45 - pretty hard to build probabilistic models
+04:47 - for discrete spaces.
+04:48 - We have GANs, VAEs, diffusion models.
+04:51 - A lot of these things are pretty hard to naively extend
+04:54 - from continuous space to discrete space, which
+04:57 - is why we only have, really have autoregressive modeling
+04:59 - as a way of doing things.
+05:03 - Basically, so autoregressive modeling
+05:05 - is the only really viable paradigm in this space.
+05:09 - The idea here is that we can extend score-based models
+05:12 - to discrete spaces, and we can do this by--
+05:15 - instead of modeling the gradients of the data
+05:18 - distribution, we model the ratios of the data distribution,
+05:21 - also known as a concrete score.
+05:24 - We optimize this new score-matching loss called score
+05:27 - entropy, which we can also have these denoising and implicit
+05:30 - variants of, which make it tractable.
+05:33 - And then we can sample from our process.
+05:36 - We can sample from our score-based model using
+05:38 - a diffusion process, using a forward and reverse diffusion
+05:41 - process.
+05:42 - So in particular, the forward diffusion process
+05:45 - synergizes with our denoising score entropy
+05:47 - loss, which makes everything pretty seamless
+05:48 - to integrate together.
+05:51 - We can make it fast and controllable
+05:53 - for our generation, which is nice.
+05:57 - And finally, our generation quality
+05:59 - can surpass autoregressive modeling because of the fact
+06:03 - that we don't have to worry about contacts.
+06:06 - We can just generate a whole sequence of parallel.
+06:08 - And this allows us allows us more information
+06:10 - during the generation process.
+06:13 - Finally, we also have a likelihood bound
+06:15 - based off of score entropy.
+06:16 - This basically lines up perfectly with our--
+06:21 - our score entropy loss basically lines up
+06:23 - perfectly with the likelihood bound
+06:25 - that one would hope to optimize or compare with.
+06:28 - And for this task, we basically challenge
+06:30 - autoregressive dominance for the first time
+06:34 - on any large enough sequence like GPT-2-level result.
+06:40 - For this case, we're computing a bound on the negative log
+06:43 - likelihood.
+06:44 - And the negative log likelihood, it goes into the perplexity
+06:49 - here.
+06:50 - So perplexity will kind of a forward KL divergence,
+06:53 - and this is like a reverse KL divergence,
+06:55 - will be the way that this model.
+06:58 - So basically, yeah, so GPT-2--
+07:01 - if we remove the fact that we're only reporting a bound,
+07:04 - it tends to outperform.
+07:06 - Really, it's much closer than that,
+07:09 - which means that it's covering the modes of the data
+07:12 - distribution sufficiently well.
+07:14 - But it also has like leakage, basically.
+07:17 - We can generate sequences that are low probability,
+07:19 - but it doesn't show up in our KL divergence loss.
+07:23 - So previously, you had this embedded into continuous space.
+07:26 - Generally, the issue that people have found
+07:28 - is that it doesn't really work as well.
+07:31 - The log likelihoods are--
+07:32 - I mean, so we had typically-- let's take a look at graph,
+07:36 - this thing here.
+07:38 - So for previous continuous diffusion models
+07:42 - would be like way worse, basically, much,
+07:45 - much worse, like 2.5 times worse, something like this.
+07:48 - This is typically the range for this discontinuous discrete
+07:51 - diffusion model, where we discretize the tokens.
+07:54 - And also the issue is that for generation quality,
+07:56 - it's like much slower.
+07:58 - Basically, when we try to generate the sequences,
+08:00 - it becomes like--
+08:02 - yeah, because it's so sparse, we have
+08:04 - to make sure we don't have much error, so we have to take
+08:07 - a lot of discretization steps.
+08:09 - So for example, for some models, we'd have to take 4,000 steps
+08:13 - in order to generate a 1,000-length sequence,
+08:15 - which is just too much, basically.
+08:19 - The idea is that hopefully the error isn't that much,
+08:21 - and you can jump between the two.
+08:23 - There is some principled way of doing it.
+08:25 - And it shows-- it's called tau leaping.
+08:26 - If you're familiar with the--
+08:29 - it's called tau leaping in the chemical engineering literature,
+08:34 - or whatever.
+08:34 - And it's it kind of works.
+08:36 - So if you take very small steps, it's
+08:39 - going to be like reasonably conditionally independent,
+08:41 - assuming your ratios don't change too much,
+08:44 - your model doesn't change too much.
+08:46 - So it's kind of-- it's a discretization scheme,
+08:47 - basically.
+08:48 - So diffusion models, we also have a similar discretization
+08:50 - scheme in Euler-Maruyama.
+08:51 - Presumably, you can learn any probability distribution
+08:56 - over your discrete space with both methods.
+08:59 - Yeah.
+09:00 - But the question here is about, which
+09:01 - one builds in a better inductive bias
+09:03 - and is more amenable for optimization?
+09:06 - Q t is kind of the transition rate.
+09:08 - But we exponentiate it.
+09:10 - So in particular, we have this--
+09:14 - so basically, the Q t is a transition rate,
+09:16 - and this exponentiated matrix is a transition kernel.
+09:18 - We can do it for many time steps,
+09:21 - but the issue here is that it's better to put in a time step,
+09:24 - so it becomes like easier.
+09:26 - Basically, the fundamental Q tends to stay the same,
+09:29 - but just we multiply it by some noise level.
+09:32 - So it's all built in.
+09:34 - Q is just a transition rate, so something like this basically
+09:39 - it would go from uniformly.
+09:41 - This is how we go other things uniformly, or in this case
+09:46 - where we go to the MASK token.
+09:49 - At each time step, the Q basically
+09:51 - is like scaled effectively.
+09:53 - So we have a scaling to how much noise
+09:55 - we add in at each time step.
+09:56 - Yeah, that's full scale is controlled by the sigma.
+09:59 - So this bound is basically a elbow bound from a VAE,
+10:02 - so you would assume that your diffusion model--
+10:05 - you have your forward diffusion process,
+10:06 - which is your encoding layer in your VAE.
+10:10 - And this is your--
+10:11 - and you're learning the reverse, real reverse diffusion
+10:15 - process, which is your decoder.
+10:17 - And then if you just work that out, you plug it in,
+10:20 - you get this-- this is the output that you get out,
+10:22 - basically.
+10:24 - Yeah, this architecture right here is the key idea here.
+10:27 - And the sequence-to-sequence neural network
+10:29 - is just like a transformer.
+10:31 - We basically make a transformer, but we have a non-causal MASK,
+10:35 - which allows us to go--
+10:36 - which allows the attention layer to go from--
+10:39 - to be completely from everything to everything, basically.
+10:44 - So it's like BART, basically.
+10:45 - Yeah, it would be like this--
+10:47 - for question-answering, it would be like this, basically.
+10:50 - You just fill it in.
+10:51 - You fill it in.
+10:53 - Yeah, we have-- separating out between the GPT-2-small,
+10:56 - the small models, and the medium models.
+10:58 - And between the medium models, we
+11:00 - have the absorbing a uniform state, basically.
+11:03 - So we have this uniform transition matrix,
+11:05 - and what is masking transition matrix, basically.
+11:08 - And typically, we see that the uniform
+11:10 - tends to produce worse results than the masking,
+11:15 - basically, so just randomly like flipping words.
+11:19 - And this makes sense because if you randomly flip words,
+11:21 - then you're going to end up with sequences that kind of don't
+11:24 - make sense, whereas if you just mask a word,
+11:27 - then the sequences still make sense broadly.
+11:29 - I mean, if you assume that we can fill in the MASKs.
+11:32 - In this case, this is our generative perplexity,
+11:35 - which is basically the--
+11:36 - we generate a new sequence, and then
+11:38 - we take like a GPT-2-large model,
+11:40 - and we evaluate the perplexity of this generated sequence
+11:43 - on our GPT-2-large.
+11:45 - It's a pretty common evaluation to use GPT-2-large to evaluate
+11:49 - the things.
+11:51 - There's a bunch of different metrics
+11:53 - that are built off of this.
+11:54 - We also took a look at Fréchet distance metric.
+11:57 - And it also tends to work.
+11:59 - It's an improvement there, basically.
+12:01 - So basically, yeah, you could take a larger model
+12:03 - and then try to extract some feature
+12:06 - representations or some values in order to mask--
+12:08 - view your smaller model outputs.
+12:12 - Yeah.
+12:12 - The issue here is that we need to compute
+12:14 - this exponential quickly.
+12:15 - And if our Q is, let's say, like a GPT-2 tokenizer size,
+12:19 - a total number of tokens is 50,000.
+12:22 - Well, if we want to compute this matrix exponential,
+12:24 - it takes way too long.
+12:26 - It will take like 10 seconds just
+12:28 - to compute this, or whatever, even on CUDA, even
+12:31 - on GPU because of how massive it is.
+12:34 - We tried experimenting with other more like complex Q
+12:38 - that would allow us to do computation easier.
+12:42 - But it just doesn't tend to work because of the fact
+12:45 - that it is too much of-- it is kind
+12:47 - of a fundamentally different architectural design
+12:51 - choice, basically.
+12:52 - It's not built for CUDA to do this matrix exponential.
+12:55 - Thanks, everyone for attending.
+12:57 - Thanks, everyone for listening.
+12:59 - I hope you learned something.

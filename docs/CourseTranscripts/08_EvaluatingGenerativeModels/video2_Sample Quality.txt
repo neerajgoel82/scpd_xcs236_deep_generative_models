@@ -1,1 +1,445 @@
-
+00:00 -
+00:05 - SPEAKER: Now, what about sample quality, right?
+00:08 - In a lot of these situations, we maybe
+00:10 - don't care about likelihoods.
+00:11 - We don't care about compression.
+00:13 - We have two generative models, maybe,
+00:17 - and we can produce samples from them.
+00:19 - And we would like to know which one is producing better samples.
+00:22 - Let's say if you're working on images.
+00:24 - Maybe you have two groups of samples.
+00:26 - And you'd like to know which one is better.
+00:28 - And how to do that?
+00:32 - It's not very obvious.
+00:35 - It's actually pretty tricky to say this generative model that
+00:39 - produce these samples better than the generative model that
+00:42 - produce these samples.
+00:44 - Not obvious how you could do that.
+00:45 -
+00:49 - Probably the best way to go about it
+00:51 - would be to have involve humans.
+00:55 - So ask some annotators to essentially compare the samples
+01:03 - and check which ones are better.
+01:05 - And of course, that's not going to be scalable.
+01:10 - Maybe it's not something you can use during training.
+01:12 - But if you have the budget for it,
+01:17 - and you have the time for to go through a human evaluation,
+01:20 - that's usually the gold standard.
+01:24 - There is actually very interesting
+01:26 - work in that in the HCI community
+01:29 - where people have explored what are principled ways of getting
+01:33 - feedback from humans, and try to figure out, and get
+01:38 - them to compare the quality of different types of samples,
+01:42 - or different kinds of generative models.
+01:44 - This paper is actually from Stanford,
+01:48 - looking at perceptual evaluation of generative models, which
+01:55 - is based in psychology, cognitive science
+01:59 - kind of literature.
+02:00 - What they suggest is that what you should do
+02:05 - is you should take samples from your model.
+02:07 - You have real data.
+02:08 - And then you can kind of check how much time people need
+02:12 - to accurately decide whether or not the samples that they
+02:16 - are seeing are fake or real.
+02:18 - So if you can only look at a sample for a very small amount
+02:21 - of time, you might not be able to perceive the difference
+02:25 - from what is real and what is not.
+02:27 - Maybe the hands are not rendered correctly.
+02:30 - But if you don't have enough time
+02:32 - to actually stare at the pictures long enough,
+02:34 - you might not be able to see it.
+02:36 - And so what they suggested is that we need to look
+02:38 - at this time to get a sense of--
+02:41 - the longer it takes for people to distinguish real from fake,
+02:47 - the better the samples are.
+02:49 - And the other metric that they propose is more traditional,
+02:53 - and it would basically be the percentage of samples
+02:56 - that deceive people when you're giving them
+02:58 - an infinite amount of time to actually check, are these real
+03:01 - or not?
+03:02 - And so you can look at the website if you're interested.
+03:06 - And this is sort of what it would do,
+03:08 - what it would work like.
+03:10 - If you want to determine how much time it takes
+03:12 - for people to figure out whether or not samples are real,
+03:16 - what you do is you might start with a very,
+03:20 - maybe, a fairly large number of, maybe, 500 milliseconds,
+03:25 - you give them to decide whether or not the image is real.
+03:28 - Maybe they always get it right because they have a lot of time
+03:31 - to figure out what kind of mistakes
+03:33 - are made by the generative model.
+03:35 - Then you start decreasing the time you give them
+03:38 - until you get, maybe, around 300 milliseconds where people
+03:41 - start kind of not being able to distinguish real from fake.
+03:45 - And at that point, that would be the hype time
+03:49 - score for this particular generative model.
+03:51 - And then yeah, as I mentioned, the longer
+03:54 - it takes people to figure that out, the better the samples are.
+04:00 - And here you can see some of the examples,
+04:04 - and then you can also rank different samples
+04:06 - based on how long it would take for human evaluators
+04:10 - to basically distinguish different types of samples.
+04:13 -
+04:17 - Now, the problem with human evaluations are great,
+04:22 - and maybe you can use them for your project.
+04:25 - The problem with human evaluation
+04:27 - is that they tend to be expensive.
+04:29 - You actually have to pay people to go
+04:31 - through the process of comparing samples,
+04:33 - deciding which ones look better.
+04:36 - They are hard to reproduce.
+04:37 - And there are strange--
+04:39 - you need to be very careful on how you set up
+04:41 - these human evaluations.
+04:43 - The lay out that you use to ask them
+04:46 - questions affects the answers that you get.
+04:49 - The way you phrase the questions affect the answers that you get.
+04:53 - So it's actually very tricky to rely entirely
+04:56 - on human evaluations, and they tend
+04:57 - to be pretty hard to reproduce.
+05:00 -
+05:04 - And the other thing you might not
+05:06 - be able to get if you just do this is you
+05:08 - might not be able to actually evaluate generalization.
+05:12 - Again, if you imagine a generative model that is only
+05:15 - just memorizing the training set,
+05:17 - it will give you very good samples just by definition.
+05:21 - And you might not be able to-- even you use humans,
+05:23 - you might not be able to actually figure out
+05:26 - that indeed the model is actually just memorizing
+05:28 - the training set, and it's not actually
+05:30 - able to generalize in any meaningful way.
+05:34 - And so it would be nice if there was
+05:38 - some kind of automatic evaluation metric
+05:42 - to actually figure out the quality of the samples.
+05:47 - And some that are very popular, that are often
+05:50 - used in the literature, and you might
+05:51 - need to implement or use also for your projects,
+05:55 - are inception scores, FID scores,
+05:58 - and KID scores, which actually I think
+06:01 - came up at some point in the last lecture,
+06:04 - and there were questions of what they actually are.
+06:07 - So now we're going to see what they--
+06:09 - how they are actually computed, and what they actually mean.
+06:14 - So inception scores is something you
+06:17 - can use when you're working on labeled data sets.
+06:21 - So if somehow you're in a setting where the images have
+06:25 - associated labels, then what you can do
+06:29 - is you can try to essentially predict
+06:31 - the labels on synthetic samples, and you
+06:35 - can check what kind of distributions over the labels
+06:38 - you get on synthetic samples versus real samples.
+06:42 - So if you have access to a classifier that can essentially
+06:46 - tell you what's the label for an image x, then what you can try
+06:53 - to do is you can try to quantify how good a generative model is
+06:59 - by looking at the behavior of the classifier on the samples
+07:03 - that it produces.
+07:04 - So there are two things that the inception score looks at.
+07:09 - The first thing it looks at is something called sharpness.
+07:12 - And essentially, you can imagine two sets of samples,
+07:16 - one that looks like this, and one that looks like this.
+07:19 - And if you were to--
+07:21 - this is a labeled data set.
+07:22 - Every sample has a label, which is just the number.
+07:25 - This is MNIST, so it's kind of a toy example,
+07:28 - but every digit, every image you produce
+07:31 - can be mapped to a number that it represents.
+07:36 - And you can kind of see that somehow these--
+07:41 - the true samples are probably relatively easy to classify,
+07:44 - while synthetic samples that are a little bit blurred,
+07:47 - they're not very clear.
+07:49 - They're going to be harder essentially
+07:50 - to classify if you have a good classifier.
+07:53 - And so the intuition behind sharpness
+07:56 - is to basically look at how confident the classifier is
+08:00 - in making predictions on the synthetic samples,
+08:03 - on the generated samples.
+08:05 - So the formula looks like this, and it's essentially something
+08:09 - related to the entropy of the classifier
+08:12 - when evaluated on samples.
+08:14 - So you generate samples from the model,
+08:17 - and then you make predictions-- you
+08:18 - look at all the possible predictions
+08:20 - that the classifier produces over the x's that are synthetic,
+08:24 - then this quantity here is basically related
+08:27 - to the entropy of the classifier.
+08:29 - And when the classifier distribution--
+08:34 - predictive distribution has low entropy,
+08:36 - so kind of the classifier is putting all the probability
+08:39 - mass on one single y, it's very confident in the prediction
+08:43 - that it makes, then the sharpness
+08:46 - value is going to be high.
+08:47 -
+08:51 - And the other thing we want to check
+08:54 - is something called diversity.
+08:55 - And the idea is that if you're working with a labeled data set,
+08:59 - you'd like the model to essentially produce
+09:03 - images of all the classes that are represented in the training
+09:07 - set.
+09:07 - So if you have, let's say, again,
+09:11 - that generates samples that look like this,
+09:13 - this would indicate something like mode collapse, where
+09:16 - it's only producing once.
+09:17 - And we would like to somehow say, OK,
+09:19 - these are not good samples because there's not
+09:21 - enough diversity.
+09:23 - And the way to quantify it is to basically look
+09:26 - at the marginal distribution over the labels
+09:31 - that you get from the classifier when you evaluate it
+09:34 - on the samples.
+09:35 - And you basically try to make sure
+09:38 - that this marginal distribution has high entropy,
+09:43 - meaning that all the classes that are possible
+09:46 - are actually predicted by the classifier
+09:50 - over the synthetic samples, essentially.
+09:52 - So it's not just producing once, the model.
+09:57 - That's the formula.
+09:58 - Again, it's basically looking at the entropy
+10:02 - of the marginal distribution.
+10:03 - Then the way you get the inception score
+10:05 - is you multiply together these two numbers.
+10:09 - And so high inception score is good
+10:11 - because it means that you have high diversity,
+10:13 - and you have high sharpness.
+10:16 - So it's not perfect.
+10:17 - And yeah, that's one example of a failure mode.
+10:19 - If somehow it does represent all the digits, but only
+10:22 - one kind of digit, you would have a potentially a
+10:26 - high inception score, even though you're dropping modes
+10:32 - within the clusters kind of corresponding
+10:35 - to different labels.
+10:36 - So not perfect for sure, but widely used, nevertheless.
+10:43 - So higher inception score corresponds to better quality.
+10:46 - Why is it called inception score?
+10:48 - Well, if you don't have a classifier-- so if you're not
+10:50 - sort of in the MNIST, or Toys, or situations, what you can do
+10:54 - is you train a classifier train on ImageNet,
+10:57 - like the InceptionNet, typically that people use for this.
+11:01 - And then you compute these metrics with respect to that.
+11:04 - This c of y, if you look at it, it's
+11:06 - basically the marginal distribution
+11:09 - over the predicted labels when you fit in synthetic samples.
+11:13 - So if you were to only produce once,
+11:16 - then this c y would be like a one hot vector,
+11:20 - and then the entropy would be very low.
+11:23 - And so you would be unhappy, basically.
+11:26 - And so you want high entropy, meaning that ideally, it
+11:29 - should be uniform--
+11:30 - the c y should be uniform over the different y's
+11:33 - that are possible, so then that means
+11:35 - that all the classes are represented in equal numbers,
+11:38 - essentially.
+11:39 - That was one.
+11:40 - And it was often used, but as we discussed, not perfect, far
+11:44 - from perfect.
+11:46 - One issue is that you're not really--
+11:49 - you're kind of only looking at samples
+11:50 - from the synthetic samples, but you're not really ever comparing
+11:54 - them to real data.
+11:56 - If you think about these formulas,
+11:57 - you're just looking at synthetic samples.
+11:59 - You pass them through the classifier.
+12:01 - And you look at statistics of what comes out
+12:02 - from the classifier, which seems suboptimal because you're never
+12:07 - even comparing synthetic samples to real samples.
+12:10 - So there is something called FID score, which
+12:13 - tries to essentially compare the similarity of the features
+12:18 - extracted by a large pre-trained model on synthetic samples
+12:22 - versus real samples.
+12:25 - So what you do is this-- you generate a bunch of samples
+12:29 - from your generative model, and you have a bunch of real data
+12:33 - from, let's say, the test set.
+12:36 - And then you feed each sample through some kind
+12:38 - of pre-trained neural network, like an InceptionNet,
+12:42 - for example.
+12:43 - That's why, again, it's called FID score.
+12:47 - And then you get features for each data point.
+12:50 - There's going to be a distribution over these features
+12:53 - because each every data point is going
+12:54 - to have a different corresponding feature vector.
+12:57 - And what you can try to do is you
+12:59 - can feed a Gaussian to the features
+13:03 - that you get from the synthetic samples and the features
+13:05 - that you get in the real samples.
+13:07 - And you're going to get two different Gaussians,
+13:11 - meaning that the Gaussians will have different means
+13:13 - and different variances.
+13:16 - And the closer these two Gaussians are, the closer the--
+13:23 - the higher the quality of the samples, essentially.
+13:26 - Because if the samples from the synthetic model
+13:29 - are very different from the real ones,
+13:31 - then you might expect that the features that
+13:33 - are extracted by a pre-trained model are going to be different.
+13:36 - And therefore, these two Gaussians
+13:38 - might be different, maybe have different means,
+13:40 - or they have different standard deviations, different variances.
+13:45 - Then you get a scalar out of this by taking the Wasserstein-2
+13:48 - distance between these two Gaussians which,
+13:50 - you can compute in closed form, and it's essentially looking
+13:53 - at the difference between the means of the Gaussians and some
+13:57 - quantity that basically quantifies how different
+14:00 - the two--
+14:01 - the variances that you got by fitting a Gaussian
+14:03 - to the real data and the fake data
+14:06 - are with respect to each other.
+14:08 - You could use other things.
+14:10 - The reason they use multivariate Gaussians
+14:11 - is that this Wasserstein-2 distance
+14:14 - can be computed in closed form, but yeah, not
+14:16 - particularly principled.
+14:18 - Well, if the model is doing a good job
+14:21 - at fitting the data distribution,
+14:22 - then you would expect the statistics extracted
+14:25 - by a pre-trained network would also be similar.
+14:28 - So if for example, this pre-trained network is looking
+14:31 - at--
+14:32 - is extracting statistics, high-level features,
+14:35 - like what's in the image, where the objects are located,
+14:40 - and things like that, which you might expect
+14:42 - these networks to do because they perform pretty well when
+14:45 - you fine-tune them on a variety of different tasks.
+14:48 - Then in some sense, you're hoping
+14:51 - that looking at these statistics will tell you
+14:54 - something about how similar the samples are in terms of,
+14:58 - do they capture a similar distribution?
+15:01 - The features are the ones that are
+15:03 - extracted by a pre-trained model, which could be anything.
+15:06 - In the FID case, it's InceptionNet.
+15:08 - That's why it's called inception distance.
+15:10 - And so that's a pre-trained model
+15:13 - typically on some large-scale image data set,
+15:16 - where you have a lot of different classes
+15:18 - in order to perform well at classification
+15:20 - and probably has to extract reasonable features.
+15:23 - Comparing the feature space kind of makes sense.
+15:26 - The other question was, why not just compare the means
+15:29 - of the samples themselves?
+15:31 - That would be a very simple kind of feature,
+15:33 - right, where you're just looking at the individual pixels.
+15:36 - You could, but it may be not exactly what we
+15:40 - what we care about.
+15:40 - It's more interesting to compare these higher-level features that
+15:44 - are extracted by a model.
+15:46 - You could train on FID, then you can no longer
+15:49 - use it as an evaluation metric.
+15:51 - So it's not-- the moment you start training on something,
+15:54 - it stops to become a good--
+15:57 - so, but you could, yeah, to the extent
+16:00 - that it's not too expensive to compute,
+16:02 - which I think it might be.
+16:03 - But you could try, at the very least.
+16:07 - And then, yeah, in this case, lower FID is better.
+16:12 - And the other thing you can do is
+16:14 - to do something called the kernel inception distance.
+16:18 - And the idea is to basically do a two-sample test, kind
+16:23 - of the same thing we've used for training models.
+16:25 - But instead of doing it at the level of the samples themselves,
+16:29 - we're going to, again, do it at the level of the features
+16:31 - extracted by a pre-trained model.
+16:34 - And so the MMD is another kind of two-sample test,
+16:37 - where you have samples from two distributions p and q.
+16:40 - And what you do is you compare the difference
+16:44 - in different moments, what was suggested by dev right now,
+16:48 - looking at the mean the variance, and so forth.
+16:51 - And more specifically, the way you do it is,
+16:53 - back to the kernel idea, you use a kernel
+16:56 - to measure similarity between data points.
+16:59 - And what you do is you do this--
+17:01 - if you have distribution p and q,
+17:03 - you check, what is the average similarity between two samples--
+17:08 - two real samples, let's say, what's
+17:10 - the average similarity between two fake samples?
+17:15 - And then you compare that to the average similarity
+17:17 - between a real and a fake sample.
+17:21 - And if p, again, is equal to q, then you
+17:23 - can see that this thing evaluates to 0
+17:26 - because the difference between real and fake samples
+17:30 - is the same as the difference between two real samples or two
+17:35 - fake samples.
+17:37 - And the idea is that we're now allowed
+17:40 - to use a kernel to basically compare
+17:42 - how similar two samples are.
+17:44 - And so we don't we don't necessarily
+17:45 - have to compare samples in terms of their raw pixel values.
+17:52 - But what we can do is we can, again,
+17:54 - sort of do MMD in the feature space of a classifier.
+17:59 - And so what you would do is you would use a kernel
+18:02 - to compare the features to sample to real samples
+18:08 - to fake samples, and a real and a fake sample, basically.
+18:13 - And it's similar to FID.
+18:17 - The key difference is that KID is a little bit more principled,
+18:22 - but it's more expensive because you're--
+18:24 - if you have n samples, then it has kind of a quadratic cost,
+18:28 - as opposed to a linear one because you
+18:30 - have to make all pairwise comparisons between the two
+18:33 - groups of samples--
+18:36 - but similar flavor to FID.
+18:39 - It is not obvious from this perspective,
+18:41 - but you could also think of it as basically the kernel,
+18:47 - you could basically map the samples
+18:50 - in the reproducing kernel Hilbert space of the kernel.
+18:53 - So it's kind of like if the kernel is comparing data
+18:56 - points based on some features, then this is basically
+19:00 - the same thing as kind of embedding the real data points
+19:04 - and the fake data points in the feature space of the kernel
+19:06 - and then comparing those two objects.
+19:08 - But the nice thing is that the kernels
+19:10 - could have-- could be looking in an infinite number of features.
+19:13 - So it's kind of the kernel trick, where you're
+19:15 - allowed to compare data points using
+19:17 - an infinite number of features without ever having to compute.
+19:20 -
+19:26 - OK.
+19:26 - So that was the three main kind of metrics
+19:31 - that are used for evaluating sample quality.
+19:36 - There is many more that you might
+19:37 - need to consider, especially if you're
+19:39 - thinking about text-to-image models,
+19:42 - then there's many things you have to worry about.
+19:44 - So if the generative model is supposed to take a caption
+19:47 - and generate an image, then you do care about image quality,
+19:50 - but you do care about other things.
+19:52 - For example, you care about the whether or not
+19:55 - the images that you generate are consistent with the caption that
+19:59 - was provided by the user.
+20:01 - But then you might care about other things.
+20:03 - You might care about the kind of biases
+20:05 - that are shown by the model.
+20:06 - You might care about whether or not
+20:08 - it's producing toxic content that you might
+20:10 - need to filter, how good it is, about reasoning about,
+20:15 - if the caption talks about different objects
+20:17 - and their spatial relationship, how good is
+20:19 - the model at understanding the sort of spatial relationship,
+20:24 - and spatial reasoning problems.
+20:26 - So there's actually something pretty new
+20:30 - that also I was involved in, came out of Stanford.
+20:34 - So we put together this benchmark called HEM,
+20:38 - holistic evaluation of text-to-image models,
+20:41 - where we've considered all the different metrics
+20:45 - that we could think of.
+20:46 - And we've considered different kind of evaluation scenarios.
+20:52 - And so you can see some examples here trying
+20:55 - to look at quality, where, maybe, we
+20:57 - use the usual FID and inception and KID that we just
+21:01 - talked about.
+21:02 - But then, we also look at other things, how robust the models
+21:05 - are if you change words in the captions,
+21:08 - and the alignment between the image that you generate,
+21:10 - and the caption, various kinds of aesthetic scores,
+21:13 - various kind of originality scores.
+21:15 - So a lot of different metrics.
+21:17 - And we actually try to do-- yeah.
+21:20 - But I think today it is the most comprehensive evaluation
+21:23 - of existing text-to-image models.
+21:25 - We took a lot of existing models and then
+21:27 - we tried to compare them with respect
+21:29 - to all these different metrics.
+21:30 - And you can go if you're interested and see the results
+21:33 - and see which model produces the highest quality
+21:38 - images as measured by all these different metrics, both real--
+21:41 - both human and automated, or other things.
+21:46 - If you care about the biases that these models have,
+21:48 - we have a bunch of metrics to measure that.
+21:52 - So that might be a useful resource again
+21:54 - as you develop your projects.

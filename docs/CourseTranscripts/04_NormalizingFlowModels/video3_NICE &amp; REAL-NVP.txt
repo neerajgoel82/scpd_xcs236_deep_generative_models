@@ -1,1 +1,324 @@
-
+00:00 -
+00:05 - SPEAKER: The simplest one is something called NICE
+00:09 - and then here you can see more.
+00:12 - The simplest way of doing this is something like this,
+00:15 - it's an additive coupling layer.
+00:19 - So what you do is you partition these z variables
+00:23 - into two groups.
+00:25 - Again, there is an ordering of the z variables
+00:27 - and you take the first d, z1 through zd
+00:31 - and then the remaining n minus d.
+00:33 - So we have two groups of the z variables and you pick a d,
+00:38 - can be anything.
+00:40 - And then to define the forward mapping that gets you
+00:43 - from z to x, what you do is you keep
+00:47 - the first d components unchanged,
+00:50 - so you just pass them through.
+00:52 -
+00:54 - And then you modify the remaining components,
+00:59 - the remaining m minus d components
+01:01 - in the simplest possible way which is just shift them.
+01:05 - So there is a neural network which
+01:07 - can be basically arbitrary which I'm calling m theta, which
+01:11 - takes the first d inputs to this layer
+01:16 - and computes n minus d shifts that then you
+01:20 - apply to the remaining n minus dz variables.
+01:25 - So you can see that the first d components remain the same,
+01:29 - you just pass them through.
+01:31 - The remaining n minus d components,
+01:33 - you obtain them just by shifting the inputs by a little bit.
+01:36 -
+01:39 - And by how much you shift the inputs can
+01:42 - be a learnable parameter.
+01:44 - Now is this mapping invertible?
+01:47 - It's pretty easy to see that it's invertible.
+01:49 - And how do you get the z if you had access to the x?
+01:55 - So how do you get z1 through d if you have access to the x?
+02:02 - Well, the first d components are not changed,
+02:05 - so you just keep them, it's just again,
+02:07 - the identity transformation.
+02:10 - How do we get the remaining if you
+02:14 - want to compute the n minus d inputs
+02:19 - given all the outputs, how do you get them?
+02:24 - You just basically subtract, you just reverse this thing.
+02:28 - You just write a z equals x minus m theta
+02:33 - and crucially we can compute m theta
+02:37 - because the first d component in the input and the output
+02:41 - are the same.
+02:42 - So when we do the inversion we know
+02:43 - by how much we should shift because we're just passing
+02:47 - through the first d components.
+02:49 - So we can apply this shift by doing this.
+02:53 - You can just subtract off m theta
+02:55 - and we can compute m theta as a function of x1
+02:59 - through d because x1 through d is the same as
+03:01 - z1 through d which is what we used to compute the shift.
+03:04 -
+03:07 - And m theta here can be an arbitrary neural network
+03:11 - basically.
+03:12 -
+03:17 - Now the other thing we need to figure out is,
+03:21 - can we compute the Jacobian of the forward mapping?
+03:25 - So what are the matrices of partial derivatives?
+03:31 - It has the right triangular structure
+03:35 - and you can see that the only thing that we're doing
+03:38 - is shifting and so when you look at the partial derivatives
+03:42 - of what happens on the diagonal, it's just all going
+03:45 - to be identity matrices, right?
+03:46 -
+03:49 - So if you look at how does the function on the second line
+03:57 - here depend on the various z's, on the later z's, you
+04:00 - see that it's just a shift.
+04:03 - So that matrix of partial derivatives
+04:05 - that you get here at the bottom right
+04:08 - is just another identity matrix.
+04:12 - So what this means is that, what is the determinant
+04:15 - of the Jacobian of this matrix?
+04:18 - It's just 1, like it's the product of all the elements
+04:21 - on the diagonal, they are all 1's
+04:22 - and so the determinant of the Jacobian
+04:24 - is 1, which means that it's trivial to sort of compute
+04:27 - this term in the change of variable formula.
+04:30 - Is this flexible enough?
+04:32 - I'll show you some empirical results that this model is not
+04:35 - the best one, it's probably the simplest
+04:37 - you can think of but it's already quite powerful.
+04:39 - You can actually already use this to model images
+04:42 - which is pretty surprising because it means
+04:44 - that by stacking a sufficiently large number of these very
+04:47 - simple layers, you can actually transform
+04:49 - a complicated distribution like over images into let's say
+04:52 - a Gaussian.
+04:54 - And now this is called a volume preserving transformation
+04:58 - because recall that basically if the determinant is 1,
+05:00 - it means that you're not expanding that unit hypercube
+05:04 - or you're not shrinking it, it's just stays the same.
+05:08 - But you can move around probability mass.
+05:12 - And now the final component that you use in this model
+05:17 - called NICE is rescaling.
+05:19 - So you can basically imagine many of these coupling layers
+05:24 - where you can change the ordering of the variables
+05:27 - in between, so you don't have to keep the same ordering
+05:30 - in every layer.
+05:31 - You can pick them any order you want
+05:33 - is fine as long as you satisfy that kind of property
+05:36 - that we had before.
+05:38 - And then the final layer is a rescaling.
+05:42 - So again, something super simple,
+05:44 - you just element wise scale all the entries with some parameters
+05:50 - Si which are going to be learned and it's just a scaling
+05:53 - that you apply.
+05:56 - So again, the simplest kind of transformation you can think of,
+06:00 - what is the inverse?
+06:01 - Again, you just divide by 1 over S,
+06:04 - so trivial to compute the inverse mapping.
+06:08 - And the determinant of the Jacobian, well,
+06:12 - if you think about the matrix of partial derivatives
+06:15 - is a diagonal matrix on the elements of on the diagonal
+06:20 - are these Si terms.
+06:22 - And so what is the determinant of a diagonal matrix?
+06:28 - It's just going to be again, the product of all these Si's
+06:30 - basically.
+06:31 -
+06:35 - You might think this is super simple,
+06:38 - how can you possibly learn something
+06:40 - useful with a model like this?
+06:42 - But if you stack enough of these layers,
+06:44 - you can actually learn some decent models.
+06:48 - So if you train a NICE model on MNIST
+06:51 - and then you generate samples, they look like this.
+06:54 - You train it on faces you can get samples that sort of look
+06:57 - like that.
+06:58 - So not the best generative model of course,
+07:01 - but it's already somewhat promising
+07:04 - that something so simple already figured out
+07:06 - how to map a complex distribution over pixels
+07:10 - into a Gaussian basically.
+07:12 - Just by stacking a sufficiently large number of simple coupling
+07:16 - layers like the one we saw before.
+07:18 - This model you would typically use a Gaussian
+07:21 - univariate like a unit Gaussian, so that's what you would use.
+07:27 - Same dimension, every entry is Gaussian
+07:29 - and if you have unit covariance, then you
+07:32 - can just sample each component independently.
+07:35 - So you start with pure noise, then
+07:37 - you fit it through I guess the inverse mapping which
+07:41 - we know how to compute because we know how to,
+07:44 - you just invert layer by layer.
+07:46 - The final layer, you invert it like this, the previous layers
+07:50 - you invert them by applying this transformation.
+07:55 - And then you gradually turn that noise into an image essentially.
+07:59 -
+08:02 - Yeah, question is because the first d components are not
+08:04 - changed, then yeah, we're basically passing them through
+08:07 - and it doesn't have to be half, it can be any d,
+08:11 - it can be an arbitrary fraction that you're basically
+08:15 - keeping unchanged and then you modify the rest
+08:17 - by just shifting essentially.
+08:19 -
+08:23 - So that's perhaps the simplest and here
+08:25 - you can see other examples if you train it
+08:27 - on a data set of SVHN, these are like house numbers,
+08:33 - to train it on CIFAR-10 again, not
+08:35 - the best kind of samples but it's doing something.
+08:40 - You can kind of see numbers here in different colors on the left,
+08:43 - you can see samples on the right.
+08:46 -
+08:48 - Now what's the kind of natural extension of this?
+08:53 - Instead of just shifting, we can shift and scale
+08:57 - and that's a much more powerful model called Real-NVP, which
+09:01 - is basically essentially identical to NICE except that
+09:06 - at every layer, we don't just shift but we shift and scale.
+09:11 - So the forward mapping is kind of
+09:13 - before, we pass through d components,
+09:19 - so we apply an identity transformation,
+09:22 - and then for the remaining ones instead of just shifting,
+09:27 - we shift which is now this neural network mu theta which is
+09:32 - the same m that I had before.
+09:34 - But now we also element wise scale each entry.
+09:39 - And again, the scaling coefficients
+09:41 - are allowed to depend in a complicated way on the first d
+09:45 - components.
+09:46 -
+09:48 - And I'm taking an exponential here so that I'm
+09:52 - guaranteed that these scaling factors are nonzero
+09:55 - and then I can invert them.
+09:56 - But essentially these matrices mu theta, alpha theta
+10:00 - can be anything.
+10:00 -
+10:04 - How do we invert the mapping?
+10:06 -
+10:09 - Again, it's the same thing, right?
+10:12 - These are neural networks, basically arbitrary
+10:16 - neural networks and they're parameterized by theta
+10:19 - and that's what you actually learn.
+10:22 - How do we get the inverse mapping?
+10:24 - How do we get z from x?
+10:28 - Again, the first d components, you don't do anything,
+10:31 - you just look them up and it's again, an identity mapping.
+10:34 - And then for the second one, you have to figure out
+10:36 - how do you recover z given x.
+10:40 - And so what you do you take x, you
+10:42 - shift it by mu and then you divide by exp of alpha
+10:47 - and that gives you the z, like element wise, right,
+10:50 - so which equivalently is like this.
+10:54 - You take the x, you shift it by mu
+10:57 - and then you multiply by e to the minus alpha which
+11:02 - is the same as dividing by e to the alpha which
+11:05 - is dividing by the coefficients that you're
+11:07 - multiplying for here.
+11:09 -
+11:11 - So again, trivial very easy to do the forward,
+11:14 - very easy to do the inverse.
+11:16 - What about the determinant of the Jacobian?
+11:21 - What does the Jacobian look like?
+11:24 - Again, it has the NICE property that it is lower triangular
+11:29 - and now it's a little bit more complicated
+11:32 - the way you operate on these z's because now there
+11:39 - is a scale which is kind of like the last layer of NICE
+11:42 - except that it's learned.
+11:43 - And so it's like what we were doing before,
+11:46 - before we were just shifting.
+11:47 - Now we're shifting and scaling and so
+11:49 - you have all these extra kind of scaling factors
+11:53 - that you're applying to the last n
+11:55 - minus d dimensions of the data.
+11:58 -
+12:01 - And again, this is just what you would
+12:03 - get if you compute partial derivatives of these outputs
+12:07 - with respect to the inputs, you're
+12:08 - going to get this kind of expression.
+12:10 -
+12:13 - And how do you get the determinant?
+12:16 - Well, you multiply together a bunch of 1's and then
+12:21 - you multiply together all the elements of the diagonal
+12:25 - of this diagonal matrix.
+12:27 - And so it's just going to be the product
+12:28 - of the individual scaling factors
+12:30 - that you apply on every dimension
+12:33 - or equivalently it's the exponential of the sum
+12:36 - of these log parameterization.
+12:38 -
+12:42 - So basically, you can choose arbitrary, neural networks, mu
+12:46 - theta, alpha theta, and if you apply that transformation
+12:52 - you get something that is invertible,
+12:53 - it's easy to compute.
+12:55 - The forward mapping, it's easy to compute the reverse mapping
+12:58 - and it's easy to figure out by how much it shrinks
+13:02 - or expand the volume locally, which is just these scalings.
+13:08 - So if the scalings are all 1, then it's
+13:12 - the same as a coupling layer that we had before.
+13:15 - But because alpha thetas are learned,
+13:17 - this is strictly more flexible than what
+13:19 - we had before because it can learn to shrink or expand
+13:24 - certain dimensions.
+13:27 - And of course, this is in general nonvolume preserving
+13:30 - because in general this determinant of the Jacobian
+13:33 - is not always 1, so it can do more interesting
+13:37 - transformations.
+13:39 - So to sample what you would do is you would randomly draw a z
+13:42 - and then you would pass it through this inverse map,
+13:46 - I guess.
+13:47 - Now I'm parameterizing the forward,
+13:48 - so you would just pass it through the forward map.
+13:51 - During training, the z's are computed
+13:56 - by inverting the mapping.
+13:58 - So the z's are obtained from the data.
+14:01 - So you just feed your image at one end
+14:06 - of this big invertible neural network
+14:07 - and then you hopefully are able to invert it.
+14:10 - And if each individual layer has this shape,
+14:12 - then you know how to invert it and then you get a z at the end.
+14:16 - You evaluate how likely the z is under the prior
+14:19 - and then you account for the local shift
+14:22 - and change that you get through the changeover.
+14:25 - So it's not like in a VAE where you have to guess the z,
+14:28 - you get it exactly through the invertible mapping.
+14:31 - The generation process is deterministic
+14:33 - given z because the mapping itself is deterministic,
+14:36 - that's a big limitation but it's also
+14:38 - what gives you tractability basically.
+14:39 - OK?
+14:41 - Now this is a model that works much better.
+14:45 - Here you can see some examples, again,
+14:48 - might seem like a very simple kind of transformation
+14:51 - that you're applying to the data,
+14:52 - but if you train these models on image data sets,
+14:56 - this is starting to generate samples
+14:59 - that are much better in terms of quality
+15:02 - like you can see on bedrooms or people.
+15:06 - These models are pretty decent, they're somewhat low resolution
+15:11 - and everything but it's generating samples
+15:13 - that have kind of the right structure,
+15:15 - they're already pretty decent.
+15:17 - I think you get the samples, these are the training samples
+15:20 - and these are the generations that you see on the right.
+15:24 - So maybe the first row not so good,
+15:27 - but for the bedrooms, I think this is Alison, this
+15:31 - is Sally B I think you can see that it's pretty decent.
+15:34 - And back to the question of what do the z's actually mean?
+15:40 - What you can try to do is you can try to interpolate
+15:42 - between different z's and what they show in this paper is that
+15:45 - basically, if you start with the four actual samples, which
+15:50 - are shown at the corner of this image here
+15:53 - and then you get the corresponding z vectors, which
+15:56 - are z1, z2, z3, z4 but just by inverting the network
+16:01 - and then you interpolate them using
+16:03 - this kind of strange formula which
+16:04 - is because the latent space is Gaussian,
+16:06 - it doesn't matter too much.
+16:08 - And then you get new z's and then you
+16:12 - pass them through the forward mapping to generate images,
+16:15 - you kind of get the reasonable interpolations.
+16:18 - You see that as you go from one person to another person
+16:23 - and it slowly drifts from one to the other.
+16:29 - And you can see examples here on this buildings and you can see.
+16:35 - So basically in each of these images,
+16:37 - the four corners are real images and what you see in between
+16:40 - is what you get if you were to interpolate the z vectors of two
+16:44 - real images and then decode them back into an image.
+16:48 - So even though, yeah, the latent variables are not compressive,
+16:52 - they have the same number of variables,
+16:54 - they have kind of meaningful structure
+16:56 - as we were discussing before in the sense
+16:59 - that if you do interpolations you get reasonable results.

@@ -1,1 +1,630 @@
 
+00:00 -
+00:05 - SPEAKER: Now how do we actually do this?
+00:08 - The simplest version would be to just do
+00:10 - gradient ascent on this objective function, right?
+00:14 - The ELBO, if you expand it, would look like this.
+00:18 - So for every data point xi, you would
+00:22 - have this expectation with respect
+00:23 - to this variational distribution q.
+00:26 - This way we're inferring the latent variables
+00:29 - given the observed ones.
+00:31 - And then you would have the log probability basically
+00:35 - in the fully observed case.
+00:36 - And then you have this term which
+00:37 - is kind of the entropy of q.
+00:40 - And so what you could do is you could do--
+00:43 - initialize all the optimization variables somehow.
+00:48 - And then you could randomly sample a data point,
+00:52 - and then you could try to optimize this quantity, as well
+00:58 - as you can as a function of the variational parameters.
+01:02 - So you compute a gradient of the quantity
+01:04 - with respect to the variational parameters.
+01:07 - You try to make that ELBO as tight as possible for the ith
+01:14 - data point.
+01:15 - And then until you can no longer improve,
+01:19 - you find some kind of local optima.
+01:22 - And then you can take a step on the theta parameters.
+01:27 - So your actual decoder, the actual VAE model
+01:31 - that you use for generating data given the best possible
+01:34 - lower bound.
+01:36 - So this inner loop will find the best lower bound.
+01:39 - This step 4 will take a step on that optimal lower bound.
+01:45 - The H is the entropy, which is the expected log
+01:48 - probability under q.
+01:50 -
+01:54 - This is not quite going to be the way we're going to train
+01:59 - a variational autoencoder.
+02:00 - It turns out that it's actually better
+02:02 - to keep theta and phi in sync.
+02:05 - But you can imagine that a strategy like this
+02:08 - could actually work as an optimization objective.
+02:13 - So how efficient it is?
+02:15 - Well, first of all, we'll see that the first challenge is
+02:18 - to figure out even how to take--
+02:19 - how to compute these gradients.
+02:22 - These gradients are going to be not too expensive, luckily
+02:24 - as we'll see.
+02:26 - But there is a question of, should you take more steps
+02:30 - on phi, less steps on theta?
+02:32 - Should you do one step on theta, one on phi?
+02:35 - There is many strategies that you can use.
+02:37 - And it's not even known actually what's the best one.
+02:40 - This is one that is reasonable.
+02:43 - It's more like a coordinate ascent procedure.
+02:45 - You find the best theta and then you optimize--
+02:48 - you find the optimal phi and then
+02:49 - you optimize the theta a little bit.
+02:51 - Yeah.
+02:52 - So that's going to be the way we're
+02:53 - going to make things more scalable,
+02:55 - is called amortized inference.
+02:56 - There's going to be how we move from this vanilla version
+02:59 - to something that is going to be worse
+03:01 - from the perspective of the bound you get.
+03:03 - But it's going to be more scalable because there is not
+03:05 - going to be one optimization parameter per data point.
+03:09 - We're basically going to do exactly what you suggested.
+03:12 - We're going to tie together--
+03:14 - we're going to have a single q that
+03:16 - is supposed to work well across different x's that
+03:19 - is going to be a neural network that will essentially
+03:21 - try to guess this phi i star as a function of x.
+03:26 - And that's sort of like--
+03:30 - I think it's better to understand it
+03:34 - through the lenses of OK, first you optimize and then
+03:36 - you try to approximate it, but that's
+03:38 - going to be the how VAE is actually trained.
+03:40 - It is basically going to be a separate neural network that
+03:43 - will take xi as input and will produce a guess for this phi i
+03:48 - star, the optimal choice of variational parameters
+03:51 - for that data point as an output.
+03:53 - And that's going to be the encoder of the VAE.
+03:56 - So without a neural network, you can do this.
+03:58 - It's just going to be-- this is actually--
+04:00 - and it's actually going to work better than whatever you can get
+04:02 - with the neural network because you're optimizing over--
+04:05 - you have less constraints, right, kind of what
+04:08 - was said before about let's make q as expressive as possible.
+04:12 - This is going to be better.
+04:15 - But it's just going to be slower.
+04:16 - And not going to be scalable.
+04:18 - But if you can afford to do this,
+04:20 - this is going to be better, basically.
+04:22 - That's a problem, yeah, because here we're
+04:24 - sort of jointly optimizing these two
+04:28 - and hoping that we can find something.
+04:29 - But you can imagine also like if the choice of phi is really bad,
+04:33 - initially at least it's probably going to be random or something.
+04:37 - And so they're going to be doing a very bad job at guessing
+04:41 - the latent variables.
+04:42 - And so you might not be able to actually optimize the theta.
+04:46 - And so you might get stuck into a very bad local optimum.
+04:51 - And this is non-convex.
+04:53 - So you have no guarantee in terms
+04:54 - of being able to find a good solution for this optimization
+04:59 - problem.
+05:00 - And so those issues indeed we have them here.
+05:05 - And you have to hope that gradient ascent will find you
+05:08 - a good solution.
+05:10 - But you could certainly get stuck.
+05:12 -
+05:17 - Cool.
+05:18 - So that's the conceptually at least
+05:22 - a good way to think about how you
+05:23 - would train a model like this.
+05:26 - And the kind of part that is still not obvious
+05:30 - is how you compute these gradients.
+05:33 - How do you compute the gradients with respect to theta?
+05:37 - So we need two gradients.
+05:39 - We need at step 3-1 within the gradient with respect
+05:42 - to the variational parameters.
+05:43 - And at step 4, we need the gradients with respect
+05:46 - to the model, the actual decoder,
+05:50 - the actual neural networks that define the VAE.
+05:56 - And these are expectations for which we don't know,
+06:01 - you cannot compute them in closed form.
+06:03 - There is no analytic kind of expression
+06:07 - that you can use to compute the expectation and then
+06:10 - the gradients of.
+06:11 - So we have to basically rely on Monte Carlo sampling.
+06:14 - We're going to approximate these expectations
+06:17 - with sample averages.
+06:20 - And so what would it look like?
+06:25 - If you want to approximate these expectation with respect to q,
+06:30 - we can just do this.
+06:31 - We can just sample a bunch of draws from q.
+06:36 - And then approximate the expectation
+06:38 - with a sample average.
+06:40 - The usual trick, an expectation with respect to q
+06:43 - is approximately equal to the sample average
+06:46 - if you were to sample the latent variables according
+06:49 - to this proposal distribution q.
+06:50 -
+06:54 - And as usual, the larger capital K
+06:57 - is, the more accurate this approximation is going to be.
+07:00 - In practice when you train a VAE,
+07:02 - you probably choose k equals 1.
+07:05 - And you would just use a single sample.
+07:06 - But in general, you could use more
+07:08 - if you wanted more accurate estimates of the expectation.
+07:13 - And the key assumption here is that q has to be simple.
+07:19 - You can't choose something very complicated
+07:22 - because you need to be able to sample from it efficiently.
+07:25 - And you need to be able to evaluate probabilities
+07:28 - under q efficiently.
+07:30 - Yeah.
+07:31 - So it has to be complex, but still it
+07:33 - has to be a model for which you can evaluate probabilities
+07:36 - efficiently.
+07:36 - And you have to sample from efficiently.
+07:38 - So a VAE, for example, would not be a good choice because you can
+07:41 - sample from it efficiently, but you cannot evaluate
+07:43 - probabilities efficiently.
+07:45 - An autoregressive model would be a reasonable maybe choice
+07:49 - because you can sample efficiently.
+07:51 - And you can evaluate probabilities.
+07:53 - But we will see generative adversarial networks will not be
+07:57 - a good choice because it's easy to sample from,
+07:59 - but you cannot evaluate probabilities.
+08:01 - We will see something called a flow model, which
+08:04 - is a class of generative models where you can sample
+08:06 - from efficiently and you can evaluate
+08:08 - probabilities efficiently.
+08:09 - That's a good choice.
+08:10 - That's what people actually use in practice.
+08:12 - So those are the two constraints.
+08:14 - Sample efficiently.
+08:15 - Evaluate probabilities efficiently.
+08:16 -
+08:19 - And then we want to compute gradients of this quantity,
+08:22 - right?
+08:22 - We want to compute gradients with respect
+08:24 - to theta and with respect to phi.
+08:27 - And the gradients with respect to theta
+08:28 - are trivial, because basically you can just--
+08:33 - the gradient of the expectation is just
+08:35 - going to be approximately equal to the gradient of the sample
+08:39 - average, essentially.
+08:41 - So the gradient is just linear.
+08:43 - You can push it inside.
+08:46 - The q part does not depend on theta.
+08:48 - So the gradient with respect to theta of this part is 0.
+08:52 - So you can basically just take your samples, evaluate
+08:57 - the gradients of the log probability
+09:00 - with respect to theta, which is-- and this is fully observed.
+09:02 - So this would be exactly the same gradient
+09:04 - as in an autoregressive model.
+09:06 - You have the z part.
+09:07 - You have the x part.
+09:08 - So you know how to evaluate these probabilities.
+09:11 - And you just take gradients.
+09:12 - And you just update your theta parameters that way.
+09:16 - So this part is very easy.
+09:19 - The tricky part is the gradients with respect to phi.
+09:23 - And the reason is that the samples are--
+09:26 - you are sampling from a distribution
+09:28 - that depends on phi.
+09:29 - And so if you want to figure out,
+09:31 - how should I change my variational parameters
+09:34 - phi to make this expectation as large as possible?
+09:39 - You kind of need to be able to understand
+09:43 - how we're changing phi change where the samples land,
+09:48 - essentially.
+09:50 - You are sampling from this distribution,
+09:52 - which depends on phi.
+09:53 - And so you need to be able to understand
+09:54 - if I were to make a small change to phi,
+09:57 - how would my samples change?
+10:00 - And if you take gradients with respect to theta,
+10:02 - you don't have to worry about it because the samples--
+10:05 - you're not sampling from a distribution
+10:07 - that depends on theta.
+10:08 - So you don't have to worry about how the samples themselves
+10:10 - would change if you were to change phi.
+10:13 - But if you're changing phi, then you
+10:15 - need to understand how your sampling procedure here
+10:19 - depends on phi.
+10:21 - And so the gradient is not going to be as easy as this one.
+10:25 -
+10:28 - And that's essentially the problem.
+10:31 - The problem is that you're taking
+10:33 - an expectation with respect to a distribution that
+10:36 - depends on phi.
+10:37 - So if you want to take gradients,
+10:39 - you need to understand how the sampling process basically
+10:42 - is affected by small changes in the variational parameters.
+10:47 - And that's more tricky.
+10:50 - And because we would still like to do it
+10:52 - through some kind of efficient Monte Carlo thing
+10:55 - where you just sample once and then
+10:57 - you compute some gradient through autodiff
+10:59 - and you're done.
+11:00 - And it's not super obvious how you would do this.
+11:03 - And there is different ways of doing it.
+11:06 - Later on we'll see a technique called REINFORCE from
+11:11 - reinforcement learning, because you can think of this as like
+11:13 - a reinforcement learning problem, where you're--
+11:18 - you could think of z as being an action.
+11:20 - You're trying to figure out your policy.
+11:22 - You're trying to figure out how you should change your policy
+11:25 - to perform well, where the argument of the expectation
+11:29 - is the reward that tells you how well you're doing.
+11:31 - And it's tricky to figure out how changing your policy
+11:35 - affects the value that you're getting.
+11:37 - But there are techniques for reinforcement
+11:39 - learning that you could use.
+11:41 - Today we'll see simpler, actually
+11:43 - better way of doing things that does not work in general.
+11:48 - It only works for certain choices of q.
+11:51 - For example when q is Gaussian, you can use this kind of trick.
+11:55 - And it's more efficient in the sense
+11:58 - that, yeah, it has lower variance.
+12:01 - It's a better estimator.
+12:03 - And this technique, it's called the reparameterization trick.
+12:08 - It only works when these latent variables z are continuous.
+12:12 - So it doesn't work when you have discrete latent variables.
+12:15 - Only works when z is continuous, like when
+12:20 - z is a Gaussian, for example.
+12:22 - And so that this expectation is not a sum,
+12:26 - but it's really an integral.
+12:28 -
+12:30 - So it's an integral with respect to this probability density
+12:35 - function q, which depends on phi of some quantity, which
+12:39 - I'm going to denote r because it's kind of like a reward.
+12:43 - But r of z is just basically the argument of the expectation.
+12:47 - I'm just changing the notation to make it
+12:50 - a little bit more compact.
+12:51 - But essentially, the argument doesn't matter too much.
+12:55 - The tricky part is to figure out how
+12:57 - to change phi so that the expectation becomes as
+13:01 - large as possible, essentially.
+13:03 - And again, you see the connection
+13:06 - with reinforcement learning.
+13:07 - If z are actions, then you're trying to say--
+13:11 - and you're randomly-- you have a stochastic policy for choosing
+13:14 - actions and different actions have different rewards.
+13:17 - You're asking, how should I choose actions
+13:21 - in a stochastic way so that I get the highest possible reward?
+13:24 - And you need to understand how changing
+13:26 - phi changes which kind of actions you pick,
+13:30 - which kind of zs are more likely and less
+13:32 - likely under your policy, which is a little bit tricky.
+13:37 - The good thing is that if again q has certain properties,
+13:44 - for example it's Gaussian, then there
+13:48 - is two ways of sampling from q.
+13:50 - You could sample from q directly or you
+13:55 - could sample from a Gaussian random variable with mean 0
+14:01 - and covariance identity and shift and rescale it.
+14:05 -
+14:08 - So if you want to sample from a Gaussian
+14:10 - with mean mu and covariance sigma square, the identity,
+14:16 - you could always achieve that by sampling
+14:20 - from a standard normal with 0 mean and identity covariance.
+14:24 - So shifting and rescaling.
+14:28 - And what this does is that we're basically
+14:31 - rewriting these complicated random variables
+14:36 - z as a deterministic transformation of something
+14:40 - simple of a standard normal Gaussian random variable.
+14:44 - This is why it's called the reparameterization trick,
+14:47 - because we're just writing z as a transformation,
+14:52 - as a deterministic transformation of a fixed
+14:56 - random variable, which does not depend on the optimization
+14:59 - parameters.
+15:01 - So we have some deterministic transformation,
+15:05 - which depends on the optimization parameters,
+15:07 - the five parameters that we use to transform
+15:10 - this basic random variable epsilon, which
+15:14 - does not depend on phi anymore.
+15:16 -
+15:19 - And then using this equivalence, we
+15:24 - can compute the expectation in two ways.
+15:26 - You can either sample from z, sample from q
+15:29 - and then evaluate r at the zs that you get by sampling from q,
+15:33 - or you can sample from epsilon, transform it through g,
+15:38 - and evaluate r at that point.
+15:41 - And the key thing is that now we have
+15:43 - an expectation that no longer depends on the optimization
+15:47 - parameters phi.
+15:48 - Now it's an expectation with respect to epsilon.
+15:51 - And so we can basically push the gradient inside just
+15:54 - like what we were doing before, or in other words,
+15:57 - basically we understand how changing the parameters
+16:01 - affects the kind of samples that we get,
+16:04 - because we're explicitly writing down the sampling
+16:06 - procedure as a deterministic transformation
+16:09 - of some simple fixed random variable.
+16:12 - So if you want to figure out what would be--
+16:15 - how would my performance change if I
+16:18 - were to change phi by a little bit, which is essentially
+16:21 - the gradient?
+16:22 - Now you know exactly how your samples
+16:26 - would change because you have a deterministic transformation
+16:28 - that gives you the new samples as a function of phi.
+16:30 - And so taking the gradient of that
+16:32 - would tell you how the samples would change by changing phi
+16:36 - by a little bit.
+16:39 - And so once you have this expression
+16:41 - or you have an expectation with respect
+16:43 - to a quantity that no longer depends on phi,
+16:47 - we're basically in a good shape, because we
+16:50 - can compute this gradient with respect to phi.
+16:53 - So here this one would be a little bit tricky
+16:55 - because you have an expectation which depends on phi
+16:57 - and we don't know how to do this.
+16:59 - But the expectation on the right is the kind of thing
+17:01 - we know how to handle because it's
+17:03 - an expectation with respect to epsilon
+17:05 - which no longer depends on phi.
+17:08 - And then we can basically push the gradient inside.
+17:11 - r is an arbitrary function.
+17:12 - Yes.
+17:13 - And this is something we can do by Monte Carlo basically.
+17:18 - All you do is you sample epsilon and then
+17:21 - you-- or a bunch of epsilons, and then you
+17:23 - approximate the expectation of the gradient
+17:26 - with the sample average of the quantity.
+17:31 - And basically by chain rule, you can figure out,
+17:36 - what would be the effect of changing phi b
+17:41 - on this expectation that you care about?
+17:45 - Because you know that basically just
+17:49 - by computing these gradients, you get what you want.
+17:52 - You know how this epsilon would be transformed.
+17:55 - And then you know what is the corresponding reward
+17:58 - R that you would get if you were to transform
+18:00 - the sample in a certain way.
+18:02 - And so you know how you should adjust your parameters
+18:05 - to maximize the reward as much as you can.
+18:08 - Because you know exactly how changing phi
+18:12 - affects the sampling procedure.
+18:14 - Yes, it doesn't work for discrete random variables.
+18:17 - If you have that kind of setting and it doesn't even
+18:21 - work for all continuous distributions,
+18:22 - like it has to be-- you have to be
+18:24 - able to write the sampling procedure
+18:26 - as some kind of deterministic transformation
+18:29 - of some basic distribution that you know how to sample from.
+18:32 - If you can do that, then this machinery
+18:34 - you can see it goes through.
+18:36 - But if you have something like a discrete, like categorical
+18:41 - random variable, then well, it would be discontinuous.
+18:45 - And at that point, you don't know--
+18:46 - and you can always sample it by inverting the CDF essentially.
+18:49 - But you would not be able to get gradients through, essentially.
+18:53 - And so for that, you either need to use REINFORCE,
+18:55 - or we'll talk about other ways to relax the optimization
+18:59 - problem when dealing with these things.
+19:00 - But this is only applicable to special cases like a Gaussian,
+19:05 - which luckily is what people often use in practice.
+19:07 - And so this is actually a good solution when you can use it.
+19:10 - OK.
+19:10 -
+19:17 - So now we're basically almost there.
+19:21 - Recall that what we wanted to was
+19:24 - to compute the gradient of this ELBO, which is just
+19:27 - an expectation with respect to q of some arbitrary function which
+19:32 - happens to depend on phi, which is a little bit
+19:35 - annoying because before we had this r which was not depending
+19:40 - on phi, now the argument of the expectation also depends on phi.
+19:45 - But you can see that basically you can still
+19:49 - use reparameterization.
+19:50 - You still, just like before, as long
+19:53 - as you know how to write down the sampling
+19:55 - procedure in some kind of as a differentiable
+19:58 - in a differentiable way, then you just basically
+20:03 - have the argument of the expectation that
+20:08 - depends on phi in two ways.
+20:10 - And then you just do basically chain rule would basically
+20:13 - take-- autodiff will take care of the gradient for you.
+20:18 - So that's actually not an issue.
+20:20 - Essentially, you use the same machinery for this--
+20:24 - for this reward function which now depends on phi.
+20:27 - But essentially, the same machinery goes through.
+20:32 - And so OK, now we know essentially how to do this.
+20:37 - We know how to compute the gradients.
+20:39 - The only other annoying piece is that we
+20:42 - have one variational parameter per data point.
+20:45 - So it would be expensive to have different variational parameters
+20:51 - per data point, especially if you have a very large data set.
+20:56 - And so the other missing piece is
+20:59 - to have what's called as amortization, which basically
+21:04 - means that we're not going to try to separately optimize
+21:08 - over all these phi's, instead we're
+21:11 - going to have a single set of parameters which is going
+21:14 - to be another neural network.
+21:16 - It's going to be the encoder of the VAE, which we're
+21:19 - going to denote as f lambda.
+21:22 - And this function is going to try
+21:24 - to guess a good choice of variational parameters.
+21:28 - So it's going to try to somehow do regression
+21:30 - on this mapping between xi and the optimal variational
+21:33 - parameters.
+21:34 - It's going to try to guess what's
+21:36 - a good way of approximating the posterior for the ith data
+21:39 - point.
+21:39 -
+21:42 - And this is much more scalable because we
+21:44 - have a fixed number of parameters now
+21:46 - that we're trying to optimize.
+21:47 - We have the theta and we have the encoder.
+21:52 - And so again, so let's say the qs are Gaussians.
+21:56 - Instead of having one different mean vector per data point,
+22:00 - you have a single neural network that
+22:02 - will try to guess what's the mean of the Gaussian
+22:05 - as a function of x, as a function of the data
+22:08 - point, the observed values that you see in each data point?
+22:13 - And now we approximate this posterior distribution
+22:18 - given that the observed value is for the ith data
+22:23 - point using this distribution.
+22:26 - So we take xi, we pass it through this neural network
+22:29 - that will guess the variational parameters.
+22:32 - And then that's going to be the q that we use in the ELBO.
+22:37 - And the same kind of gradient computation
+22:39 - goes through as long as the--
+22:42 - yeah, as long as the reparameterization works,
+22:44 - you can see that the same machinery applies here.
+22:48 - The trade-off in that case, you're going to get a better--
+22:51 - I mean to the extent that you can do the optimization well,
+22:54 - because it's non-convex.
+22:55 - So the weird things could happen.
+22:56 - But to the extent that you can optimize,
+22:58 - you would get a better average log likelihood.
+23:04 - So it's going to be more expensive because you
+23:06 - have more variational parameters to optimize over.
+23:09 - You're also going to give up on the fact
+23:11 - that if I give you a new test data point
+23:13 - and you want to evaluate the likelihood of that test data
+23:16 - point, you would have to solve an optimization problem
+23:19 - and to try to find variational parameters for that data point.
+23:22 - If you have this neural network that
+23:24 - is already trained to give good variational parameters,
+23:28 - you have no cost.
+23:29 - So it's all amortized.
+23:31 - So it's called amortized because essentially there
+23:34 - is a neural network that is amortizing
+23:37 - the cost of solving this optimization problem
+23:39 - over variational parameters.
+23:41 - And the problem of solving the optimization problem
+23:45 - and give you the optimal variational parameters
+23:47 - is kind of amortized by a single feed
+23:49 - forward pass through this neural network.
+23:53 - So if we generalize in the sense that you would have a P
+23:56 - and you could try to evaluate--
+23:59 - you could try to then--
+24:00 - it defines a valid likelihood on any x.
+24:04 - It might-- optimizing through an encoder,
+24:08 - might have a regularization effect in the sense
+24:10 - that it's constraining p because you're jointly optimizing
+24:15 - p and q.
+24:15 - So you could say that, OK, you're optimizing phi
+24:18 - to try to make the approximate posterior
+24:20 - close to the true posterior, but you're also
+24:23 - optimizing the true posterior to be close to one
+24:26 - that you can approximate with your little neural network.
+24:29 - And so it has a regularization effect
+24:33 - over the kind of generative model
+24:34 - that you learn because it has to be a generative model on which
+24:38 - you can do inference relatively well
+24:41 - using this single neural network that we have here.
+24:45 - So as you said, that might help you
+24:47 - in terms of log likelihood on a new data point
+24:50 - because the model is more constrained
+24:52 - and so it might perform well, it prevents
+24:53 - overfitting to some extent.
+24:55 - If you wanted to get the best approximation
+24:57 - to the likelihood on a new test data point,
+25:01 - you would optimize a new file.
+25:02 - And that would give you a valid--
+25:03 - the best lower bound on the ELBO for that data
+25:06 - point, that would be the best.
+25:10 - The marginal likelihood is defined regardless of how you
+25:14 - choose the phi's.
+25:15 - And so the phi is just a computational thing
+25:20 - that you need in order to evaluate the likelihoods.
+25:23 - But if you just care about generation,
+25:25 - you don't even need the phi's.
+25:26 - How many phi's in practice?
+25:28 - What you would do is you would have a single neural network
+25:30 - that would essentially guess the optimal phi's
+25:34 - as a function of the data points.
+25:36 - And these neural networks are typically relatively shallow.
+25:39 - You don't actually ever get the phi's.
+25:41 - So what you do is you just optimize the ELBO
+25:43 - as a function of this let's say lambda parameters here.
+25:49 - And so you never actually compute these five stars.
+25:52 - You just restrict yourself to the phi's
+25:55 - that can be produced by this single neural network.
+25:59 - So the dimension of phi and the family that you choose,
+26:02 - is it a Gaussian?
+26:03 - Is it like whatever variational family?
+26:07 - That's a choice, the modeling choice.
+26:09 - So Yeah, again, this is saying what
+26:12 - we were discussing before that for different data points,
+26:15 - there is going to be different optimal variational parameters.
+26:20 - And then you have this single map
+26:22 - that will take xi as an input and will output
+26:26 - a good choice of variational parameters for that xi
+26:29 - that you're going to use to infer the latent
+26:31 - variables for that data point.
+26:34 - So there is not even going to be any phi anymore.
+26:36 - There's going to be a single neural network f lambda that
+26:39 - does the work for you.
+26:41 - And in the VAE language, that's often denoted q phi of z
+26:48 - given x, meaning that the choice of variational distribution
+26:53 - that you use is a function of x and phi,
+26:57 - and the relationship is determined
+27:00 - by this neural network, which is going
+27:01 - to be the encoder in the VAE that predicts
+27:05 - the parameters of this variational distribution
+27:08 - over the latent variables given what you know,
+27:11 - given the x variables.
+27:14 - So it's the same machinery, except that there
+27:17 - is less trainable parameters because there
+27:19 - is a single neural network that will describe
+27:22 - all this variational distributions that
+27:25 - in general should be different.
+27:27 - But just for computational efficiency reasons,
+27:30 - you restrict yourself to things that can be described that way.
+27:36 - And then basically, that's how you actually do things.
+27:40 - Then you have exactly the ELBO that we had before,
+27:43 - which depends on the parameters of the decoder and the encoder
+27:47 - phi.
+27:48 - So phi here now denotes the parameters
+27:51 - of the separate inference neural network that takes x as an input
+27:56 - and produces the variational posterior q for that x.
+28:01 - And then everything is just optimized
+28:05 - as a function of theta and phi through gradient descent.
+28:09 - So you initialize the decoder and the encoder somehow.
+28:15 - And then what you would do is you would randomly sample a data
+28:18 - point, then there is going to be a corresponding ELBO
+28:22 - for that data point.
+28:23 - And what you can try to do is you can try to figure out,
+28:26 - how should you adjust the theta, the decoder, and the encoder
+28:30 - to maximize the ELBO for that particular data point?
+28:33 - And this expression is just like what we had before,
+28:36 - except that the variational parameters
+28:39 - are produced through this neural network which is the encoder.
+28:43 - And you can just backprop through that additional neural
+28:46 - network to figure out what this gradient should be.
+28:50 - How should you adjust the gradients of the encoder
+28:53 - so that you produce variational parameters for the ith data
+28:57 - point that perform well with respect to the ELBO?
+29:01 - And you can still use the reparameterization trick
+29:04 - as long as q is a Gaussian.
+29:06 - Everything works.
+29:08 - And then you just take steps.
+29:10 - And in this version, which is the version that people
+29:12 - use in practice, you jointly optimize theta and phi
+29:16 - at the same time.
+29:18 - So you try to keep them in sync so
+29:20 - that-- because we know that they are related to each other,
+29:22 - we know that phi should track the true conditional
+29:26 - distribution of z given x given the current choice of theta.
+29:30 - And so as you update theta, you might as well
+29:32 - update phi and vice versa.
+29:34 - So it makes sense to just compute
+29:36 - a single gradient over both and optimize both optimization
+29:40 - variables at the same time.
+29:41 -
+29:45 - And how to compute gradients?
+29:47 - Again, like let's say reparameterization trick
+29:50 - as before.
+29:50 - But you can see now the autoencoder perspective,
+29:54 - q is the encoder, takes an image, let's say an input
+29:59 - and it maps it to a mean and a standard deviation, which
+30:03 - are the parameters of the approximate posterior
+30:07 - for that x.
+30:09 - And then the decoder takes a z variable and it maps it to an x.
+30:17 - And that's the other neural network.
+30:19 - And you can start to see how this has an autoencoder flavor.
+30:23 - And in fact what we'll see is that the ELBO
+30:26 - can be interpreted as an autoencoding objective
+30:30 - with some kind of regularization over the kind of latents
+30:34 - that you produce through an autoencoder.
+30:37 - And so that's why it's called a variational autoencoder
+30:40 - because it's essentially it is an encoder
+30:42 - which is the variational posterior
+30:44 - and there is a decoder.
+30:46 - And they work together by optimizing the ELBO.
+30:49 - And optimizing the ELBO is essentially a regularized type
+30:53 - of autoencoding objective.

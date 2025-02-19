@@ -1,1 +1,534 @@
-
+00:00 -
+00:05 - SPEAKER: Today, we're going to start talking about score based
+00:09 - models or diffusion models.
+00:11 - And we're going to see that which is a state of the art,
+00:16 - class of generative models for images, video, speech, audio,
+00:21 - a lot of different continuous data modalities.
+00:24 - This is the way to go.
+00:25 - And we'll see it's going to build
+00:27 - on some of the techniques we talked about
+00:30 - in the last lecture.
+00:33 - So first of all, usual picture here.
+00:38 - The overview of what we're talking about in this class,
+00:44 - we've talked a lot about different model families
+00:48 - and we've seen two main classes of generative models.
+00:52 - We've seen likelihood based models
+00:56 - where basically the key object you're working with
+00:59 - is the probability density or the probability mass function.
+01:02 - So the model is basically just a function
+01:04 - that takes as input some x.
+01:07 - And maps it to some scalar which is how likely
+01:09 - is that x according to the model.
+01:12 - And we've seen that probability mass functions or probability
+01:15 - density functions are tricky to model.
+01:17 - Because they have to be normalized.
+01:19 - They have to integrate to one.
+01:21 - So we've seen that one way to get there is
+01:23 - to use autoregressive models.
+01:25 - Another way to get there is use flow models.
+01:27 - But that's always constrains the architectures you can use.
+01:32 - And the alternative way to go around it is to sort of, well,
+01:39 - give up in some sense on the normalization.
+01:42 - And use variational tricks to essentially evaluate
+01:46 - the likelihood.
+01:47 - So we've seen variational autoencoders.
+01:49 - And we've seen energy based models
+01:51 - where you have to deal with this normalization constant that
+01:54 - normalizes the probability density.
+01:57 - And we've talked about a bunch of techniques
+01:59 - to try to get around the fact that you
+02:03 - have to evaluate Z theta and maybe avoid
+02:05 - likelihood based training.
+02:07 - And various ways of training energy based models.
+02:10 - And then the pros here is that you
+02:14 - can do maximum likelihood training which
+02:15 - in principle is great.
+02:17 - It's a lot that you can monitor.
+02:19 - You can see how well it goes.
+02:21 - It's optimal in a certain sense.
+02:23 - You can compare models.
+02:25 - But you have to deal with the restricted architectures.
+02:28 - You can't plug-in an arbitrary neural network
+02:30 - to model the likelihood.
+02:33 - The alternative way to go about this
+02:35 - is to just model the sampling process.
+02:37 - So this is kind of an implicit generative model like a GAN
+02:40 - where we're just going to describe
+02:42 - the way you produce samples.
+02:44 - For example, you feed random noise through a neural network.
+02:48 - Essentially, any neural network, you
+02:50 - can pick as the generator defines a valid sampling
+02:53 - procedure.
+02:55 - The problem is that given a sample, given an output
+02:57 - from this network, evaluating how likely the model is
+03:01 - to generate that is very hard.
+03:03 - And so you have to give up on likelihoods again.
+03:06 - And although these models tend to work pretty well.
+03:11 - The key problem is that you can't train them
+03:13 - in a very stable way.
+03:14 - You have to do minimax optimization
+03:16 - and that's a problem.
+03:19 - And so what we're going to talk about today is
+03:22 - a different way of representing probability distributions,
+03:26 - probability densities that deals with the score.
+03:29 - That's what these models are going to be.
+03:31 - They're going to-- they're called
+03:32 - score based generative models.
+03:34 - And this is only going to be applicable to probability
+03:39 - density functions.
+03:40 - So continuous kind of random variables.
+03:43 - But when we're dealing with continuous random variables,
+03:45 - then we can start thinking about working
+03:48 - with the gradient of the log density
+03:53 - instead of working with the density itself.
+03:56 - So we've seen that in a likelihood based model.
+03:59 - You would normally work with p of x.
+04:02 - And score based model instead, the object that you work with
+04:06 - is the gradient of the log density.
+04:08 - And the gradient again, is with respect to the inputs
+04:11 - is not with respect to the parameters of your model.
+04:16 - And that's the score function.
+04:18 - And we've seen this in the previous lecture.
+04:21 - But the idea is that it provides you
+04:24 - an alternative interpretation of the probability density
+04:28 - function.
+04:29 - You can alternatively think of the PDF
+04:31 - as a function that maps every point to a scalar which
+04:35 - is non-negative.
+04:36 - So you can think of it as the height of some surface
+04:40 - over this 2D space.
+04:41 - In this case, it's a mixture of two Gaussians.
+04:43 - And the score is just a function that is vector valued.
+04:48 - At every point, it gives you the gradient of the log density.
+04:51 - And so it's kind of like a vector field
+04:53 - where at every point, you get the arrow is telling you,
+04:57 - what's the direction that you should
+04:58 - follow if you want to increase the log likelihood most rapidly?
+05:03 - And these two are sort of like equivalent views.
+05:06 - So if you like again analogies with physics,
+05:09 - this is kind of like describing a physical system
+05:12 - in terms of electric potentials or electric fields that
+05:15 - kind of like are the same.
+05:17 - But computationally, it might be advantageous
+05:20 - as we'll see to work with one versus the other.
+05:25 - And in particular, the main challenge
+05:30 - that we talked a lot about in this course when
+05:33 - modeling probability density functions is
+05:35 - that you have to make sure that these PDFS are normalized.
+05:39 - So you need to figure out a way of parameterizing curves
+05:42 - that are ideally flexible.
+05:45 - And they can have arbitrary shapes
+05:47 - as you change or as complicated as possible of a shape
+05:51 - as you can get by changing the parameters
+05:53 - of your neural network.
+05:54 - But somehow you need to make sure
+05:55 - that the total area under the curve is fixed.
+05:59 - It's equal to one.
+06:00 - So you have a normalized object or some way of somehow computing
+06:04 - the area under the curve for any choice of the parameters.
+06:08 - And that's potentially tricky as we've seen.
+06:11 - Often, what it means is that you have
+06:14 - to choose very specific architectures that
+06:17 - allow you to basically either guarantee
+06:19 - that the area under the curve is one
+06:21 - or somehow like in a normalizing flow
+06:24 - that you can compute it efficiently.
+06:27 - And now if you think about the score, in the one case,
+06:32 - the score is just--
+06:33 - this is the gradient, is just the derivative
+06:35 - of the function you see on of the log of the function
+06:38 - you see on the left.
+06:40 - And the function on the right no longer
+06:44 - needs to satisfy any normalization constraint.
+06:48 - So, and it's potentially much simpler to work with.
+06:52 - You see here, this relatively complicated curve
+06:55 - on the left and the corresponding score
+06:57 - function on the right is potentially much easier
+07:02 - to work with.
+07:02 - So the intuition behind a score based model
+07:05 - is that instead of modeling data using the density,
+07:08 - we're going to model data using the score.
+07:11 - So that's going to be the object that we're
+07:13 - going to use to define our model family.
+07:16 -
+07:19 - And we've seen that this is useful in the context of energy
+07:25 - based models.
+07:26 - Energy based models are one way of defining
+07:29 - very flexible probability density functions by saying,
+07:33 - OK, I'm going to pick an arbitrary neural network.
+07:35 - I'm going to make it non-negative.
+07:36 - And then I'm going to renormalize
+07:38 - by dividing somehow computing the total area under the curve.
+07:42 - And then dividing by the number to get a valid probability
+07:45 - density function.
+07:47 - Super flexible, the problem is that if you
+07:50 - want to do evaluating likelihoods involve the log
+07:53 - partition function.
+07:54 - So if you want to do maximum likelihood training,
+07:57 - you have to go through either somehow estimate
+07:59 - a partition function.
+08:01 - Or you need to do contrastive divergence things
+08:04 - where you have to sample from the model, which is expensive.
+08:08 - On the other hand, which is something
+08:10 - you don't want to do-- on the other hand what we're
+08:12 - seeing is that we can train energy based models
+08:15 - by matching-- instead of trying to match basically the density
+08:22 - ratios using KL divergences.
+08:24 - We can try to fit our energy based model to-- by trying
+08:28 - to make sure that the vector--
+08:29 - the corresponding vector field of gradients.
+08:31 - So the scores of the model match the scores
+08:35 - of the data distribution.
+08:37 - And so, and recall that this was basically the Fisher divergence.
+08:44 - And we were able to do through integration by parts.
+08:48 - We were able to rewrite this objective function
+08:50 - into one that basically only involves the score.
+08:55 - Which as we've seen in the last lecture,
+08:59 - does not require you to compute the partition function.
+09:02 - So the score here.
+09:05 - The critical thing to notice here
+09:07 - is that the score function, the gradient of the log density
+09:11 - according to the model, when you take the log of an EBM,
+09:15 - you get your neural network.
+09:16 - And then you get the log partition function.
+09:18 - Critically, the log partition function does not depend on x.
+09:21 - It's the same for every point.
+09:22 - It's just the area under the curve.
+09:24 - No matter where you are, the area under the curve
+09:26 - is the same.
+09:27 - And so when you take the gradient with respect to x,
+09:29 - that's 0.
+09:30 - And so we can compute this model score
+09:34 - in terms of the original energy of the model.
+09:38 - So in this expression here, we can basically compute this term
+09:42 - efficiently without having to deal with the normalization
+09:46 - constant.
+09:48 - And so we have this expression.
+09:51 - If you want to do score matching for an energy based model,
+09:53 - you have that loss which you can in principle optimize.
+09:58 - And try to minimize as a function of theta.
+10:02 - And now you might wonder.
+10:05 - I mean, can we only do score matching for EBMs.
+10:08 - And if you think about it.
+10:11 - It's a-- if you look at the loss,
+10:14 - it's something that is well defined
+10:16 - for any model family, rightt?
+10:20 - As long as you're able to compute
+10:22 - this gradient with respect to x of the log density
+10:25 - according to the model, then you can do score matching.
+10:28 - And you can train a model by minimizing the Fisher
+10:31 - divergence.
+10:33 - So in particular, what other model families can we apply?
+10:38 - Score matching too, well, we can certainly
+10:40 - apply it to continuous autoregressive models.
+10:43 - If you can compute the log density,
+10:45 - you can probably also differentiate through that
+10:48 - and compute the score.
+10:49 - You can do it on a normalizing flow models.
+10:52 - Again, we can compute the log likelihood.
+10:56 - And so we can also compute the score.
+10:58 - Although, perhaps it doesn't make a lot of sense because you
+11:01 - have access to the likelihood.
+11:03 - So you might as well train these models by maximum likelihood.
+11:05 - But in principle, you could apply score matching
+11:08 - to these models.
+11:09 - And you could train them that way as well.
+11:12 - So but you could also wonder.
+11:15 - I mean, what's the most general model family that we
+11:17 - can train using score matching?
+11:20 - And you can think that while you can certainly
+11:24 - apply it to autoregressive models, to flow models,
+11:28 - you can think of EBMs as a generalization where
+11:33 - autoregressive models and flow models are
+11:35 - special kind of EBMs where the partition function is guaranteed
+11:38 - to be 1.
+11:40 - But perhaps, there is something even larger.
+11:43 - We can even optimize over an even broader
+11:45 - set of model family.
+11:50 - And that's the idea behind a score based model.
+11:54 - Instead of modeling the energy, we're basically directly going
+11:59 - to model the score function.
+12:01 - So we're going to define our model family by defining--
+12:08 - by basically specifying the corresponding vector
+12:12 - field of gradients.
+12:14 - So the model is not going to be a likelihood,
+12:16 - the model is not going to be an energy.
+12:18 - The model is going to be a vector valued function or a set
+12:22 - of vector valued functions as you change theta as you change
+12:24 - your neural network, you're going
+12:26 - to get different vector fields.
+12:29 - And that's what we're going to use to describe basically
+12:33 - the set of possible distributions
+12:36 - that we are going to be fitting to our data
+12:39 - distribution in the usual way.
+12:43 - And so the-- basically that the difference
+12:47 - with respect to an EBM is that we're not
+12:49 - going to model necessarily the energy
+12:50 - and then take the gradient of it.
+12:52 - Instead, we're going to directly think
+12:54 - about different kinds of vector fields that we can get.
+13:00 - And we can parameterize using a neural network.
+13:03 - And in this case the neural network
+13:04 - is a vector valued function for every x s theta.
+13:09 - The estimated score at that point
+13:11 - is a vector with the same number of dimensions as the input.
+13:15 - So as theta is really a function from rd to rd.
+13:19 - So if you have d dimensions, the output of this neural network
+13:23 - will also have d dimensions.
+13:24 - Because that's how however many coordinates
+13:28 - you need to specify one of these arrows at every point.
+13:32 -
+13:35 - And so that's basically the kind of very high level story here.
+13:43 - As usual we want to fit a model to a data density.
+13:48 - So there is a true underlying data density that is unknown.
+13:51 - We assume we have access to a bunch of samples from the data
+13:54 - density.
+13:56 - And then what we're going to try to do
+13:58 - is we're going to try to find some function in our model
+14:05 - family.
+14:05 - So we're going to try to choose parameters theta
+14:08 - or we're going to try to choose some vector field of gradients.
+14:12 - That is hopefully as close as possible to the vector
+14:15 - field of gradients of the original data density.
+14:19 - So that's going to be the learning objective
+14:23 - and try to choose parameters theta such
+14:25 - that the corresponding function-- vector valued
+14:28 - function that we get matches the true vector field of gradients
+14:32 - of the data density.
+14:34 - The only thing we have access to are
+14:36 - samples and so we don't have access to the true density.
+14:38 - And so we're never going to be able to achieve this perfectly.
+14:41 - And there is a learning element in the sense
+14:44 - that we only have access to a bunch of samples.
+14:47 - So we need to make sure we're not overfitting.
+14:50 - And we need to make sure that there's
+14:53 - going to be some limits to how well we can do this.
+14:56 - But it's that you have the same problem even if you have a--
+15:00 - if you're training by maximum likelihood.
+15:02 - You're only given samples.
+15:03 - You can try to get as close as possible to the empirical data
+15:07 - distribution hoping that by fitting the samples,
+15:12 - you're also fitting the true underlying data density.
+15:15 - So we're going to have the same problem in the sense
+15:18 - that we only have samples.
+15:19 - We have limited data.
+15:21 - But the main difference is that instead
+15:23 - of trying to fit one of these scalar function
+15:27 - that is giving us the likelihood.
+15:29 - We're going to try to fit this vector valued function
+15:32 - that is giving us the gradient of the log likelihood
+15:36 - essentially.
+15:37 - In both cases, it's a hard problem.
+15:39 - I would say that even if you work with likelihoods,
+15:41 - you don't just want to put probability
+15:43 - mass around the training data.
+15:46 - Because you want the model to generalize to unseen data
+15:51 - that it hopefully coming from the same distribution as the one
+15:54 - you've used for training.
+15:55 - But you don't want to just fit the training distribution.
+15:59 - If you're fitting a model over a training set of images,
+16:04 - you don't just want to put probability mass
+16:06 - around the images that you have in the training set.
+16:08 - You want to spread it out and you need to be able to say,
+16:11 - oh, there is other parts of the space where
+16:13 - I need to put probability mass even though I have not seen them
+16:16 - during training.
+16:17 - And so we have a similar problem.
+16:20 - To some extent, kind of the gradient and the function
+16:23 - are essentially the same thing.
+16:25 - So if you have the gradient, you can integrate it
+16:27 - and you can get the function.
+16:29 - And because everything has to be normalized.
+16:32 - So you know that the, I mean, you can get the function up
+16:35 - to a constant and we know what the value of that constant
+16:37 - needs to be because it has to be normalized.
+16:39 - So in some sense, it's just as hard as the original problem.
+16:44 - As we'll see, there's going to be
+16:46 - issues that are very specific to training with the Fisher
+16:49 - divergence.
+16:51 - That makes it so that doing things,
+16:55 - this vanilla or approach will not quite work
+16:57 - and we'll need to do a bunch of different things
+16:59 - to actually make it work in practice.
+17:02 - But so far, it's more like a--
+17:04 - up to here, I'm just saying that it's
+17:06 - going to be a different representation of the models we
+17:09 - are willing to consider.
+17:10 - I even said, how are we going to do the training?
+17:13 - And how do we prevent overfitting?
+17:15 - And so forth.
+17:16 - So the idea would be that potentially, the vector
+17:22 - field that you model might not be the gradient of a scalar
+17:25 - function.
+17:25 - So it might not necessarily be a conservative vector field.
+17:29 - So you can imagine that here if you do things this way,
+17:34 - f theta is a scalar function which is the potential.
+17:40 - If you think about in physics term, there is a potential.
+17:43 - Maybe an electric potential and that's a scalar.
+17:46 - And you get the vector field by taking the gradient of that.
+17:50 - So it's a way of parameterizing a set of vector fields
+17:54 - that they need to satisfy certain properties because they
+17:58 - are the gradients of a scalar function.
+18:02 - Here, I'm saying, oh, I'm no longer even
+18:04 - going to restrict myself to gradients of scalar function.
+18:08 - I'm going to allow myself to just have arbitrary vector
+18:12 - fields.
+18:12 -
+18:15 - There might not be an underlying scalar function such
+18:20 - that this vector field is the gradient of that function.
+18:24 - That's the sort of high level idea,
+18:26 - we're going to try to fit directly score models to data.
+18:31 - So the problem is this, you're given IID samples from our data
+18:35 - density which is unknown.
+18:37 - Usual learning setting, our training set of samples
+18:42 - from some unknown data distribution
+18:44 - and you want to try to estimate the score of this data
+18:47 - distribution.
+18:49 - And so we're going to think about model family which
+18:52 - is going to be a set of vector valued functions.
+18:56 - Parameterized by neural networks as you change theta,
+18:58 - you change the shape of the vector field.
+19:01 - And the goal is to choose parameters so that the vector
+19:04 - fields are similar.
+19:08 - So you can imagine the first question is, how do we
+19:11 - compare two vector fields.
+19:14 - So there's going to be the true vector
+19:17 - field of gradients corresponding to the data density.
+19:20 - There's going to be an estimated vector field of gradients.
+19:23 - How do we compare them?
+19:26 - A reasonable way to do it is to basically overlap these two
+19:30 - vector fields at every point.
+19:32 - There is going to be a true gradient, an estimated gradient.
+19:35 - And we can look at the difference between the two.
+19:38 - And average this over the whole space.
+19:43 - And if you do that, you get back the Fisher divergence
+19:48 - that we talked about before.
+19:51 - So if you go through every x, you
+19:54 - look at the true gradient at that point
+19:55 - according to the data density.
+19:57 - You look at the estimated gradient at that point
+19:59 - according to the model.
+20:01 - There's going to be some difference,
+20:03 - you look at the norm of that vector,
+20:05 - you average with respect to the data density.
+20:09 - And that's going to be a scalar value that tells you
+20:12 - how far away your model is from the true vector
+20:16 - field of gradients of the data distribution.
+20:20 - So if you can get this quantity to zero as a function of theta,
+20:24 - then that the vector fields match
+20:26 - and you have a perfect model.
+20:28 - And so trying to minimize this as a function of theta
+20:31 - is a reasonable learning objective.
+20:33 - And we know that even though it looks like something that you
+20:37 - cannot possibly optimize because it depends on this unknown
+20:41 - quantity here.
+20:43 - Recall, we only have access to samples.
+20:46 - We can do integration by parts and you
+20:48 - can rewrite it in terms of an objective that
+20:51 - only depends on your model.
+20:54 - And it still involves an expectation with respect
+20:56 - to the data.
+20:57 - But you can approximate that using the sample average.
+21:03 - So in order to train this kind of model,
+21:06 - you need to be able to evaluate s theta efficiently.
+21:11 - And we need to somehow be able to compute
+21:17 - this trace of the Jacobian.
+21:20 - Which is basically the sum of all a bunch
+21:22 - of partial derivatives.
+21:26 - And then there is the question of, well,
+21:29 - do we need this core model to be proper to correspond
+21:35 - to the gradient of some energy function?
+21:37 - And we'll see that that's actually not
+21:39 - really needed in practice.
+21:43 - So the most straightforward way of kind
+21:49 - of parameterizing the score would
+21:52 - be to just pick a vector value in the neural network.
+21:55 - So let's say you have three inputs and three outputs.
+21:59 - Because we at every point, this neural network
+22:02 - has to estimate the gradient which
+22:03 - is a vector, which is the same dimension as the input.
+22:08 - And then we need to be able to basically evaluate
+22:12 - this loss which involves the norm
+22:14 - of the output of the neural network
+22:18 - and the trace of the Jacobian.
+22:22 - So to evaluate the first term which
+22:25 - is just the norm of the output, it's easy.
+22:28 - Basically what you do is you just do a forward pass
+22:31 - and then you can compute as theta,
+22:33 - and then you can also compute the squared norm as theta.
+22:39 - The more complicated piece is the trace of the Jacobian.
+22:44 - So the Jacobian is basically this matrix
+22:48 - where you have basically all the partial derivatives
+22:53 - or all the gradients of every output with respect
+22:57 - to the inputs.
+22:59 - So the first term up here is the partial derivative
+23:03 - of the first output with respect to the first input.
+23:06 - And then you have all these partial derivatives
+23:12 - that you have to deal with.
+23:15 - And the problem is, we're trying to compute
+23:20 - the trace of this matrix which is basically
+23:23 - the sum of the elements of the diagonal.
+23:25 - And so what you need to do is you
+23:27 - need to be able to compute the partial derivative
+23:30 - of the first output with respect to the first input.
+23:33 - And then you need to compute this element here
+23:37 - on the diagonal.
+23:38 - You need to compute the partial derivative of the second output
+23:41 - with respect to the second input.
+23:43 - And then you need to compute the partial derivative
+23:46 - of the third output with respect to the third input.
+23:50 - Then you have to sum up these three numbers.
+23:54 - Because you need to sum up these three elements
+23:57 - on the diagonal of this matrix.
+24:01 - And although, we can do back propagation.
+24:04 - So you can compute these derivatives
+24:06 - relatively efficiently.
+24:09 - Naively doing this would require a number of back propagation
+24:15 - steps that scales linearly with the number of dimensions
+24:18 - that you have.
+24:20 - And we don't know if there is a more efficient way
+24:23 - of basically doing this.
+24:24 - But the only way basically we know how to do it
+24:27 - is essentially extremely inefficient
+24:30 - when the number of dimensions grows.
+24:33 - And is very large.
+24:36 - And so even though this loss does not
+24:40 - involve partition functions, it still
+24:42 - scales pretty poorly with the dimensionality of the data.
+24:46 - Yeah.
+24:47 - So IBMs are even worse because in an IBM,
+24:51 - you would need to do one more backprop to get the score.
+24:56 - And then one more to get these derivatives.
+25:00 - So an IBM would even be even more expensive.
+25:04 - These at least saves you one backpropagation
+25:08 - because you are already modeling the gradient of something.
+25:11 - But it's still expensive.
+25:14 - Yeah.
+25:15 - So you have the hessian of f theta.
+25:17 - So when you take the first gradient with respect
+25:19 - to x of f theta, you get essentially s theta.
+25:24 - And then you have to do the Jacobian of s theta.
+25:28 - So you need to do second order basically derivatives
+25:32 - in that case.
+25:33 - So it's even more expensive.
+25:34 - They have to be the same here because you're
+25:36 - modeling the score, which is the gradient of the log likelihood.
+25:41 - And so that has to be the same dimension as the input.
+25:44 - Yeah.
+25:45 - We're modeling a joint distribution
+25:47 - over a set of random variables.
+25:50 - And if some of them are missing, computing marginals
+25:54 - might be expensive.
+25:56 -
+25:59 - Cool.
+26:00 - So this vanilla version which is something
+26:04 - we briefly mentioned also in the last lecture, if you recall.
+26:06 - We said, OK, this is avoids the partition function.
+26:10 - But you doing integration by parts is still expensive.
+26:14 - Because of this Hessian term or trace
+26:17 - of the Jacobian in this case and so
+26:19 - we need more scalable approximations
+26:21 - that work in high dimensions.
+26:24 - And that's what we're going to talk about next, which
+26:27 - is how to get this to scale to high dimensional settings
+26:31 - where basically this d is large.

@@ -1,1 +1,476 @@
-
+00:00 -
+00:04 - SPEAKER: So now, how do we get the next step?
+00:09 - How do we use--
+00:10 - now that we've decided that that's
+00:12 - going to be our notion of the way
+00:15 - we're going to compare how similar basically pdata is
+00:19 - to p theta, now we can define a learning objective where
+00:24 - we try to optimize p theta to basically fool
+00:27 - the discriminator.
+00:29 - And so it's going to be like a game.
+00:31 - It's going to be a minimax optimization
+00:34 - problem between a generator, which
+00:36 - is just your generative model, and this discriminator,
+00:39 - this classifier.
+00:41 - And the generator is just going to be a generative model
+00:48 - typically that basically looks like a flow model in the sense
+00:51 - that you start with a latent variable z.
+00:55 - And then you map it to a sample through
+00:59 - some deterministic mapping, which is parameterized
+01:04 - by a neural network.
+01:05 - And we're going to call it G theta.
+01:06 -
+01:09 - So the sampling procedure is the same as a flow model.
+01:11 - You sample z from a simple prior, for example, a Gaussian.
+01:15 - And then you transform it through this neural network.
+01:18 - And crucially, this is similar to a flow.
+01:23 - But the mapping does not need to be invertible.
+01:25 - It can be an arbitrary neural network.
+01:27 - It's an arbitrary sampler.
+01:28 - You start with some random vector.
+01:31 - And you transform it into a sample,
+01:33 - no restrictions on what G is.
+01:36 - You could use any generative model, yeah.
+01:38 -
+01:42 - We'll see that it's actually convenient.
+01:44 - Well, to train it, it would be good
+01:46 - if you can sort of backprop through the generative process.
+01:52 - But to some extent, you can indeed
+01:55 - use other generative models.
+01:57 - But the advantage is that basically you
+02:00 - don't have any restrictions on this neural network, right?
+02:03 - So we don't have to--
+02:06 - there is going to be some distribution over the outputs
+02:09 - of this neural network.
+02:11 - But we're not ever going to compute it.
+02:15 - So unlike autoregressive models, or flow models,
+02:18 - or VAE where we were always very worried about being
+02:21 - able to compute, given an x, what
+02:23 - was the likelihood that my model produces that particular x?
+02:28 - For these kind of models, we don't even care,
+02:30 - because we're going to use two sample tests to compare,
+02:33 - to train them.
+02:34 - And so we don't need to be able to evaluate likelihoods.
+02:38 - And so we don't have any restriction basically on what
+02:43 - this sampling procedure does.
+02:44 - It can essentially be any.
+02:45 -
+02:49 - And what we do then is we're going
+02:52 - to train this generator to do the opposite basically
+02:57 - of the discriminator.
+02:59 - The generator is going to try to change this mapping, which
+03:04 - implicitly also changes the kind of samples
+03:07 - it produces to try to minimize this statistic that we were
+03:12 - using in support of the fact that this null hypothesis that
+03:17 - says the data is equal to the distribution of samples
+03:21 - that I get by using this model.
+03:24 - And so the end result is this.
+03:27 - You have this minimax optimization problem
+03:30 - where the function V is the same as this--
+03:33 - basically the loss or the negative loss of the classifier.
+03:38 - And then these two players in the game, the generator
+03:43 - and the discriminator, they have opposing objectives.
+03:46 - The discriminator is going to try to maximize this,
+03:49 - which, again, this is the same as what we had before.
+03:52 - This is just saying classifier.
+03:54 - The discriminator is trying to do
+03:56 - as well as it can to distinguish samples coming
+03:58 - from the data, two samples coming
+04:01 - from this generative model from this generator.
+04:05 - And the generator is going to do the opposite.
+04:07 - It's going to try to minimize this objective function, which
+04:12 - basically means the generator is trying
+04:14 - to confuse the classifier as much as it can.
+04:18 - So it's going to try to produce samples
+04:20 - such that the best classifier you can throw at that--
+04:25 - when you compare them to the data distribution,
+04:27 - the best classifier is going to perform poorly,
+04:31 - which supports the fact that if a classifier cannot distinguish
+04:36 - the samples I produce from the samples that are in the data
+04:39 - set, then I probably have pretty good samples.
+04:43 - And that's sort of the training objective
+04:46 - that we're going to use for training
+04:49 - this class of generative models.
+04:52 - Now, it turns out that this is related
+04:54 - to a notion of similarity between probability
+04:58 - distributions.
+05:00 - We know that what the optimal discriminator is,
+05:04 - it's just the density ratio, pdata over pdata plus p model
+05:08 - basically.
+05:09 - And we know that basically the optimal discriminator
+05:14 - is going to depend on what the generator does.
+05:17 - And we can evaluate the value of this objective function
+05:21 - when basically the second player, the discriminator,
+05:24 - is picking the best possible thing it
+05:27 - can do given what the generator is doing because we
+05:33 - know what that looks like.
+05:34 - We know that when the discriminator is optimal,
+05:39 - the discriminator is just going to give us this density ratios,
+05:41 - pdata over pdata plus p model.
+05:44 - So we can plug it into this expression.
+05:47 - And we get this sort of equation.
+05:50 - So this is the optimal loss that you
+05:53 - get by choosing-- whenever you choose generator G,
+05:59 - if the classifier picks-- if we pick the best classifier given
+06:02 - the G and given the data distribution,
+06:04 - this is the value of that objective function.
+06:08 - This ki nd of looks like a KL divergence.
+06:12 - It's an expectation of a log of some density ratios.
+06:17 - Remember, KL divergence is expectation
+06:20 - under p of log p over q.
+06:22 - This kind of has the flavor.
+06:24 - Now, the denominators here are not probability distributions.
+06:31 - They are not normalized.
+06:33 - You have to divide by 2 if you want to get a something that
+06:36 - integrates to 1.
+06:39 - But you can basically just divide by 2 here and here
+06:42 - and then subtract off that logarithm of 4
+06:46 - that you just added in the denominators.
+06:49 - And now this is really just two KL divergences.
+06:54 - You can see that this is the KL divergence between the data
+06:58 - and a mixture of data and model.
+07:02 - And this is KL divergence between model and a mixture.
+07:06 - The same thing, mixture of data and model.
+07:08 -
+07:11 - And then it's shifted by this log
+07:13 - 4, which is just because I had added these two here and here.
+07:17 - And so you need a log 4 there to make it equal.
+07:21 - And so what this is saying is that this objective,
+07:25 - as a function of the generator, is
+07:29 - equal to this sum of KL divergences,
+07:32 - which actually has a name.
+07:34 - It's called the Jensen-Shannon divergence
+07:38 - between the data distribution and the model distribution.
+07:44 - So this thing is essentially two times
+07:47 - this quantity called the Jensen-Shannon divergence, which
+07:52 - is also known as symmetric KL divergence.
+07:56 - If you look at that expression, it's
+07:58 - basically that-- if you want to compute
+08:00 - this Jensen-Shannon divergence between p and q,
+08:02 - you basically do the KL divergence between p
+08:05 - and a mixture of 1/2 p and 1/2 q.
+08:08 - And then you do the reverse KL divergence between q
+08:11 - and a mixture of p and q.
+08:15 - And this has nice properties.
+08:18 - We know KL divergence is nonnegative.
+08:20 - Sum of two KL divergences also has to be nonnegative.
+08:25 - What is the global optimum of this?
+08:28 - When can it be zero?
+08:29 -
+08:32 - Yeah, so it also has the nice property
+08:34 - that the global optimum can be achieved if
+08:36 - and only if basically the distributions are the same.
+08:40 - It's symmetric, which is nice.
+08:42 - Remember, KL divergence was not symmetric.
+08:44 - The KL p, q is not the same as KL q, p.
+08:47 - This is symmetrized basically by definition.
+08:52 - And it also has triangle inequality but not
+08:54 - super important.
+08:56 - And so what this means is that somehow you
+09:02 - can optimize this quantity here as a function of G.
+09:09 - So if you minimize this V as a function of G,
+09:11 - which is what you do here on the outside,
+09:15 - you will basically choose a model distribution that matches
+09:21 - the data distribution exactly.
+09:24 - So the global optimum is the same as what you
+09:26 - would get with KL divergence.
+09:29 - And you would get that optimal loss.
+09:33 - So the summary is that basically as a recap, what we're doing
+09:37 - is we're changing the way we're comparing the data distribution
+09:41 - and the model distribution.
+09:43 - And we choose this similarity based on a two-sample test
+09:48 - statistic.
+09:49 - And the statistic is obtained by optimizing a classifier
+09:52 - and under ideal conditions so that the classifier can
+09:55 - basically be optimal, which in practice is not
+09:58 - going to be because if you use a neural network,
+10:00 - it might not be able to learn that density ratio.
+10:04 - But under ideal conditions, this basically
+10:07 - corresponds to not using KL divergence here and instead
+10:11 - using this Jensen-Shannon divergence to compare
+10:15 - the data to the model.
+10:16 -
+10:19 - And the pros is that to evaluate the loss and optimize it,
+10:24 - you only need samples from p theta.
+10:26 - You don't need to evaluate likelihoods, which is great
+10:29 - because that means you don't have restrictions
+10:31 - on autoregressive, normalizing things, normalizing flows.
+10:35 - You don't have to worry about it.
+10:38 - Lots of flexibility in choosing the architecture
+10:40 - for the generator.
+10:41 - Basically, it just has to define a valid sampling
+10:44 - procedure, which is essentially always the case.
+10:47 - If you feed in random noise into a neural network,
+10:49 - you get a sampling procedure.
+10:51 - A valid sampling procedure, that's really all you need.
+10:54 - And it's fast sampling because you
+10:57 - can generate a sample in a single pass
+10:59 - through the generator.
+11:01 - So it's not like autoregressive models, one variable at a time.
+11:03 - Everything is generated in a single pass.
+11:07 - The con is that it's very difficult to actually train
+11:11 - in practice because you have this minimax sort
+11:14 - of optimization problem.
+11:17 - And so in practice, what you would have to do
+11:20 - is you would have to do something like this.
+11:22 - You would have to, let's say, start
+11:24 - with a minibatch of training examples.
+11:28 - And then you get a sample of noise vectors
+11:31 - from the prior of the generator.
+11:34 - And then you pass them through--
+11:37 - you pass these noise vectors through G
+11:41 - to generate m fake samples.
+11:45 - And then you basically have these two minibatches .
+11:49 - You have m real data points and m fake data
+11:52 - points, which is what you get by passing zi
+11:55 - through the generator.
+11:58 - And then what you do is you try to optimize
+12:01 - your classifier, your discriminator
+12:03 - to maximize that objective.
+12:06 - So the classifier, which is just the usual training
+12:09 - of a classifier, just try to--
+12:11 - you take a step in a gradient ascent in this case
+12:16 - step on that objective function to try
+12:18 - to improve this optimization objective to do better,
+12:25 - basically classifying a distinguishing real data
+12:28 - from fake data.
+12:31 - And as it was mentioned before, then the generator
+12:39 - is also trying to--
+12:42 - is also looking at the same objective function.
+12:44 - But it has an opposite objective.
+12:46 - The generator is trying to minimize
+12:48 - that objective function.
+12:49 - You can still do gradient descent.
+12:52 - And what you do is you compute the gradient
+12:55 - of this quantity with respect to theta, which
+12:58 - are the generator parameters.
+13:00 - And the first term does not depend on theta.
+13:03 - That's just the data.
+13:04 - So you cannot change what the data looks like.
+13:07 - But what you can do is you can try
+13:09 - to adjust the parameters of G, so
+13:13 - the parameters of the generator, so that the samples that you
+13:16 - produce by passing random noise through G
+13:21 - look like the real data as measured by this discriminator d
+13:26 - phi, which is what you get by taking
+13:28 - this kind of gradient descent step on that objective.
+13:32 - Yeah, so it's, unfortunately, very tricky to train this.
+13:37 - And this is not guaranteed to converge.
+13:40 - And it can be--
+13:43 - in practice, you would use the new phi.
+13:46 - And you would do-- you would keep
+13:47 - going and trying to kind of play this game where each player is
+13:52 - trying to play a little bit better and hope
+13:53 - that it converges.
+13:55 - You repeat this and hope that something good happens.
+14:00 - And here is kind of a visualization
+14:03 - of what happens if you do this.
+14:05 - So what's happening here is you can
+14:08 - imagine there is a bunch of z vectors
+14:10 - that are then mapped by G to different x locations.
+14:15 - So here z and x are just one dimensional.
+14:18 - And that is giving us a distribution,
+14:20 - which is this green curve.
+14:22 - So you see that most of the samples from the generator
+14:24 - end up here.
+14:26 - And then there is a data distribution, which is just
+14:28 - this red curve that's fixed.
+14:31 - It is whatever it is.
+14:33 - And then let's say you start with a discriminator, which
+14:36 - is not very good.
+14:37 - And it's this wiggly kind of blue line here.
+14:41 - Now, given that you have a bunch of red samples
+14:44 - and you have a bunch of green samples,
+14:46 - so real samples and fake ones coming
+14:49 - from the current generator, what you would do
+14:53 - is you would try to come up with a good classifier.
+14:58 - And the better classifier that you
+15:00 - get after you update the discriminator
+15:02 - is this blue curve.
+15:04 - So as you can see, if x's are coming from this left side,
+15:08 - then they're probably coming from the real data distribution.
+15:12 - There is no chance they come from the generator
+15:14 - because the generator has very low probability here.
+15:17 - The data is pretty high.
+15:18 - And so the discriminator should say samples around here
+15:22 - should have high probability of being real.
+15:24 - Samples around here should have high probability
+15:26 - of being fake or low probability of being real.
+15:30 - And then here in between, it's unclear.
+15:34 - And then you just decrease the probability
+15:35 - as you move towards the right.
+15:39 - So that's what happens when you optimize phi.
+15:41 - You basically come up with a better discriminator.
+15:45 - Once you have the better discriminator,
+15:47 - you can try to update the generator
+15:50 - to fool this discriminator.
+15:53 - So what would happen is you would change these arrows here,
+15:57 - which are basically the G, which is telling you
+15:59 - how you map the random noise from the prior, the z,
+16:03 - to x's that you like.
+16:06 - And in particular, if you're trying
+16:09 - to fool the discriminator, you are
+16:11 - going to try to shift probability mass to the left.
+16:16 - And so you might end up with a new generator
+16:18 - that looks like this.
+16:19 - And that confuses the discriminator more
+16:24 - because you can see it's overlapping
+16:26 - more with the red curve.
+16:29 - And the discriminator is going to have
+16:31 - a hard time trying to distinguish these two samples.
+16:34 - And then you keep going until you reach hopefully
+16:37 - this convergence where the discriminator--
+16:40 - where the generator matches the data distribution.
+16:43 - So the green and the red curves are overlapping.
+16:45 - They're identical.
+16:46 - And the discriminator is maximally confused and is
+16:49 - producing 1/2 everywhere because it cannot do better than chance
+16:53 - at that point.
+16:54 - As part of what you need to do, the job of the discriminator
+16:57 - is to basically look at a bunch of samples like these two.
+17:02 - And you need to decide which one is real
+17:05 - and which one is fake essentially.
+17:08 - So which one do you think is real?
+17:09 - And which one is--
+17:10 - both are fake
+17:11 - [LAUGHTER]
+17:14 -
+17:18 - And this these technologies improved a lot over the years,
+17:24 - like you can see from 2014, all the way to 2018.
+17:28 - And there are even better improvements now.
+17:31 - Very successful in a lot of tasks.
+17:34 - But it's very challenging in practice
+17:36 - to get them to work because of the unstable optimization.
+17:39 - There are several problems with GANs.
+17:41 - The first one is unstable optimization.
+17:44 - Because you have this minimax objective,
+17:46 - it's very tricky to train them.
+17:48 - It's very hard to even know when to stop because it's
+17:51 - no longer like likelihood.
+17:52 - And you can see it going down.
+17:54 - And at some point, you can just stop or up,
+17:57 - let's say, or you're maximizing likelihood.
+18:01 - You see it goes up.
+18:01 - And at some point, you see it's not improving anymore.
+18:04 - You can stop.
+18:04 - Here is no longer the case that you know when to stop basically.
+18:08 - And it can have this problem called mode collapse, which
+18:11 - we'll see basically.
+18:15 - While the KL divergence is mode covering,
+18:17 - we'll try to put probability mass everywhere
+18:19 - because otherwise, you get a huge penalty.
+18:21 - If something is possible under pdata
+18:24 - but you put zero probability, then you have infinite penalty.
+18:27 - This GAN tend to be much more mode-seeking.
+18:30 - And so they might just focus on a few types of data points
+18:34 - and completely stop generating other kinds of data points
+18:38 - that are present in the training set.
+18:41 - And so in practice, you need a lot of tricks
+18:43 - to train these models.
+18:46 - And I'm going to point you to some reference for how this--
+18:50 - yeah, where you can see some of them.
+18:52 - I mean, in theory, under some very unrealistic assumptions,
+18:56 - that kind of procedure where you do updates on the discriminator
+19:02 - and the generator or at every step or you find the optimal
+19:05 - discriminator is supposed to work, in practice, it doesn't.
+19:11 - In practice, what you see is that the loss keeps
+19:13 - oscillating during training.
+19:15 - So it might look something like this
+19:18 - where you have the generator loss, which
+19:22 - is the green one, the discriminator loss, and the two
+19:25 - types of samples, the real and the fake ones.
+19:27 - You can see it keeps oscillating because you are not
+19:33 - reaching the--
+19:35 - yeah, it doesn't converge basically
+19:37 - through this gradient procedure.
+19:40 - And there is no robust stopping criteria.
+19:43 - You don't know when should you stop.
+19:45 - You don't really know.
+19:46 - The only thing you can do is you look at the samples and see,
+19:49 - OK, it's doing something meaningful,
+19:51 - and then you just stop.
+19:52 - But it's very hard to come up with a principled way
+19:55 - of deciding when to stop the training.
+19:58 - And so the other problem is that you have mode collapse, which
+20:03 - is this problem that, again, the generator is
+20:06 - basically collapsing on a few types of samples.
+20:09 - And it doesn't generate the other ones.
+20:12 - And you can see an example here where kind of like,
+20:15 - if you look at the samples, it really
+20:17 - likes this type of data points.
+20:20 - And it keeps generating it over and over.
+20:24 - And you can see a more toy example that gives you
+20:27 - a sense of what's going on.
+20:29 - Imagine the data distribution is just
+20:32 - kind of a mixture of a bunch of Gaussians that are in 2D.
+20:36 - And they are lying on this circle.
+20:41 - And then what happens is that as you train your generator,
+20:45 - it kind of keeps moving around.
+20:46 - So maybe at some point, it produces one of the modes.
+20:50 - And then the discriminator is doing a good job
+20:53 - at distinguishing what it does from the real data.
+20:56 - Then the generator is moving the probability mass
+20:58 - on a different mode.
+20:59 - And it keeps moving around.
+21:01 - But it never actually covers all of them at the same time.
+21:03 - Yeah.
+21:04 - So there is all kinds of tricks that you have to use.
+21:08 - And here is our example on MNIST where
+21:10 - you can see how it's collapsing on generating
+21:14 - one particular digit.
+21:16 - And it stops learning.
+21:18 - And there's this great blog post, GAN Hacks,
+21:22 - where you can see all of hacks that you can use to get
+21:27 - GANs to work in practice.
+21:29 - And there is all kinds of techniques,
+21:31 - including noise and various tricks
+21:34 - that you can look up on the website.
+21:37 - Unfortunately, it's all very empirical.
+21:39 - There is nothing that is guaranteed to work.
+21:41 - And you have to try.
+21:43 - And there are better architectures.
+21:45 - There are tricks that sometimes works and sometimes don't.
+21:49 - But I would say the fact that these models are so hard
+21:52 - to train is why they are no longer kind of state-of-the-art.
+21:55 - And people have kind of largely given up on GANs.
+21:58 - And people are using diffusion models
+22:00 - instead because they are much easier to train.
+22:03 - And they have a clean loss that you
+22:06 - can evaluate during training.
+22:08 - And you know how to stop.
+22:09 - And there is no instability.
+22:11 - It's just a single optimization problem that you have to do.
+22:13 - And I would say this is the main reason GANs are no longer so
+22:19 - much in fashion anymore.
+22:23 - And people are still using them.
+22:24 - And it's a powerful idea.
+22:26 - And it might come back.
+22:28 - But I think that's the main drawback, very, very
+22:30 - hard to train.
+22:32 - The discriminator is seeing the data.
+22:33 - And then the generator is learning
+22:36 - from what the discriminator has learned about the data
+22:39 - essentially.
+22:40 - Then depending on what kind of features
+22:42 - the discriminator is looking for,
+22:44 - you might try to catch up with those
+22:47 - but then just keep changing.
+22:48 - And then you never really converge to anything.
+22:50 - In fact, there is even recent papers at ICML this year
+22:54 - where they were taking a diffusion model.
+22:55 - And then they had a clever way of incorporating
+22:57 - basically a discriminator to improve performance.
+23:01 - And often if you can throw in maybe a little bit
+23:05 - of discriminator to kind of compare
+23:08 - samples in a meaningful way, that often helps.
+23:14 - That's why we're still talking about this idea
+23:15 - because it's actually powerful.
+23:17 - And you can use it in combination
+23:19 - with other existing models.
+23:21 - And yeah, it's still valuable for other things.
+23:24 - This, I think, was the first model generated art.
+23:31 - It was auctioned at Christie's a few years ago.
+23:35 - This is a painting generated kind of by a GAN, one
+23:39 - of the best one at that time.
+23:41 - I think it was expected to sell for something in that range.
+23:44 - And I think it went for almost half a million dollars.

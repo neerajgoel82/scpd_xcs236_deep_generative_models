@@ -1,1 +1,445 @@
 
+00:00 -
+00:05 - SPEAKER: The plan for today is to continue
+00:07 - talking about generative adversarial networks.
+00:11 - As a recap, remember that the nice thing
+00:15 - about generative adversarial networks
+00:18 - is that it allows us to train models
+00:21 - in a likelihood-free way, which basically means that you no
+00:26 - longer have to choose special architectures
+00:30 - or factorize a distribution according to chain rule
+00:35 - because you're forced to be able to evaluate
+00:38 - the probability of each data point
+00:39 - because you want to train by maximum likelihood.
+00:43 - The idea is that there are ways to basically compare
+00:47 - the probability distribution of your generative model
+00:50 - to the data distribution, that it does not
+00:54 - involve KL divergence, and does not require basically you having
+00:59 - to evaluate the probability of samples according to your model.
+01:02 - And in particular, we've seen that there
+01:04 - is one very reasonable way of figuring out
+01:09 - how well your generative model matches a data distribution.
+01:14 - And that involves basically training a classifier.
+01:17 - And the classifier is often called
+01:19 - a discriminator in this space.
+01:21 - And the discriminator is supposed to--
+01:24 - is trained to distinguish kind of whether or not the samples
+01:29 - it's receiving are real, meaning they come from the data
+01:32 - distribution, or fake, meaning they come
+01:35 - from the model distribution.
+01:36 - And you can think of the performance of this classifier
+01:41 - as an indicator of how well your generative model has been
+01:48 - trained or how similar the samples it produces
+01:51 - are to the real data distribution.
+01:54 - If the discriminator is having a very, very hard time
+01:57 - distinguishing your samples from the real ones,
+01:59 - there is a good chance that your samples are actually
+02:02 - pretty good.
+02:03 - And so based on this intuition, we
+02:06 - have this kind of training objective here
+02:09 - which involves a minimax game.
+02:12 - So it's kind of an optimization problem
+02:14 - where there are two players.
+02:15 - There is a generator that is trying to produce samples.
+02:18 - That's your generative model.
+02:20 - There is a discriminator, D, that
+02:22 - is trying to distinguish real samples from phase samples.
+02:25 - And there is this performance metric, which is basically
+02:29 - the loss of the discriminator.
+02:33 - It's just basically the negative cross-entropy loss
+02:36 - of the discriminator on this task
+02:38 - of distinguishing real versus fake.
+02:40 - And you have this minimax game where the discriminator
+02:42 - is trying to do as well as it can
+02:45 - in this classification problem, binary classification problem.
+02:48 - And the generator is trying to make the discriminator perform
+02:53 - poorly.
+02:54 - So they're playing kind of the game.
+02:57 - And this is like a minimax game in the sense
+02:59 - that they're pushing the objective function
+03:01 - into different directions.
+03:02 - And the generator is being trained
+03:04 - to try to fool basically the discriminator, trying
+03:07 - to produce samples that are as close
+03:10 - as possible to the ones in the data
+03:12 - as measured by a discriminator not being able to distinguish
+03:16 - these two types of samples.
+03:19 - And we've seen that under some assumptions.
+03:22 - So if you assume that somehow you
+03:26 - are able to compute the optimal discriminator,
+03:29 - recall that optimal discriminator is basically
+03:31 - giving you density ratios.
+03:34 - And if you plug that optimal discriminator into this loss
+03:39 - function, then you get a mixture of two types of KL divergences.
+03:44 - And we've seen that, that divergence as a name
+03:47 - is called the Jensen-Shannon divergence.
+03:49 - And up to scaling and shifts, you
+03:52 - can think of this training objective
+03:55 - from the perspective of the generator.
+03:58 - Assuming the discriminator is optimal,
+04:01 - you can think of this as trying to minimize
+04:03 - this Jensen-Shannon divergence between the data distribution
+04:06 - and the model distribution.
+04:09 - And so this is not too different from
+04:12 - traditional maximum likelihood learning
+04:14 - where we're minimizing KL divergence
+04:16 - between the data and the model.
+04:18 - Under these assumptions, you're trying
+04:20 - to make to instead minimize some mixture of KL divergences
+04:26 - that are basically between the data and mixtures of models
+04:29 - and data.
+04:30 - This restriction scaling is just it
+04:32 - happens to show up if you define the loss this way.
+04:37 - It just happens to be the case that Jensen-Shannon divergence
+04:39 - is defined that way.
+04:40 - And it doesn't have this--
+04:42 - this is kind of optimal loss that you can have.
+04:44 - Not super important.
+04:45 - It's just like if you've worked through the math,
+04:47 - you get a shift in scale.
+04:48 - But, yeah, we don't care about--
+04:50 - of course, the loss is the same basically.
+04:55 - You're just changing the landscape by shifting it.
+04:57 - So it doesn't really matter.
+04:59 - It just happens to show up if you do the derivation.
+05:04 - And in practice, of course, this is not feasible in the sense
+05:11 - that you cannot get the optimal discriminator.
+05:13 - But in practice, what you would do
+05:15 - is you would have two neural networks, a generator,
+05:18 - and a discriminator, and they play this game.
+05:20 - And then the generative distribution
+05:25 - is defined as what you get by transforming simple samples
+05:29 - from a prior distribution like a Gaussian
+05:32 - through the generator network, and then
+05:35 - you just optimize this sort of objective function.
+05:38 - And there's been a lot of success based on this paradigm.
+05:44 - This is a cool kind of repo where
+05:47 - you can see a lot of different GANs and variants
+05:50 - of these ideas that have been proposed in the past.
+05:54 - And what we're going to see today
+05:57 - is that this idea of setting up a minimax game
+06:01 - is actually very powerful.
+06:03 - And not only you can use it to minimize
+06:05 - the Jensen-Shannon divergence, but you can actually
+06:08 - use it as a tool that under some conditions
+06:14 - allows you to optimize a much broader class of divergences
+06:18 - between the data and the model distribution,
+06:20 - something called f-divergences.
+06:22 - And we'll see that there is also another extension
+06:28 - or similar framework that allows you to approximately minimize
+06:34 - some notion of the Wasserstein distance between model and data
+06:38 - distribution.
+06:39 - And we'll also see how to get latent representations
+06:44 - from generative adversarial networks.
+06:46 - So similar to a VAE, we'll see to what extent
+06:49 - it's possible to essentially not only generate samples
+06:53 - but also map samples to latent representations
+06:57 - then you can use perhaps on to do semi-supervised learning
+07:00 - or use them on other kinds of downstream tasks.
+07:03 -
+07:06 - And then we'll also see maybe CycleGANs that
+07:09 - are sort of like conditional generative adversarial networks,
+07:12 - are also pretty cool.
+07:14 - All right, so first, let's go back to the high level picture.
+07:19 - Again, remember that we've been in the first part of the course.
+07:25 - We were always kind of choosing this divergence between the data
+07:28 - and the model to be the KL divergence which plays nicely
+07:32 - with kind of likelihood-based models.
+07:34 - If you can evaluate probabilities under your model
+07:37 - comparing similarity in terms of KL divergence,
+07:40 - makes a lot of sense.
+07:41 - And we know that that's optimal in a certain sense.
+07:46 - We've seen that to some extent you
+07:48 - can optimize the Jensen-Shannon divergence through the GAN
+07:52 - objective.
+07:53 - And what we'll see today is that you can actually
+07:56 - optimize a broader class of divergences that
+07:59 - are called the f-divergences.
+08:01 - And an f-divergence is defined as follows.
+08:05 - So if you have two densities p and q,
+08:09 - you can define a divergence between them
+08:11 - by looking at the expectation with respect
+08:15 - to the second argument, which is q, of this f function applied
+08:21 - to the density ratio between--
+08:24 - at each point between p and q where f is basically a function,
+08:31 - a scalar function that has to be convex, lower semicontinuous,
+08:37 - and it has to evaluate to 0 when you plug-in 1.
+08:41 - And as you change basically this f function,
+08:45 - you get different ways of basically comparing
+08:48 - how similar p is to q.
+08:52 - And just to be precise, what these technical conditions mean,
+08:58 - well, one is that you have the function
+09:01 - f has to be convex, which hopefully you
+09:03 - know what it means.
+09:04 - It means that if the graph basically--
+09:08 - if you take two points, and you connect them,
+09:10 - that line is above.
+09:11 - So the graph of the function has to be
+09:13 - lower semicontinuous, which is just a very technical thing.
+09:16 - It basically means something similar to continuous.
+09:19 - And if it's discontinuous, then kind of
+09:23 - on one of the directions, then it
+09:25 - has to be above the value of the function
+09:30 - where there is a discontinuity, not super important.
+09:34 - But the intuition is that somehow f
+09:38 - is what tells you how much you're being penalized when
+09:44 - p and q are assigned different probabilities to one
+09:47 - of the possible things that can happen, let's say,
+09:50 - one of the possible images.
+09:52 - So it's similar in some sense to KL divergence
+09:54 - where remember what we were doing
+09:56 - is we were going through all the possible things that can happen,
+09:58 - and then we were looking at the ratio of probabilities assigned
+10:02 - by p and q, and then we were taking some kind of log.
+10:05 - This is a generalization in the sense
+10:06 - that you can use different kind of convex functions
+10:10 - to score how happy or unhappy you are with different density
+10:14 - ratios.
+10:15 - And ideally, if p and q are the same,
+10:18 - then they are going to assign the same probability to every x.
+10:22 - And so the density ratio is one.
+10:24 - And then this function f is going
+10:28 - to give you a penalty of zero.
+10:30 - And that's the best that can happen.
+10:34 - But f is essentially measuring how much you care about p and q
+10:43 - assigning different probabilities
+10:45 - to the various axes, to the various samples that
+10:47 - can be generated by the model.
+10:50 - And the interesting thing is that because f is convex,
+10:58 - then you can still use the same trick
+11:00 - that we did for KL divergence to basically show
+11:02 - that this f-divergence is non-negative.
+11:07 - And in particular because we have
+11:09 - an expectation of a convex function of some density ratio,
+11:13 - this is always at least as large as the function
+11:16 - applied to the expectation.
+11:18 - And now that expectation, you can expand it.
+11:21 - It's basically the integral with respect
+11:24 - to this probability distribution q of the density
+11:28 - ratio, which is just p over q.
+11:30 - So the q's simplify, and you're left with the integral of p. p
+11:36 - is normalized.
+11:37 - It evaluates to 1, that integral.
+11:39 - And so this is f of 1, which is 0.
+11:41 - And so you get the desirable property
+11:45 - that basically this f-divergence is
+11:49 - non-negative for any choice of p and q.
+11:52 - And if you plug in p equals to q,
+11:56 - then this density ratios here are always going to be 1.
+11:59 - f of 1 is 0.
+12:01 - And so this whole expectation is 0.
+12:04 - And so it behaves similarly to KL divergence in the sense
+12:07 - that it tells you how similar or different p and q are
+12:12 - by kind of looking at all these density ratios
+12:15 - and scoring them throughout.
+12:17 - If the distributions are the same,
+12:19 - then the density ratios, the two p and q
+12:20 - are assigned exactly the same probabilities
+12:22 - to everything that can happen.
+12:23 - And that f-divergence is going to be 0.
+12:27 - In general, it's going to be non-zero.
+12:30 - It's going to be greater than or equal to zero.
+12:32 - And so it makes for a reasonable objective
+12:36 - function to try to minimize this quantity.
+12:39 - So we could have one of p and q be the data distribution,
+12:43 - the other one being the model distribution,
+12:45 - and then we can try to minimize this as a function of the model.
+12:51 - And if you-- the nice thing about the f-divergences
+12:56 - is that if you plug in different types of f's, you
+13:00 - get many existing reasonable kind of divergences
+13:03 - that you might want to use to compare probability
+13:05 - distributions.
+13:06 - For example, if you choose f to be u log u,
+13:12 - and you plug it into this formula,
+13:16 - then you will see that this expression evaluates
+13:21 - to the usual KL divergence where the way
+13:24 - you compare two probability distributions p
+13:27 - and q is by going through everything
+13:29 - that can happen, look at the density ratios,
+13:31 - and scoring them with respect to this log function.
+13:35 - There are many other f-divergences.
+13:37 - So the nice thing is that if you plug in different f's, you
+13:41 - get different divergences.
+13:44 - So we have the Jensen-Shannon divergence
+13:46 - which you get by choosing, for example, this odd-looking choice
+13:50 - of u.
+13:51 - You can get the usual KL divergence.
+13:54 - By choosing u, you can get the reverse KL divergence
+13:58 - where you basically swap the argument of p and q
+14:02 - and the regular KL divergence.
+14:03 - By choosing minus log u as the function f,
+14:07 - and you can get many more.
+14:08 - You can get-- you can see here squared
+14:12 - Hellinger, total variation, alpha
+14:16 - divergences, a lot of different kind
+14:17 - of ways of comparing similarities between p and q
+14:21 - by choosing a different f function.
+14:25 - And what will turn out to be the case is that generative
+14:29 - adversarial network, like objectives,
+14:31 - cannot only be used to minimize an approximate version
+14:35 - of the Jensen-Shannon divergence which corresponds to a very
+14:38 - particular choice of f, but it can actually be used to optimize
+14:42 - all of them.
+14:43 - So you can pick any f which satisfies
+14:48 - those constraints, that defines a valid f divergence.
+14:51 - And what we'll see is that we can use a GAN-like objective
+14:54 - to minimize the corresponding f-divergence approximately.
+14:59 - The basic setup is that as usual, we're
+15:03 - trying to train a generative model.
+15:05 - So we have a data distribution.
+15:06 - We have a model distribution.
+15:08 - And it would be nice if we could choose an f,
+15:11 - and then either minimize the f-divergence between the model
+15:16 - and the data or perhaps the f-divergence between data
+15:19 - and model.
+15:20 - Now, this is reasonable because we've
+15:22 - seen that for any choice of f that satisfies
+15:25 - those constraints, this objective function is
+15:28 - non-negative and is going to be zero if the two arguments match.
+15:33 - So if your generative model matches the data distribution,
+15:36 - then this loss function is going to be zero, is non-negative.
+15:40 - And so if you set up a learning objective
+15:43 - where you try to minimize this as a function of data,
+15:45 - you might be able to learn a good generative model.
+15:50 - Now, the issue is that the expression, kind
+15:54 - of when we started looking at KL divergence the first time,
+16:01 - doesn't look like something you can actually optimize.
+16:04 - It doesn't look like something you can evaluate
+16:06 - and doesn't look like something you can actually
+16:08 - optimize as a function of data.
+16:10 - First of all, you have an expectation outside with respect
+16:13 - to, let's say, the data distribution.
+16:16 - Well, we don't know p data, but we have access to samples.
+16:19 - So we can approximate that expectation
+16:21 - with a sample average.
+16:22 - So that's not a problem.
+16:24 - The real problem is that it requires
+16:28 - you to evaluate the probability of x under the model
+16:32 - and under the data distribution.
+16:35 - And even if you have a likelihood-based model,
+16:38 - even if you can evaluate p data, we
+16:40 - can never evaluate probabilities under the data distribution.
+16:44 - And so that density ratio is unknown.
+16:48 - So like in the KL divergence case where
+16:50 - we have that log density ratio, and we couldn't actually
+16:53 - evaluate it, and we could only actually
+16:55 - optimize KL divergence up to a shift, up
+16:58 - to the entropy of the data, we have the same problem
+17:01 - here that this kind of objective function
+17:04 - seems reasonable but doesn't look like something
+17:07 - we can actually optimize.
+17:09 - And if you try to swap, you try, OK, maybe we can do--
+17:13 - instead of doing f-divergence between p data and p data,
+17:16 - we could try to do p data to p theta,
+17:19 - and you end up with something similar.
+17:21 - We have, again, an expectation with respect to samples drawn
+17:25 - from the model, which is fine.
+17:27 - But, again, you have this density ratio
+17:29 - that is not something we can compute in general,
+17:33 - even if you have a likelihood-based model.
+17:35 -
+17:37 - And so what we need to do is we need to somehow rewrite this
+17:44 - f-divergence or approximate this expression and write it
+17:48 - into something that ideally does not depend on either
+17:53 - the probabilities--
+17:55 - basically does not require you to be
+17:57 - able to evaluate probabilities under the data distribution
+18:00 - and ideally not even according to the model distribution.
+18:04 - Because if the objective function does not
+18:06 - involve neither p theta nor p data,
+18:10 - and it only requires you to be able to sample
+18:12 - from both of them, then we're back in the setup just
+18:18 - like a generative adversarial network
+18:19 - where we can basically use any sort of architecture
+18:22 - to define p theta implicitly as whatever you get if you were
+18:28 - to sample from a simple prior, feed the samples
+18:32 - through a neural network, which is the generator that
+18:35 - defines a potentially very complicated p theta or x
+18:39 - to the extent that we can write down
+18:40 - the objective function in an equivalent way
+18:43 - or approximately equivalent way that does not require
+18:46 - us to evaluate probabilities,
+18:48 - then we can use a very flexible network architectures,
+18:53 - like in generative adversarial networks.
+18:55 - The question is, OK, is p theta--
+18:59 - p data x1?
+19:01 - And in general, no.
+19:03 - That's basically the probability that the model
+19:06 - assigns to every possible x.
+19:10 - So that's just an--
+19:12 - there is an underlying, as usual, data generating process
+19:16 - that we assume we have access to only through samples.
+19:19 - So we assume we have a training set
+19:21 - that was sampled from p data, and that distribution is not
+19:26 - uniform.
+19:27 - This is not the empirical distribution
+19:29 - on the data set, which could be just like one over n
+19:34 - where n is the size of the data set.
+19:36 - This is the true data generating process.
+19:39 - You could set it up trying to fit
+19:41 - the empirical distribution on the data set,
+19:44 - but it's not quite.
+19:45 - You could even think of that as an approximation of p data
+19:49 - where you have a very simple kernel density estimator based
+19:52 - on the training set.
+19:54 - But that doesn't work particularly well because
+19:57 - in high dimensions, it's going to be-- it might not generalize.
+20:00 - So you're overfitting too much to the training set.
+20:04 - This machinery works if you can evaluate p theta.
+20:10 - But as we know, evaluating p theta
+20:14 - constrains you in the kind of models you can use.
+20:16 - You have to then either use autoregressive models,
+20:19 - or you have to use invertible neural networks, which
+20:21 - is kind of undesirable.
+20:23 - And if you could set up a learning objective where
+20:25 - p theta is not even something that you have to evaluate,
+20:28 - you just need to be able to sample from it.
+20:30 - Then that opens up the possibility
+20:33 - of using implicit models, like feed noise
+20:38 - through a neural network like a simulator
+20:41 - almost where you don't even need to know how it works.
+20:44 - You don't need to know how it assigns probabilities
+20:46 - to data points.
+20:47 - You just need to be able to sample from it.
+20:49 - So that opens up more of a kind of broader set of models,
+20:56 - including these implicit ones where you just
+20:59 - need to be able to sample from it essentially.
+21:01 - Remember KL divergence is an expectation with respect
+21:04 - to p of log p over q.
+21:08 - Yeah, so you have to multiply by-- yeah, to basically change
+21:12 - the expectation to 1 with respect to p.
+21:15 - But if you see-- in fact, if you want reverse KL,
+21:18 - then it's just minus log u because reverse KL
+21:22 - would be an expectation with respect to the second argument.
+21:25 - So the u in front is basically to change the expectation
+21:28 - from 1 under q to 1 under p, basically.
+21:33 - OK, so now let's see how we can actually move forward
+21:38 - and come up with, again, like way
+21:40 - of approximating this f-divergence that
+21:43 - does not require likelihood.
+21:46 - The reason we were able to do it for, I guess,
+21:50 - Jensen-Shannon divergence is exactly what
+21:53 - we're going to see now, which is basically a way
+21:55 - to reduce this expectation which looks like something that you
+22:01 - might not be able to compute.
+22:03 - If you look at the Jensen-Shannon divergence,
+22:05 - it looks like something you're not able to compute.
+22:07 - But if you have an optimal discriminator,
+22:10 - intuitively, the optimal discriminator
+22:12 - computes these density ratios for you.
+22:16 - And so that's how you get around it,
+22:19 - like you are offloading this problem of computing the density
+22:25 - ratios to a discriminator.
+22:27 - And this might be good or bad.
+22:29 - But the hope is that neural networks
+22:31 - seem to work really well for kind of supervised learning
+22:34 - classification problems.
+22:35 - And so we might be able to come up
+22:38 - with reasonable estimates of these density ratios
+22:40 - by training a classifier because to do well on classification,
+22:44 - if you're trying to classify real samples from fake samples,
+22:48 - you essentially need to estimate that.
+22:50 - The optimal classifier requires you
+22:52 - to know for every x, how likely is this point to come
+22:57 - from one versus the other?
+22:58 - And so that's kind of the trick.

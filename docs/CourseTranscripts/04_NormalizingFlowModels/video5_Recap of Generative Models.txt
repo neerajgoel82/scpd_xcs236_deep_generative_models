@@ -1,1 +1,371 @@
-
+00:00 -
+00:05 - SPEAKER: OK, so today we're going
+00:08 - to be talking about generative adversarial networks.
+00:11 - So we're going to start introducing yet another class
+00:16 - of generative models.
+00:19 - Just as a recap, this is like the high level story, high level
+00:25 - roadmap for the things we're going to be
+00:28 - talking about in this course.
+00:30 - The high level idea when you build a generative model
+00:32 - is that you start with some data,
+00:35 - and you assume that the data is basically
+00:38 - a set of IID samples from some unknown probability distribution
+00:43 - that we denote P data.
+00:45 - Then you have a model family, which
+00:47 - is a set of probability distributions
+00:48 - that are parameterized usually by neural networks.
+00:52 - And then what you do is you define some kind of notion
+00:55 - of similarity between the data distribution and the model
+00:59 - distribution, and then you try to optimize over
+01:01 - the set of probability distribution
+01:04 - in your model family, and you try
+01:05 - to find one that is close to the data distribution
+01:09 - according to some notion of similarity.
+01:12 - And we've seen different ways of basically constructing
+01:17 - probability distributions in this set.
+01:20 - And we've seen autoregressive models
+01:22 - where you have chain rule, and you break down
+01:24 - basically the generative modeling
+01:26 - problem as a sequence of simple prediction problems.
+01:30 - We've seen variational autoencoders
+01:32 - where we are essentially, again, modeling
+01:35 - the density over the data using essentially a big mixture model.
+01:41 - And then the last class of models we've seen
+01:44 - is this idea of a normalizing flow
+01:46 - model which is kind of like a variational autoencoder
+01:50 - with a special type of decoder, which is just
+01:52 - a deterministic invertible transformation where, again, we
+01:56 - kind of get these densities through the change
+01:58 - of variable rule.
+02:00 - But the key thing is that we essentially always try
+02:04 - to model the probability assigned by the model
+02:08 - to any particular data point.
+02:10 - And the reason we do that is that if we can do that,
+02:13 - then we can do maximum likelihood training.
+02:15 - So if you know how to evaluate probabilities
+02:18 - according to the model, then there
+02:20 - is a very natural way of training the models, which
+02:23 - is basically this idea of minimizing the KL
+02:25 - divergence between the data distribution
+02:27 - and the model distribution, which as we know
+02:30 - is equivalent to maximizing likelihoods.
+02:33 - So there's a very natural and very principled
+02:36 - way of comparing probability distributions that
+02:40 - works very well when you have access to likelihoods.
+02:44 - And a lot of this machinery involves
+02:48 - way of setting up models such that you can evaluate
+02:52 - likelihoods efficiently.
+02:54 - And that's one way of doing things.
+02:56 - What we're going to see today is basically a different way
+03:01 - of comparing similarity or of measuring
+03:04 - similarity between probability distributions.
+03:06 - So we're going to change this piece of the story,
+03:09 - and we're going to try to compare probability
+03:11 - distributions in a different way.
+03:13 - And by doing that, we will get a lot of flexibility
+03:16 - in terms of defining the model family because we will not
+03:19 - have to essentially--
+03:22 - the training objective is not going
+03:24 - to be based on maximum likelihood anymore.
+03:26 - And so we're going to get more flexibility essentially
+03:29 - in terms of defining the generative model itself.
+03:34 - So remember that, again, sort of what we've been doing so far
+03:39 - is training models by maximum likelihood.
+03:41 - So the idea is that we have access
+03:43 - to the density or the probability mass
+03:46 - function over each data point.
+03:47 - So we can ask the model, how likely
+03:50 - are you to generate this particular data point
+03:55 - Xi in this case?
+03:58 - And if we can do that, then we can also
+04:01 - try to choose parameters such that we maximize the probability
+04:06 - that the model generated the training data set that we have
+04:09 - access to, or equivalently we can
+04:11 - choose parameters to try to maximize the average log
+04:15 - probability assigned by the model to our training set.
+04:19 - And there is good reasons for choosing this kind
+04:22 - of learning objective.
+04:24 - In particular, it can be shown that this
+04:26 - is optimal in a certain sense.
+04:29 - And what I mean is that basically
+04:33 - under some assumptions, which are not necessarily true
+04:36 - in practice, but under some ideal assumptions
+04:40 - and an ideal setting where you have a sufficiently
+04:43 - powerful model and there is some identifiability condition,
+04:49 - not super important, but under some technical conditions,
+04:56 - you can prove that basically trying
+04:58 - to estimate the parameters of the models
+05:00 - by maximizing likelihood by basically solving
+05:03 - this particular optimization problem
+05:05 - is the most efficient way of using the data.
+05:07 - So basically there is going to be other learning objectives
+05:10 - that you can set up that would potentially
+05:14 - give you estimates of the true parameters of the model.
+05:20 - But among all these various techniques,
+05:22 - the maximum likelihood one is the one
+05:24 - that converges the fastest, which basically means
+05:27 - that given a certain amount of data,
+05:30 - this is the best thing you can do.
+05:33 - It's the one that will give you the right answer basically using
+05:37 - the least amount of data.
+05:40 - And so that's why using maximum likelihood
+05:43 - is a good idea because in some sense,
+05:46 - you're making the best possible use
+05:49 - of the data you have access to under some technical conditions.
+05:55 - And the other reason that maximum likelihood
+05:59 - is a good training objective is that we've
+06:02 - seen that it corresponds to a compression problem.
+06:05 - So if you can achieve high likelihood on a data set,
+06:10 - then it means that you would do reasonably
+06:13 - well at compressing the data.
+06:15 - And we know that compression is a reasonable learning
+06:18 - objective, is one of the--
+06:21 - in some sense that if you're able to compress the data,
+06:23 - then it means that you can predict the things that
+06:26 - could happen pretty well.
+06:28 - And it's a good way of forcing you to understand
+06:32 - what the patterns in the data.
+06:35 - And so compression is a typically a pretty good learning
+06:41 - objective.
+06:43 - However, it might not be necessarily what we want.
+06:47 - And so what we'll see first is that there
+06:50 - are cases in which achieving high likelihood
+06:54 - might not necessarily be correlated with, let's say,
+06:58 - achieving good sample quality.
+06:59 - So if you're thinking about training a generative model
+07:02 - over images, for example, it's possible to construct models
+07:05 - that would give you high likelihood and terrible samples
+07:09 - in terms of quality.
+07:11 - And vice versa, it's going to be possible to train models that
+07:15 - have very good sample quality, meaning they produce images that
+07:19 - are very realistic, but they have terrible likelihoods
+07:22 - at the same time.
+07:24 - And so although training on maximum likelihood
+07:30 - has good properties, it might not be necessarily
+07:32 - what we want if what you care about is, let's say,
+07:36 - generating pretty samples or pretty images.
+07:40 - And so that's going to be some motivation for choosing
+07:43 - different training objectives that are not necessarily
+07:46 - going to be based on a maximum likelihood.
+07:50 - So let's see what does this mean a little bit more rigorously.
+07:59 - First, what we know is that if somehow you're able to find
+08:05 - the true global optimum of this optimization problem,
+08:11 - so if you're really able to find a model distribution that
+08:15 - perfectly matches the data distribution--
+08:18 - so somehow if you go back to this picture,
+08:21 - if you are able to make this distance exactly zero--
+08:25 - so the KL divergence between the data and the model
+08:28 - is truly zero, so you're able to reach the global optimum
+08:31 - of this optimization problem--
+08:33 - then you are in good shape because, well, you
+08:36 - get the best possible likelihood,
+08:38 - and the samples that you produce are perfect essentially
+08:42 - by definition because your model is exactly equal to the data
+08:46 - distribution.
+08:47 - And so if you sample from the model,
+08:49 - it's like sampling from the data.
+08:51 - And so that's as good as it gets.
+08:54 - But what we're going to see is that as long as the match is not
+08:58 - perfect, as long as there is a little bit of a gap, which
+09:01 - in practice is always going to be the case, then being
+09:06 - close in KL divergence or equivalently
+09:11 - doing well with respect to likelihood,
+09:12 - it doesn't necessarily mean that you are achieving good sample
+09:16 - quality, right?
+09:18 - But somehow if you're really able to get
+09:21 - the true global optimum, then you're good.
+09:25 - But for imperfect models, achieving high likelihoods
+09:28 - does not necessarily mean that you achieve good sample quality
+09:33 - and vice versa.
+09:34 - There is an example where you can get very good likelihoods
+09:39 - but very bad samples.
+09:41 - And so to do that, you can basically imagine a situation
+09:44 - like this where you come up with this model, which is
+09:50 - a mixture of two distribution.
+09:53 - It's a mixture of the true data distribution
+09:56 - and some garbage, pure noise distribution.
+09:59 - And so the sampling process is something like this here.
+10:02 - You flip a coin.
+10:04 - And then with 99% probability, you generate noise.
+10:08 - You generate garbage.
+10:09 - And with 1% probability, you generate a true sample
+10:13 - from the data distribution.
+10:15 - Of course, in practice, you cannot really do this.
+10:17 - But this is just to show that there exist models
+10:20 - that achieve very good likelihoods
+10:23 - as we'll see but very good sample quality.
+10:26 - And what I mean, the sample quality
+10:28 - is bad because 99% of the time, you are generating pure garbage,
+10:34 - and only 1% of the time you're generating good samples.
+10:40 - And what we'll see is that even though this model is generating
+10:44 - very bad samples, it actually achieves very good likelihoods.
+10:48 - And to see that, it's actually a relatively simple derivation.
+10:52 - When you evaluate the probability of a data point X,
+10:55 - according to this model, you get a sum of two terms.
+10:58 - It's the true probability under the data distribution
+11:01 - and is the probability under the noise distribution.
+11:05 - And even though the noise distribution
+11:07 - could be really bad, the probability
+11:09 - is at least as good as the 1% probability
+11:14 - of sampling from the data.
+11:16 - And so the probability assigned to this data point
+11:18 - is at least as large as--
+11:19 - this is a sum of two non-negative quantities.
+11:21 - And so this log is at least as large
+11:24 - as the log of that little contribution that comes
+11:27 - from the data distribution.
+11:30 - And because we're taking logs, the log of 1% times P data
+11:35 - is equal to the log of P data minus this log of 100.
+11:41 - So somehow basically what we're seeing
+11:44 - here is that the log probability assigned by this model
+11:48 - to a data point is the best log probability you can get,
+11:53 - the one that you get according to the true data distribution
+11:57 - shifted down by some constant.
+11:58 -
+12:01 - And in particular what this means
+12:05 - is that if you take an expectation of this with respect
+12:07 - to the data distribution, so you want
+12:09 - to see what is the average log likelihood
+12:11 - that this model achieves.
+12:12 - If you take an expectation of the left hand side,
+12:15 - you take an expectation of the right hand side,
+12:17 - you get that on average, these models performs reasonably well
+12:25 - in the sense that it performs as well as
+12:27 - what you would get if you were to use the true data
+12:30 - distribution as a model shifted by some constant.
+12:37 - And we know because KL divergence is non-negative,
+12:41 - that somehow this is the best you can do.
+12:44 - The average log likelihood for any model cannot be possibly
+12:48 - better than the log likelihood that you would get if you were
+12:52 - to use the true data distribution to evaluate
+12:54 - likelihoods of samples produced by the data distribution.
+12:59 - The KL divergence is non-negative,
+13:01 - which just if you just move the log on the other side,
+13:05 - is just saying that the data distribution-- if the data is
+13:08 - coming from the data distribution, the best
+13:10 - model of the world you can possibly have
+13:12 - is the one that produced the data is the data distribution.
+13:15 - And no matter how clever you are in choosing theta,
+13:18 - you cannot possibly do better than using the true model that
+13:22 - produced the data.
+13:24 - So you can see that this performance that we get
+13:33 - is bounded above by this basically entropy
+13:37 - of the data distribution and below by the same thing
+13:41 - shifted by a little bit.
+13:43 - And what I argue is that, that constant doesn't matter
+13:46 - too much because if you think about it, as we increase
+13:52 - the number of dimensions, so as we
+13:54 - go in higher and higher dimensions, the likelihood--
+13:58 - so this piece will basically scale linearly
+14:02 - in the number of dimensions while the constant is fixed.
+14:06 - It doesn't depend on how many variables you're modeling.
+14:09 - If you factorize the true data distribution
+14:13 - according to the chain rule, you can kind of
+14:16 - see that this term here, the log P data scales linearly
+14:20 - in the number of variables that you have
+14:22 - while the second piece does not depend
+14:25 - on the number of variables.
+14:27 - And so you can see that in high dimensions,
+14:31 - this model is basically doing as well as you could hope to do.
+14:35 - The likelihood of this model which
+14:37 - is producing garbage, 99% of the time
+14:40 - is pretty close to the best you can possibly achieve.
+14:45 - And so I think back to your question,
+14:47 - it means that there is a model that
+14:49 - is very close to the optimal one and is still
+14:53 - producing very, very bad results, especially
+14:56 - in high dimensions.
+14:57 - To what extent could you use, let's say, bad data
+15:01 - and somehow train the models that way?
+15:04 - It's not obvious how you would do it with maximum likelihood.
+15:07 - But using GANs, which is what we're going to talk about today,
+15:10 - it's actually pretty straightforward
+15:11 - to incorporate negative data.
+15:15 - So if you know that there are certain things that are clearly
+15:18 - not possible or things you don't like,
+15:21 - then it's pretty straightforward to incorporate
+15:24 - that negative data augmentation into your training objective.
+15:28 - For example, if you take your training on images,
+15:31 - and you apply some kind of jigsaw operator
+15:34 - where you produce a puzzle, and then you move the pieces around,
+15:38 - you get an image that kind of has the right local texture,
+15:41 - but it's not something you want.
+15:43 - And you can incorporate that data augmentation
+15:47 - essentially or negative data augmentation
+15:48 - to improve the training.
+15:50 - So that applies generally.
+15:51 - It's a little bit trickier to do with likelihood-based models.
+15:58 - But yeah, that's a good idea.
+16:01 - I think in general we're not in the setting where
+16:04 - we are assuming that there is even noise in the training data.
+16:09 - Or I think what we were talking about
+16:10 - is a setting where you know what you don't want,
+16:12 - and you take advantage of that, but you
+16:15 - don't have to figure out what is noise
+16:17 - and what is not because you kind of already know.
+16:19 - And here we're in the setting where we we're assuming the data
+16:22 - is clean.
+16:23 - The data is really just a bunch of samples
+16:25 - from the data distribution.
+16:26 - So you do want to use everything you have access to.
+16:29 - And there is no need to filter the noise.
+16:31 - This is just a model of the world that is made up,
+16:36 - but it's illustrating the point that optimizing likelihoods
+16:40 - might not give you good sample quality because at least
+16:43 - conceptually it's possible that by optimizing likelihood,
+16:46 - you end up with a model like this, which would produce
+16:49 - garbage 99% of the time but gives you high likelihoods.
+16:55 - And so there is that potential issue.
+16:58 -
+17:00 - And conversely, it's possible to get
+17:03 - models that produce great samples and very bad log
+17:09 - likelihoods.
+17:10 - Anybody have a guess on how you could do that?
+17:13 - Overfitting.
+17:14 - Yeah, that's the probably the simplest way to do it.
+17:16 - Just memorize the training set.
+17:18 - So you build a model that puts all the probability mass
+17:21 - uniform, let's say, distribution over the training set.
+17:24 - And then if you sample from this model,
+17:27 - the samples would look great.
+17:28 - I mean, they are by definition just training samples.
+17:31 - So basically you cannot do better than that.
+17:35 - But the test likelihood would be as bad
+17:36 - as it gets because it's going to assign basically zero
+17:39 - probability to anything that the model hasn't
+17:41 - seen during training, and so again, terrible log likelihood.
+17:48 - So again, this is suggesting that it
+17:53 - might be useful to kind of disentangle a little bit sample
+17:57 - quality and likelihood.
+18:01 - Even though we had some success training models
+18:04 - by maximum likelihood, it's not guaranteed
+18:07 - that that's always the case.
+18:08 - And there might be other training objectives
+18:11 - that will give us good results in practice.
+18:14 -
+18:16 - And so that's sort of the main motivation
+18:19 - behind the key idea behind generative adversarial networks.
+18:25 - It's a different training objective
+18:28 - that will not depend on the likelihood function.
+18:31 - And so back to our high level picture,
+18:34 - basically what we're going to do is
+18:36 - we're going to change this performance measure here.
+18:40 - We're going to change the way we're
+18:42 - comparing how good our model is by throwing away
+18:45 - KL divergence, which is what we've been doing so far.
+18:49 - And we're going to try some alternative way of comparing
+18:53 - two probability distributions that
+18:54 - will not rely on likelihood.
+18:57 - Yeah, it's a good question.
+18:58 - What is a great sample?
+19:00 - Maybe you want the samples to have diversity, in which case
+19:02 - maybe this wouldn't be.
+19:03 - But if you think about images, like,
+19:05 - if you were to look at them, they would look perfect.
+19:08 - They would have the right structure.
+19:09 - They would be good, except that there is not maybe
+19:14 - enough variety because you're not really
+19:16 - generating anything new.
+19:18 - But presumably, it would be--
+19:21 - in terms of just quality of the individual samples,
+19:25 - this should be good.

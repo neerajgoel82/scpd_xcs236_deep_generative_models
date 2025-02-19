@@ -1,1 +1,535 @@
-
+00:00 -
+00:05 - STEFANO ERMON: So the plan for today
+00:06 - is to talk about energy-based model.
+00:10 - So it's going to be another family of generative models
+00:13 - that is closely related to diffusion models, which is what
+00:17 - we're going to talk about next.
+00:19 - So as a recap, remember this is sort
+00:22 - of the high-level picture, which I think summarizes
+00:27 - pretty well the design space.
+00:29 - When you're trying to build a generative model,
+00:31 - you have data coming from some unknown data distribution.
+00:35 - You have IID samples from it.
+00:37 - You always need to define some kind of model family.
+00:41 - And then you need to define a loss function that basically
+00:44 - tells you how good your model is compared to the data
+00:48 - distribution.
+00:49 - And we've seen that likelihood or KL divergence
+00:53 - is a very reasonable approach.
+00:56 - And that's pretty natural to use with autoregressive models,
+01:02 - normalizing flow models, and to some extent
+01:06 - variational autoencoders because they give you
+01:09 - ways to either exactly or approximately evaluate
+01:13 - the probability of a data point.
+01:15 - And so you can score how close p theta is to the data
+01:20 - distribution by basically computing the KL divergence up
+01:23 - to a constant, which is just the likelihood assigned by the model
+01:27 - to the data, which is kind of a compression-based type
+01:30 - of objective.
+01:32 - And as we know, maximum likelihood training
+01:36 - is very good.
+01:36 - It's a very principled way of training models.
+01:39 - But you always have some kind of restrictions in terms of,
+01:42 - OK, how do you define this set of probability distributions?
+01:46 - And you cannot pick an arbitrary sort of neural network that will
+01:50 - take as input the different axes--
+01:53 - like the data point and maps it to a scalar.
+01:56 - It has to be a valid probability density or a valid probability
+02:00 - mass function.
+02:01 - And so in order to do that, you have to either use chain rule
+02:05 - and break it down into a product of conditionals,
+02:08 - or you have to use some kind of invertible neural network
+02:12 - to define the marginal distribution.
+02:15 - Or you have to deal with approximations
+02:17 - and kind of use a variational autoencoder.
+02:21 - And then the other approach or the other extreme
+02:25 - is to try to have as much flexibility as possible in terms
+02:30 - of defining the model family.
+02:32 - And specifically, we're just going to define the probability
+02:37 - distribution implicitly by instead defining the sampling
+02:41 - procedure.
+02:42 - And the price that you have to pay
+02:47 - is that you can no longer basically
+02:50 - measure this kind of similarity up here.
+02:54 - Using KL divergence, you have to essentially come up
+02:59 - with a training objective that does not require you to evaluate
+03:03 - probability of data points.
+03:04 - Essentially the only thing you have access to at this point
+03:07 - is samples from the data and samples from the model.
+03:11 - And so you have to come up with some kind of two-sample test,
+03:15 - some kind of likelihood free way of comparing how similar
+03:19 - the samples--
+03:20 - the real samples from the fake samples are.
+03:22 - And GANs are one way to do that, where you have this minimax
+03:26 - objective, where you're trying to train a generator
+03:29 - to produce samples that are hard to distinguish
+03:32 - from the real ones as measured by some discriminator that
+03:36 - is trained in the innermost maximization problem
+03:39 - to do as well as it can to distinguish real
+03:42 - versus fake samples.
+03:45 - And we've seen that that's--
+03:48 - under some conditions, this is principled in the sense
+03:51 - that if you had access to extremely
+03:54 - powerful discriminator, then you could, to some extent,
+03:59 - approximate the optimization of an f divergence or even
+04:02 - a Wasserstein distance.
+04:04 - But in practice, although it's true that you can use
+04:08 - essentially any architecture you want to define the sampling
+04:11 - procedure, training this kind of minimax with these minimax
+04:16 - objectives is very tricky because we don't have
+04:20 - likelihoods; you have to do minimax optimization,
+04:22 - which is unstable; it's hard to track progress;
+04:25 - it's hard to know whether you have converged or not;
+04:27 - it's hard to evaluate whether one model is better than
+04:30 - the other because you cannot just look at the loss;
+04:32 - and you have mode collapses.
+04:34 - And so all sorts of issues that arise in practice
+04:37 - when you try to train an adversarial type model.
+04:41 - And so what we're going to see today
+04:43 - is another way of defining kind of a model family,
+04:48 - so a different way of parameterizing
+04:51 - probabilistic models that is called an energy-based model.
+04:55 - And what we'll see is that this will allow us to essentially
+05:00 - lift all those restrictions that we
+05:02 - had on the kind of neural networks
+05:04 - you can use to define a valid probability density
+05:07 - function or a valid probability mass function.
+05:09 - So that's the main benefit of using
+05:12 - these kind of energy-based models, extreme flexibility.
+05:16 - And to some extent, they will allow
+05:20 - us to have some fairly stable training procedure in the sense
+05:24 - that it's still going to be based on maximum likelihood
+05:28 - or other variants of losses that are fully--
+05:33 - that are taking advantage of the fact
+05:35 - that you have a probabilistic model and not
+05:37 - just a sampling procedure.
+05:40 - And these models tend to work pretty well.
+05:43 - They give you fairly high sample quality
+05:45 - and we'll see they are very closely related to diffusion
+05:48 - models, which are actually sort of state of the art models
+05:51 - right now for a lot of continuous modalities
+05:54 - like images, videos, and audio and others.
+05:59 - And as another benefit, you can also compose energy-based models
+06:04 - in interesting ways.
+06:06 - And so we'll see that that's another thing you can do,
+06:10 - that you can take different kinds of generative models,
+06:13 - and you can combine them because that essentially
+06:16 - is one way of defining an energy-based model.
+06:18 - And that allows you to do interesting things
+06:21 - like combining different concepts
+06:26 - and combining different kinds of model families
+06:29 - together, like a flow model and autoregressive model.
+06:33 - And we'll see that that's also beneficial in some settings.
+06:38 - So the high-level motivation is the usual one.
+06:45 - We want to define a probabilistic model.
+06:48 - So we want to define a probability distribution
+06:51 - because that's kind of the key building block.
+06:53 - We need to define this set, this green
+06:56 - set here that we're optimizing over.
+06:58 - And if we can do that, then we can just
+07:01 - couple that with a loss function,
+07:03 - and you get a new kind of generative model.
+07:06 - And to some extent, this is just a function.
+07:10 - It's a function that takes x as an input, where
+07:12 - x could be an image or a sentence or whatever,
+07:16 - and maps it to a scalar, right, so it
+07:18 - seems pretty straightforward.
+07:21 - But the key thing is that you cannot pick an arbitrary
+07:23 - function.
+07:24 - This valid probability density functions or probability mass
+07:29 - functions in the discrete case, they
+07:33 - are special kind of functions in the sense that they need
+07:35 - to satisfy certain constraints.
+07:37 - The first one is that they have to be non-negative.
+07:40 - So given any input x, the output scalar
+07:43 - that you get from this function has to be a non-negative number.
+07:47 - And this, I would say, is not a particularly hard constraint
+07:50 - to enforce.
+07:51 - The more difficult one is that they have to be normalized.
+07:56 - So because we're working with probabilities,
+08:00 - it has to be the case that if you
+08:01 - look at all the possible things that can happen
+08:03 - and you sum up their probabilities, you get 1.
+08:07 - Or if you're working with continuous random variables,
+08:09 - if you integrate the probability density
+08:12 - function over the whole space, you should get--
+08:15 - you should get 1.
+08:17 - And so, again, this is basically due to the fact
+08:22 - that, essentially, the probabilities
+08:28 - if you go through all the possible things that can happen
+08:31 - have to sum to 1.
+08:34 - And that's a much trickier constraint to enforce.
+08:39 - That's really the hard constraint to enforce.
+08:42 - And that's because-- essentially,
+08:44 - the reason we have to enforce those strange architectures
+08:47 - like autoregressive models or flow models
+08:50 - is basically because we have to enforce this normalization
+08:53 - constraint.
+08:54 - And enforcing that is tricky.
+08:56 - And if you take an arbitrary neural network
+08:58 - is not going to enforce--
+09:00 - it's not going to satisfy that constraint.
+09:02 - And enforcing that is not so straightforward.
+09:06 - And so again, if you think about the first constraint,
+09:11 - it's not a very hard property to satisfy.
+09:17 - It's not hard to come up with a very broad set--
+09:21 - or families of functions that are guaranteed to be
+09:25 - non-negative given any input.
+09:27 - And in fact, if you take an arbitrary function,
+09:30 - let's say an arbitrary neural network,
+09:32 - it's pretty trivial to change it a little bit and make sure
+09:37 - that the output is guaranteed to be non-negative.
+09:41 - And so one thing you can do is you
+09:43 - can take an arbitrary neural network, f theta.
+09:45 - If you just square the output that it produces,
+09:48 - you get a new neural network, g theta,
+09:51 - which is also very flexible because it's basically
+09:53 - very similar to the f theta that you started with.
+09:56 - And it's guaranteed to be non-negative given any input.
+10:00 - Or you can take the exponential.
+10:03 - Again, given an arbitrary neural network,
+10:05 - f theta, if you just basically add an extra layer
+10:08 - at the end, which takes the output
+10:10 - and passes it through this exponential non-linearity,
+10:14 - then you get a new neural network,
+10:16 - which is guaranteed to be non-negative.
+10:18 - Or you could take the absolute value.
+10:21 - Or I'm sure you can cook up many, many other ways
+10:24 - of transforming a neural network into one that is just
+10:29 - as basically flexible, where you just
+10:31 - add a new layer at the end that is guaranteed to make the output
+10:35 - non-negative.
+10:37 - So that's not-- that's not hard to do.
+10:41 - The tricky part is to guarantee that, basically,
+10:44 - if you go through all the possible inputs
+10:46 - that you can feed through this neural network
+10:49 - and you sum up the outputs you get one.
+10:52 - Or if you have a continuous setting where the inputs are
+10:56 - continuous, then the integral over all possible inputs
+10:59 - to this neural network has to be one.
+11:02 - And I guess one way to think about it is that--
+11:06 - and why this is important if you're
+11:08 - building a probabilistic model is that this is basically
+11:11 - enforcing that the total probability mass is fixed.
+11:15 - So if you're thinking about the role of a probabilistic model
+11:19 - as being--
+11:20 - or the meaning of outputting of computing p of x
+11:23 - is you're saying, what is the probability that the model
+11:26 - assigns to one particular x, which could be an image or it
+11:29 - could be some sentence in a language modeling application?
+11:34 - The fact that basically the total--
+11:38 - the sum of all the probabilities is
+11:40 - one is kind of enforcing this fact that, essentially,
+11:43 - the total volume is fixed.
+11:45 - So if you increase the probability of one data point,
+11:49 - you're guaranteed that the probability of something else
+11:51 - will have to go down.
+11:53 - So the analogy is that there is a cake,
+11:55 - and you can divide it up in many different ways.
+11:58 - But if you make one slice bigger,
+12:00 - then the other ones will have to get smaller, inevitably.
+12:06 - And we need this kind of guarantee
+12:10 - so that when we increase the probability of the data
+12:15 - that we have in the training set by increasing
+12:18 - the slice of the cake that we assign to the samples we like,
+12:24 - the ones that are in the training set,
+12:25 - we're automatically reducing the probability of other things,
+12:29 - which are, in the case of a generative model, the things
+12:33 - that basically we don't like.
+12:36 - And again, enforcing the non-negativity constraint,
+12:41 - which is basically saying with this analogy
+12:43 - that the size of each slice is non-negative, is easy.
+12:50 - But enforcing this constraint, that's like the volume,
+12:54 - is fixed.
+12:55 -
+12:57 - Here in the definition, it's one,
+13:00 - but as long as you can keep it fixed,
+13:03 - that's fine because you can always divide by the constant.
+13:07 - But enforcing that-- basically, regardless of how you choose
+13:12 - your parameters theta in your neural network,
+13:15 - you're guaranteed--
+13:18 - if you go through all the possible inputs,
+13:20 - or if you sum over all possible inputs,
+13:23 - or you take an integral over all possible inputs
+13:25 - and you look at the output value,
+13:28 - you get a constant, which does not depend on theta.
+13:31 - It does not depend on the parameters
+13:33 - of the neural network.
+13:34 - That's hard.
+13:36 - You can always compute what is the total
+13:39 - the total normalized probability that
+13:43 - is assigned by a neural network if you go through all
+13:45 - the possible inputs.
+13:47 - There is always going to be some number.
+13:49 - If you go through all possible inputs
+13:50 - and you evaluate the output of the neural network,
+13:53 - you sum them up, you're going to get a value.
+13:56 - But in general, that value is going to depend on theta.
+13:59 - It's going to depend on the parameters
+14:03 - of your neural network.
+14:04 - And it's not going to be one.
+14:05 - It's not going to be something fixed, unless you choose
+14:09 - g theta, you choose your function family
+14:10 - in some very special way, like an autoregressive model
+14:14 - or with invertible architectures.
+14:16 - It's sort of guaranteed by design
+14:18 - that no matter how you choose your parameters,
+14:20 - the total mass or the total volume is basically fixed.
+14:24 - And the analogy here is in the discrete case,
+14:28 - you sum over all possible inputs.
+14:30 - In the continuous case, it's the integral
+14:34 - that you have to worry about.
+14:35 -
+14:40 - And so that's basically the hard constraint to enforce.
+14:46 - Somehow what we need to be able to do
+14:49 - is we need to be able to come up with a family of functions that
+14:53 - are parameterized by theta.
+14:55 - Ideally, this function should be as flexible as possible,
+14:58 - meaning that you would like to choose
+15:02 - essentially an arbitrary neural network or very
+15:05 - deep neural networks or very no kind of constraints
+15:08 - on the kind of layers that you can choose.
+15:11 - It's easy to enforce that the function is non-negative,
+15:14 - but it's very hard to enforce that the volume is
+15:18 - fixed to some value.
+15:20 - So yeah, basically that's the idea of energy-based models
+15:23 - is that you can basically-- as long as you can compute
+15:26 - the total area of the pie or the total amount of pie
+15:31 - that you have, then you can define an energy-- you can
+15:34 - define a valid probabilistic model by basically just dividing
+15:37 - by that number.
+15:38 - And that's basically the idea behind energy-based models.
+15:42 - The fact is that given a non-negative function g theta,
+15:50 - you can always define a valid probabilistic model by basically
+15:56 - dividing by the total volume, by the total area, the total size
+16:02 - of the pie by dividing by the integral
+16:04 - over all possible inputs of the unnormalized probability.
+16:08 - And that defines a valid probability distribution
+16:11 - because this object is now normalized.
+16:13 - So for every theta, you can compute
+16:15 - these unnormalized probabilities, the size
+16:18 - of each slice of the cake.
+16:20 - And at the same time, if you can also
+16:21 - compute how big is the cake, then you get--
+16:24 - and you divide these two, then you
+16:25 - get something that is normalized because it's kind of a ratio.
+16:29 - And that is basically the main idea behind energy-based models
+16:38 - is to just bite the bullet and be
+16:43 - willing to work with probability density functions or probability
+16:47 - mass functions that are defined by normalizing objects that
+16:53 - are not necessarily normalized by design by dividing
+16:56 - by this quantity Z theta, which is often called the partition
+17:00 - function, this normalization constant, the total volume,
+17:04 - the total and normal amount of unnormalized probability
+17:07 - that we need to divide by to get a valid probabilistic model.
+17:11 - And you can see that if you are willing to divide by this Z
+17:14 - theta, you can get a valid--
+17:18 - you get an object that is normalized because if you
+17:21 - integrate the left-hand side here, you get--
+17:26 - and you swap in the definition, which
+17:28 - is g theta over the normalization constant,
+17:31 - you basically get the integral over all the possible things
+17:36 - that can happen in the numerator, the integral of all
+17:38 - the possible things that can happen in the denominator.
+17:40 - And when you divide them you get one by definition, basically.
+17:47 - And so as long as you have a non-negative function, g theta,
+17:52 - you can always define a valid normalized probabilistic model
+17:56 - by dividing by this normalization constant,
+17:59 - by this partition function, by the integral over the scalar
+18:03 - that you can--
+18:05 - that is well defined, which is just the integral
+18:07 - over all possible inputs or the sum over all possible inputs
+18:10 - in the discrete space of these unnormalized probabilities
+18:13 - that you get by just using g theta.
+18:16 -
+18:19 - And as a few examples that you might have seen before is--
+18:29 - or one way to go about this is to choose functions g
+18:33 - theta for which this denominator,
+18:37 - this normalizing constant, this partition function
+18:40 - is basically known analytically.
+18:43 - In general, we might not know that this integral
+18:46 - might be tricky to compute.
+18:48 - But if we restrict ourselves to relatively simple functions, g
+18:52 - theta, we might be able to compute that integral
+18:55 - in closed form analytically.
+18:57 - For example, if we choose-- if we
+18:59 - choose g to have a very kind of simple form, which is just
+19:02 - the relationship that you have in a Gaussian PDF,
+19:10 - so g is just basically a squared exponential and g
+19:15 - now has two parameters, mu and sigma.
+19:17 - And this non-negative function is just e to the minus
+19:24 - x minus mu squared is divided by the variance, sigma squared.
+19:30 - This function is non-negative.
+19:33 - By itself it's not necessarily normalized,
+19:37 - but it's a simple enough function
+19:38 - that you can actually compute the integral analytically.
+19:43 - We have a closed-form solution to that.
+19:45 - And the total volume is just the square root
+19:48 - of two pi sigma squared.
+19:50 - And indeed, if you take this expression of g
+19:54 - and you divide it by the total volume,
+19:57 - you get the Gaussian PDF.
+19:59 - So you can think of that strange kind of scaling factor
+20:04 - that you have in front of the Gaussian PDF as being basically
+20:07 - the total volume that you have to divide for if you want
+20:10 - to get a normalized object.
+20:12 - Or you could choose--
+20:14 - OK, let's choose g to be an exponential that
+20:17 - looks like this.
+20:18 - You have a single parameter, lambda,
+20:21 - and g of x is e to the minus lambda x.
+20:23 - Again, non-negative function by itself
+20:25 - is not necessarily normalized, but you can compute
+20:29 - the volume in closed form.
+20:31 - It turns out to be just 1 over lambda.
+20:33 - And so you can actually get--
+20:36 - if you divide these two things, you
+20:38 - get a valid PDF, which is the one
+20:41 - corresponding to the exponential distribution.
+20:46 - And more generally, there is a broad family
+20:50 - of distributions that have PDFs that basically have this form.
+20:54 - It's kind of similar to what we have up here.
+20:57 - It's also an exponential of some dot
+21:00 - product between a vector of parameters theta
+21:03 - and a vector of functions of sufficient statistics t of x.
+21:07 - Not super important, but it turns out
+21:10 - that there is a volume here, which is just, again,
+21:14 - the integral of the unnormalized probability.
+21:19 - And then if you divide by that quantity,
+21:24 - you get this family of distributions
+21:28 - that are called the exponential family, which
+21:31 - captures a lot of known commonly used distributions,
+21:34 - like normal, Poisson, exponential, Bernoulli,
+21:37 - and many more.
+21:38 -
+21:42 - So this kind of setting, where you
+21:47 - start with a non-negative function
+21:49 - and you somehow restrict yourself to functional forms
+21:53 - that are simple enough that you can compute
+21:55 - the integrals analytically, they are pretty powerful in the sense
+22:00 - that these are very useful building blocks,
+22:06 - useful in many applications.
+22:08 - But you can see that you can't choose an arbitrary g.
+22:12 - If you choose some really complicated thing
+22:14 - or you plug in a neural network, you
+22:16 - might not be able to compute that integral analytically.
+22:21 - There might not be a closed form for that partition
+22:25 - function, T theta, or the total unnormalized probability.
+22:29 - And that's where energy-based models come in.
+22:33 - How do we go from this kind of setting,
+22:37 - where everything is simple, kind of handcrafted,
+22:39 - can be solved analytically in closed form,
+22:41 - to something more flexible where we
+22:43 - can start to plug in much more complicated kind of functions
+22:47 - here, like neural networks, essentially.
+22:51 - And now, these simple building blocks, like Gaussians,
+22:57 - exponentials, and so forth, they're still pretty useful
+23:01 - in the sense that what we've been doing so far, like using
+23:05 - autoregressive models or even variational autoencoders, latent
+23:09 - variable models, are essentially kind
+23:12 - of tricks for composing simple functions that are normalized
+23:17 - by design and building more complicated probabilistic models
+23:21 - that are, again, by construction, guaranteed
+23:26 - to be normalized.
+23:27 - And so as we can see, in some sense,
+23:34 - an autoregressive model is basically
+23:38 - just a way of defining a joint probability distribution
+23:43 - or joint probability density function that
+23:46 - is normalized by design because it's a product of conditionals
+23:52 - that are normalized that are Gaussians or are exponentials.
+23:58 - They are the ones for which we know
+24:00 - how to compute these integrals, these partition functions
+24:03 - analytically.
+24:05 - And so if you imagine you have two of these objects that
+24:09 - are guaranteed to be normalized, like a family parameterized
+24:17 - by theta and another family here that is parameterized by theta
+24:21 - prime, where theta prime can be a function of x, as long as
+24:27 - for every theta prime the distribution that you get over y
+24:30 - is normalized, this full object that you
+24:34 - get by multiplying them together is guaranteed to be normalized.
+24:37 - So if you look over-- if you try to--
+24:40 - if you multiply together two objects that are basically
+24:43 - by construction normalized, like marginal
+24:46 - over x and the conditional over y, where the parameters depend
+24:51 - on x, you get something that is normalized.
+24:54 - It's basically what we do in an autoregressive model, right?
+24:57 - You define the joint as a product of conditionals.
+25:00 - And if you look at the--
+25:03 - if you look at the integral over all possible inputs
+25:06 - of the joint, you get something that is by design basically
+25:10 - normalized.
+25:11 - And the reason is that if kind of the--
+25:15 - by construction, the distribution over y
+25:18 - is such that it's normalized for any choice of the parameters,
+25:22 - and the choice of the parameters can depend on the value
+25:25 - that x can take, then by design the integral over y
+25:30 - is guaranteed to evaluate to 1, regardless of the choice
+25:35 - that you have for x.
+25:37 - And then when you integrate over x, again,
+25:39 - that object is normalized.
+25:41 - And so you get once again something
+25:44 - where the full joint distribution
+25:46 - is guaranteed to be normalized and to integrate to one.
+25:52 - So the object in here, it's essentially
+25:55 - one way of thinking of the conditional of y.
+25:59 - The probability over y is let's say
+26:02 - a Gaussian, where the parameters depend on the value of x.
+26:08 - This would be one setting where this would show up
+26:12 - if you have an autoregressive model, where
+26:14 - let's say p of x is a Gaussian, p theta of x is a Gaussian.
+26:18 - So here, theta could be the mean of the standard deviation.
+26:20 - And the distribution over the second variable
+26:23 - or the second group of variables is, again,
+26:24 - a Gaussian, where the parameters of the Gaussian, theta prime,
+26:28 - are allowed to depend on x.
+26:31 - For example, you compute the mean and the standard deviation
+26:33 - as a function of the previous variable in the ordering.
+26:37 - Then you have an object that is guaranteed
+26:40 - to be normalized by design.
+26:42 - So you can think of autoregressive models
+26:44 - as a way of combining objects that are normalized, simpler
+26:48 - objects, and putting together a more complicated one,
+26:51 - a joint distribution that is again guaranteed
+26:54 - to be normalized by design, which
+26:57 - is the product of normalized objects.
+26:59 - And then if you slide these integrals in,
+27:02 - you can-- all the integrals evaluate to one.
+27:06 - When you integrate out the conditionals,
+27:07 - they all evaluate to one.
+27:08 - And the full object is guaranteed to be normalized.
+27:13 - And to some extent, even the latent variable models
+27:16 - can be thought as a way of, again,
+27:19 - combining normalized objects and building a more complicated one
+27:24 - that is, again, guaranteed to be normalized.
+27:26 - So if you have two densities, p theta and p theta
+27:30 - prime, that are normalized and then you
+27:33 - take a convex combination, like alpha p
+27:37 - plus 1 minus alpha p prime for any choice of alpha
+27:41 - or between 0 and 1, you get another density,
+27:46 - which is guaranteed to be normalized, right?
+27:49 - Because if you integrate it out, again, you get something that--
+27:54 - basically, the first integral evaluates
+27:56 - to alpha because p theta is normalized.
+27:58 - The second integral evaluates to 1 minus alpha
+28:01 - because theta prime is normalized.
+28:03 - So again, you get an object that is normalized.
+28:05 - And that's basically what happens
+28:07 - in a variational autoencoder, where
+28:10 - you have this kind of mixture in behavior.
+28:12 - The conditionals that you have in the encoder--
+28:15 - in the decoder are simple, normalized objects,
+28:19 - like Gaussians.
+28:20 - And you're taking a mixture of them.
+28:23 - And by doing that, you define a marginal,
+28:25 - which is, again, sort of normalized by construction.
+28:29 -
+28:35 - So you can kind think of what we've
+28:38 - been doing, building autoregressive models
+28:40 - or latent variable models as trying to--
+28:43 - as clever ways of combining simple normalized object
+28:47 - and building more complicated objects
+28:50 - that are normalized by design.
+28:51 - But this is sort of enforcing some restrictions still
+28:55 - in terms of how complicated the final object is.
+28:58 - And you have to follow these rules
+29:00 - to construct objects that are guaranteed to be normalized.

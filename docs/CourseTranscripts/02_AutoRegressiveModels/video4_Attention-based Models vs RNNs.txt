@@ -1,0 +1,602 @@
+00:00 -
+00:04 - SPEAKER: The plan for today is to finish up
+00:08 - the material we didn't cover in the last lecture
+00:11 - on autoregressive models.
+00:13 - And then we'll talk about learning.
+00:16 - So towards the end of the last lecture,
+00:19 - we talked about RNNs as being another way
+00:22 - to parameterize autoregressive models.
+00:25 - And remember, the key idea is that you
+00:27 - have a small number of parameters, actually
+00:30 - a constant number of parameters with respect
+00:33 - to the length of the sequence you're trying to model.
+00:36 - And you're going to use these parameters to basically keep
+00:40 - track of the context that you use to make the--
+00:44 - to predict basically the next token or the next pixel.
+00:48 - And you keep track of all this information
+00:50 - through a single kind of hidden vector
+00:54 - that is supposed to summarize all the information that you've
+00:57 - seen so far and that you're going
+00:58 - to use to make the next prediction, like in this example
+01:02 - here where I'm looking at, let's say,
+01:04 - building an RNN to model text.
+01:06 - So you have tokens.
+01:07 - And you might have some prefix like my friend opened up.
+01:14 - And then you're going to use all this information.
+01:16 - You pass it through your RNN.
+01:18 - And the RNN will update its state, its hidden vector.
+01:21 - And you end up with a hidden vector h4 here.
+01:25 - And then you're going to use that vector
+01:27 - to predict the next token.
+01:29 - And maybe if you're doing a good job,
+01:30 - then you'll put high probability to reasonable ways
+01:34 - to continue this sentence like the door or the window.
+01:37 - And you're going to put low probability to things
+01:39 - that don't make sense.
+01:41 - And as we've seen, these RNN models kind of
+01:44 - work reasonably well, even if you build them at the character
+01:46 - level, which is pretty hard.
+01:48 - One challenge is that this single hidden vector
+01:52 - that you have here basically has to summarize all the information
+01:57 - that you've seen so far.
+01:58 - And that's the only thing you can use
+02:00 - to make the next prediction.
+02:02 - And that can be a problem because you kind of
+02:04 - like have to do a pretty good job of summarizing the meaning.
+02:08 - Let's say if you're building a language model,
+02:10 - this single vector has to capture all the entire meaning
+02:14 - of all the previous elements in the sequence, which
+02:19 - can be challenging.
+02:21 - The other problem of RNNs is that basically you
+02:24 - have to unroll the computation if you
+02:26 - want to compute these probabilities
+02:28 - and you want to come up with reasonable losses at training
+02:31 - time, which makes them pretty slow and pretty hard to train.
+02:35 - And the other problem is that, yeah, they
+02:38 - can be a bit problematic to train because you have
+02:43 - these long dependencies from, let's
+02:46 - say, early on in the sequence towards the, let's say,
+02:50 - the present.
+02:51 - It can take many, many updates to get there.
+02:54 - And this can lead to exploding or vanishing gradients.
+02:57 - And it can be problematic.
+02:59 - So this is now what's actually been
+03:01 - used instead of the art language model-- autoregressive language
+03:04 - models.
+03:05 - Existing state of the art models use attention.
+03:08 - And the basic idea is that they look more
+03:11 - like a NADE or a MADE, these other models
+03:14 - that we've seen before where you essentially
+03:17 - are able to use the entire sequence of inputs up to time t
+03:24 - to make the next prediction.
+03:26 - And so instead of just using the hidden vector corresponding
+03:30 - to the last time step to make the prediction,
+03:32 - you look at all the hidden vectors from previous time steps
+03:37 - to predict what's going to come next.
+03:40 - And the way to make this effective in practice
+03:44 - is to use an attention mechanism to kind of try
+03:48 - to figure out which parts, which elements of this sequence
+03:52 - are useful and which ones are not,
+03:54 - which one you should pay attention to
+03:56 - and which one you shouldn't pay attention
+03:58 - to when you make a prediction.
+04:01 - And so roughly, at a very high level,
+04:03 - the way these methods work is that there
+04:05 - is some kind of attention mechanism
+04:07 - that will tell you how relevant a query vector is
+04:14 - with respect to a key vector.
+04:18 - So this is similar to when you search in a database.
+04:21 - You have a query.
+04:22 - You have a set of keys.
+04:23 - And you want to figure out-- you want to do retrieval.
+04:25 - This has a similar flavor.
+04:27 - And it will basically tell you how relevant
+04:29 - is the hidden vector, let's say, corresponding
+04:32 - to the first time step with respect to the hidden vector
+04:35 - that you have at the current time step.
+04:38 - This could be something as similar as just
+04:40 - taking a dot product between the two vectors.
+04:42 - Once you have the similarity vectors,
+04:45 - then you turn them into an attention distribution,
+04:47 - which is the thing that we were talking about before,
+04:49 - the thing that tells you which elements of the sequence matter
+04:53 - and which ones don't.
+04:54 - And one simple way to do it is to just take all these attention
+04:57 - scores and pass them through a softmax
+05:00 - to get an actual distribution.
+05:02 - The question is whether this kind of model
+05:05 - assumes conditional independence.
+05:06 - If you build a model like this, again, there
+05:09 - is no conditional independence explicitly stated because,
+05:13 - in principle, as long as-- this is just an autoregressive model.
+05:19 - And we're just parameterizing the conditionals
+05:21 - using a function that has a very specific functional form.
+05:27 - And so we're not going to be able to capture
+05:29 - all possible dependencies.
+05:30 - But we're not explicitly making any conditional independence
+05:34 - assumption so far.
+05:35 -
+05:37 - Well, if you were to make conditional independence
+05:40 - assumptions, yes, typically performance
+05:42 - would drop significantly.
+05:44 - As we'll see, the nice thing about this kind of architecture
+05:47 - is that it allows you to take into account the full context
+05:52 - when you make a prediction while at the same time being
+05:55 - selective and kind of being able to ignore things that are not
+05:58 - relevant and pay attention to things that are relevant.
+06:01 - For example, in this kind of simplified version
+06:04 - of an attention mechanism, what you could do
+06:07 - is you could take an average of the hidden vectors
+06:10 - that you've seen before in your RNN.
+06:12 - And you weigh them with the attention score.
+06:15 - Attention distribution scores that you have, you average them.
+06:19 - And you get a new vector.
+06:20 - Then you're going to combine it with the current vector
+06:22 - to make a prediction for the next token.
+06:24 - And you see that now we're no longer bottlenecked.
+06:27 - We're not just using this green vector to make the prediction.
+06:30 - We're able to use the whole history.
+06:32 - So we're able to really compare every pair essentially
+06:35 - of tokens in the sequence.
+06:37 - And that's pretty powerful.
+06:40 - And as you can see, for example, in this little example here,
+06:46 - I have a robot that must obey the orders given it.
+06:53 - And then you need to make a prediction.
+06:55 - And if you want to make a prediction,
+06:56 - you kind of need to figure out what it refers to.
+07:00 - And the attention mechanism can help
+07:02 - you to figure out that this it is probably referring to--
+07:06 - when you're trying to figure out what it means,
+07:08 - you should pay attention to these two tokens, a robot.
+07:12 - And so that's the flavor of why this attention mechanism is
+07:16 - helpful because you can take advantage of the whole sequence.
+07:21 - As usual, in practice you need to be
+07:25 - careful about making sure that the model is autoregressive.
+07:28 - So you cannot pay attention to future vectors when you do these
+07:33 - kind of things.
+07:34 - And so you have to use a mask mechanism just like in MADE,
+07:38 - just like in these other models so that you can only basically
+07:42 - pay attention to the tokens or the random variables that
+07:45 - come before it in the sequence, in the ordering.
+07:50 - The other thing that is important
+07:52 - is that in an actual system that is used in practice,
+07:56 - you would not use any sort of recurrent architecture.
+08:00 - So you wouldn't even need these kind of recurrent computation
+08:04 - here where you update the state recursively using
+08:08 - an using an RNN.
+08:10 - You just use feedforward computation.
+08:12 - You stack multiple layers of attention.
+08:16 - And the key advantage of this is that we're back to kind of like
+08:19 - the previous MADE-like setting where you can actually
+08:24 - evaluate--
+08:26 - you can evaluate the architecture in parallel.
+08:30 - So you can do the computation necessary to make
+08:33 - a prediction at every index in parallel across indexes.
+08:40 - This is at training time, of course.
+08:42 - And this is really what makes these systems--
+08:44 - these models good in practice compared to an RNN.
+08:47 - I think actually an RNN would be reasonably good.
+08:51 - In terms of modeling power, it's just too slow to train.
+08:55 - And these transformers, because they
+08:57 - allow for massive parallelism--
+09:01 - and we'll come back to this when we talk exactly
+09:03 - how these models are trained.
+09:04 - But the key advantage is that you can basically
+09:06 - evaluate the loss very efficiently
+09:08 - without having to unroll the recursion corresponding
+09:11 - to an RNN.
+09:12 - And that's why they are-- one of the reasons
+09:14 - they've achieved this great success in practice
+09:17 - is because they can be evaluated in parallel.
+09:19 - They can take advantage of GPUs.
+09:21 - And you can scale them to very large sizes.
+09:25 - And you can see some of the demos of the systems
+09:27 - that the GPTs, GPT-2, 3, 4, that we've seen in the first lecture.
+09:37 - The amazing LLMs that everybody's talking about,
+09:43 - Llama, other systems that are available online you
+09:46 - can play around with are essentially
+09:47 - based on these on this kind of architecture.
+09:50 - Autoregressive models using this self-attention mechanism
+09:54 - that we're going to talk about more in one
+09:56 - of the section that is going to be dedicated
+09:58 - to neural architectures.
+10:00 - So this is the high level idea of one of the key ingredients
+10:06 - that is behind state-of-the-art language models.
+10:10 -
+10:13 - Cool.
+10:14 - Now back to RNNs.
+10:16 - I know people have been using them not only for text.
+10:19 - You can use them to model images.
+10:21 - So you can just think of an image as a sequence of pixels.
+10:24 - You can generate them in top left
+10:28 - to bottom right one at a time.
+10:30 - And you can use an RNN to basically model
+10:32 - all the conditionals in your autoregressive model.
+10:36 - So each pixel, you're going to have one conditional per pixel
+10:40 - giving you the distribution of that pixel given all the ones
+10:43 - that come before it in the sequence.
+10:46 - And each conditional is going to be
+10:49 - a categorical distribution over the colors
+10:52 - that that pixel can take.
+10:53 - And if you're modeling pixels using an RGB encoding,
+10:57 - then you have three channels-- red, green, and blue.
+10:59 - And so you need to sort of capture
+11:02 - the distribution over the colors of a pixel given
+11:04 - all the previous pixels.
+11:06 - And one way to do it is to use an autoregressive structure
+11:11 - kind of inside every pixel--
+11:14 - every conditional defined in the pixel.
+11:18 - So a pixel is going to involve three random variables--
+11:21 - the red, the green, and the blue channel.
+11:23 - And you can generate them, let's say, in that order.
+11:26 - So you can compute the conditional probability
+11:28 - of the red channel given the previous context.
+11:30 - And you can do the green channel given
+11:32 - the previous context and the value
+11:34 - of the red channel and so forth.
+11:37 - And in practice, you can basically
+11:39 - use an RNN-style architecture with some masking,
+11:43 - the same kind of masking we've seen
+11:45 - in MADE that enforces this kind of ordering.
+11:47 - So first, you try to compute the conditional probability
+11:51 - of the red pixel.
+11:52 - And that can depend on everything you've seen before.
+11:55 - But you cannot pick.
+11:56 - You cannot look at the green channel or the blue channel.
+11:59 - When you try to predict the green channel,
+12:02 - it's fine to look at the value of the red channel
+12:05 - for that pixel and so forth.
+12:08 - And so, again, it's basically the same idea.
+12:10 - But you're going to use some sort of masking to enforce
+12:13 - autoregressive structure.
+12:15 - And this was one of the--
+12:16 - these are some examples of the results you can get from an RNN
+12:21 - at the pixel level, trained on ImageNet, downscaled ImageNet.
+12:27 - Again, you can see that these results are not great,
+12:30 - but they're pretty decent.
+12:32 - Like what you see here is you take an image.
+12:35 - You see the rightmost column is an actual image.
+12:39 - And then what you do is you can remove the bottom half.
+12:43 - And then you can let the model complete.
+12:45 - So it's similar to a language model.
+12:47 - You have a prompt, which in this case
+12:48 - is going to be just the top half of the image.
+12:51 - And then you let your autoregressive model generate
+12:53 - the next pixel and then the next pixel and then
+12:55 - the next pixel and so forth.
+12:57 - And you can see that it's coming up
+12:59 - with somewhat reasonable completions.
+13:02 - It has the right structure.
+13:04 - It has the right symmetries.
+13:06 - It's doing a reasonable job of capturing the dependencies
+13:09 - between the pixels.
+13:11 - There is some variability in the samples like here,
+13:15 - this one versus this one.
+13:16 - Of course, there is stochasticity.
+13:17 - So if you sample from the-- even given the same initial
+13:20 - condition, if you sample--
+13:23 - there is randomness in the way you sample.
+13:24 - So you can generate different completions every time.
+13:28 - Every time you sample, you're going
+13:29 - to get a different possible way of completing that image.
+13:33 - And you can see that they have--
+13:35 - not always.
+13:36 - I mean, some of them don't make a lot of sense.
+13:38 - But some of the completions are actually decent.
+13:40 - And there is some variability, which is good.
+13:45 - The challenge is that, again, because you
+13:49 - have to evaluate the probability of an image sequentially,
+13:54 - you have to unroll the recursion.
+13:56 - These models are very slow.
+13:58 - And so in practice, what tends to work much better on images
+14:02 - is convolutional architectures.
+14:03 - These are the kind of architectures
+14:05 - that work well when you're building classification models.
+14:08 - And so it would be natural to try
+14:10 - to use a convolutional architecture to build
+14:13 - a generative model of images.
+14:16 - The challenge once again is that you
+14:17 - need to make sure that the model is
+14:20 - consistent with an autoregressive one.
+14:23 - So what you need to make sure is that when
+14:27 - you make a prediction for a pixel,
+14:29 - you only use information that is consistent with the ordering
+14:33 - you've chosen.
+14:34 - So if the ordering is once again from top
+14:36 - left to bottom right, when you make
+14:38 - a prediction for this pixel, it's
+14:40 - fine to use information from all the shaded area in the image.
+14:45 - But you cannot pick--
+14:46 - you cannot look at information coming from the future or coming
+14:49 - from any of the white region of the image.
+14:54 - And the way to do it is once again relatively simple,
+14:57 - is always masking at the end of the day.
+15:00 - So when you think about--
+15:02 - if you want to enforce autoregressive structure,
+15:04 - one way to do it is to set up the kernels of your convolutions
+15:09 - to be consistent--
+15:13 - to have zeros in the right places
+15:17 - so that the way the computation occurs
+15:20 - is consistent with the autoregressive nature
+15:22 - of the model.
+15:23 - So if you have a simple three by three
+15:27 - kind of convolutional kernel.
+15:28 - And you zero out all these entries in the kernel.
+15:32 - Then if you look at the computation graph,
+15:34 - whenever you make a prediction for this red pixel,
+15:37 - you're only going to use the blue pixels to make
+15:41 - that prediction.
+15:42 - And so that's consistent with the ordering that we had before.
+15:47 - So again, it's very similar to MADE.
+15:48 - It's very similar to transformers or self-attention.
+15:51 - You basically mask to make sure that things are
+15:53 - consistent with the ordering.
+15:55 - Yeah, so the question is whether you can use, I think,
+15:58 - attention or self-attention for modeling images
+16:02 - and whether that would recover the right inductive biases.
+16:06 - And yeah, you can use masked, once again, attention on images.
+16:12 - And there have been autoregressive models
+16:15 - that are essentially using the transformer-like architecture
+16:20 - on images.
+16:21 - And they've been very successful.
+16:23 - As far as I know, they are not in the public domain.
+16:26 - So these have been built in industry.
+16:29 - But they have not been actually released.
+16:32 - I think they tend to be more computationally
+16:34 - intensive to train.
+16:35 - And so other models seem to-- like infusion models that we're
+16:39 - going to talk about later, tend to work better in practice.
+16:41 - But there's been reported in the literature
+16:44 - some good success using transformer-based architectures
+16:48 - for images.
+16:49 - The question is, what's the right ordering for images?
+16:52 - For text, maybe left to right seems reasonable.
+16:55 - But for images, what's the right order?
+16:56 - That's a great question.
+16:57 - And we don't have a great answer.
+17:00 - Right now, the typical ordering is top left to bottom right.
+17:03 - But as you said, it's probably not the right one.
+17:06 - And you could imagine a different kind of mechanism.
+17:09 - There are people and there's been
+17:11 - research where people have tried to learn the optimal ordering.
+17:15 - Like you can imagine there's a combinatorially large number
+17:17 - of orderings.
+17:18 - But you could try to somehow set up an optimization problem
+17:20 - where you search for the right ordering first.
+17:23 - And then you find the autoregressive model
+17:26 - consistent with that order that maximizes the data fit
+17:30 - with moderate kind of success.
+17:33 - And incidentally, as far as I know, even for language,
+17:35 - you can model right to left.
+17:36 - And it works OK too.
+17:38 - So maybe the ordering is not that important
+17:41 - even for language.
+17:43 - So the question is whether these convolutional models
+17:46 - can be evaluated in parallel.
+17:49 - And to some extent, convolutions can be
+17:53 - evaluated pretty efficiently.
+17:56 - Components can be evaluated in basically just
+17:59 - matrix multiplications.
+18:01 - And they can be done very efficiently on modern hardware.
+18:05 - In fact, that's another way to build very efficient
+18:07 - language models is actually based on convolutions,
+18:10 - one deconvolutions.
+18:12 - You can get pretty close to transformers-like models using
+18:16 - convolutions that are, of course--
+18:18 - of course, they need to be causal,
+18:19 - so you cannot look into the future.
+18:21 - You can only look into the past.
+18:22 - But using kind of convolutional models
+18:25 - has shown to work reasonably well on language as well.
+18:28 - It matches the performance of transformers,
+18:31 - so that's another way to get fast parallel computation
+18:35 - and reasonably good modeling performance.
+18:39 - Yeah, so the question is whether you
+18:42 - could train a generative model based
+18:43 - on inpainting where you maybe mask out parts of an image
+18:46 - and you train a model to predict the remaining parts.
+18:50 - And in general, that wouldn't give you
+18:53 - a generative model, although there
+18:55 - are ways to generate samples from that kind of architecture
+18:58 - because in some sense, it's still trying to learn something.
+19:01 - You need to learn something about the joint
+19:03 - if you want to do well at that.
+19:04 - But it doesn't give you directly a way
+19:07 - to generate samples at least left to right.
+19:10 - You would need to use more expensive kind of sampling
+19:13 - procedures that make these models harder
+19:16 - to use in practice, although there
+19:18 - are variants like masked autoencoders that
+19:20 - are used generatively.
+19:22 - But that's a little bit more complicated.
+19:25 - So the question is whether transformers
+19:27 - are more powerful than an RNN.
+19:28 - And I think that's a little bit tricky because an RNN
+19:32 - an end by itself is already Turing-complete in general,
+19:34 - so it can implement any function at a relatively small RNN.
+19:39 - In theory, it could do that.
+19:41 - So it's been proven that they are essentially arbitrarily,
+19:45 - yeah.
+19:47 - So it's really probably more about the efficiency of training
+19:51 - or maybe inductive biases than--
+19:54 - there is not a good understanding
+19:56 - about the flexibility by itself.
+19:58 - The question is why would you use an RNN?
+20:02 - One advantage is that at inference time,
+20:05 - keeping track of a single state is actually pretty good
+20:08 - because you don't have to do a lot of computation over and over
+20:12 - if you had a vanilla model where nothing is tied.
+20:16 - You need to do a lot of computation at inference time.
+20:19 - An RNN is nice because all you have to do
+20:23 - is you keep track of a small state.
+20:24 - And you can throw away everything.
+20:26 - All the past doesn't matter.
+20:27 - You just need to keep track of the hidden state.
+20:29 - And you just keep on folding the computation.
+20:32 - I mean, it's sequential.
+20:33 - But all these models are sequential anyways.
+20:36 - But the fact that you have this very small vector
+20:38 - and that's the only thing you need
+20:40 - to keep track of with respect to the state is very appealing.
+20:43 - So that's why people are trying to actually get
+20:45 - back to RNN-like architectures because they could be much more
+20:48 - efficient at inference time.
+20:50 - Then the other thing you have to keep in mind if you do this mask
+20:53 - convolution is that you might end up
+20:56 - with this kind of blind spot thing
+20:57 - where if you look at the receptive field
+21:00 - that you get when you use kernels that are not--
+21:02 - that are masked-- when you make a prediction--
+21:05 - if you have a stack of convolutions
+21:08 - and you make a prediction for this pixel,
+21:10 - you're not actually going to take into account
+21:12 - this grayed out pixels because of the blind spot.
+21:15 - I don't know if you see what happens if you recurse
+21:19 - on this kind of computation structure
+21:21 - and you see-- you do a bunch of convolution one
+21:24 - on top of each other.
+21:25 - You end up with this blind spot.
+21:26 - And so there are some other tricks
+21:28 - that you have to do at the level of the architecture
+21:31 - to basically combine multiple convolutions
+21:34 - with different kinds of masking to solve that sort of issue.
+21:41 - And here you can see some samples that tends to work well.
+21:45 - If you replace the RNN with a CNN,
+21:47 - you get significantly better samples.
+21:50 - And it's much faster.
+21:50 -
+21:57 - And these models tend to actually not only generate
+22:00 - reasonable samples.
+22:02 - But they seem to get a pretty good understanding of what
+22:05 - is the structure of the images that they see at training time.
+22:10 - And one indication that that is indeed the case
+22:15 - is that you can use them to do anomaly detection.
+22:17 - So you might have heard that machine learning models are
+22:21 - pretty vulnerable to adversarial examples, adversarial attacks.
+22:24 - So you take an image like this one.
+22:26 - That would be classified as a dog image.
+22:28 - And then you add this noise.
+22:30 - You get back an image that looks identical to the original one
+22:33 - but would be classified with very high confidence
+22:36 - by state-of-the-art models to be something completely wrong.
+22:39 - And so these two images are different but in very subtle
+22:43 - ways.
+22:43 - And there is a natural question of whether you
+22:45 - can detect these kind of differences in the images.
+22:49 - And if you could do it, maybe you
+22:50 - can build more robust machine learning models.
+22:53 - And one way to do it is to try to fit in these two
+22:57 - types of inputs like natural images and adversarial attacks
+23:01 - into a pretrained generative model.
+23:03 - And see whether they would assign different probabilities
+23:06 - to these two types of inputs.
+23:08 - If the model is doing a good job,
+23:10 - it might be able to detect that this is a natural image.
+23:13 - It should be assigned fairly high probability
+23:16 - versus this one.
+23:17 - Something weird is going on here.
+23:19 - And so it should be assigned a lower probability.
+23:22 - And indeed, a pretrained PixelCNN model
+23:26 - does a pretty good job at discriminating
+23:29 - between natural images and ones that have been tampered with.
+23:33 - And so what you see here is basically a histogram
+23:36 - of the kind of likelihoods.
+23:38 - I guess they are written in bits per dimension.
+23:40 - But it's the same thing as the probability
+23:43 - that the different samples are given by the model
+23:46 - is on the x-axis.
+23:47 - And on the y-axis you see how frequently
+23:50 - different images, let's say, in the training set
+23:53 - are given that probability by the model.
+23:55 - And you see that the train and test set, they are kind of here,
+24:00 - while the adversarial attack are significantly kind of separated
+24:06 - from the natural images, meaning they
+24:08 - are assigned a much lower probability by the model.
+24:11 - So if you use a threshold to try to distinguish and say
+24:14 - if the probability of my input is significantly lower than what
+24:17 - I'm expected to, then I can maybe
+24:20 - say that's an adversarial attack.
+24:22 - And I can reject it.
+24:23 - And this model seemed to perform reasonably well,
+24:25 - which means that they are no longer getting the high level
+24:31 - semantics of the image.
+24:32 - But they really are able to understand
+24:34 - the subtle dependencies between the pixel values that
+24:38 - exist in natural images.
+24:40 - The question is whether people can
+24:41 - do adversarial attacks if they don't have access to the model.
+24:44 - To some extent, yes.
+24:46 - It depends.
+24:46 - There are different kinds of adversarial methods.
+24:49 - You can assume that you have exactly, you know, the weights.
+24:51 - Maybe you can only know the outputs of the model.
+24:54 - Sometimes you don't even have access to anything.
+24:56 - And you have to somehow hope that an attack built for a model
+24:59 - transfers to a different one.
+25:01 - So to some extent, there have been some success
+25:03 - even in black box settings.
+25:06 - It's not necessarily better.
+25:07 - I think that the idea is that this is just
+25:09 - to show that the generative model, the PixelCNN that
+25:13 - was just trained by maximizing the likelihood of a data set
+25:16 - is able to understand the structure of the images
+25:20 - and kind of the likelihood itself is useful.
+25:23 - So it's not just a matter of sampling from the model,
+25:25 - but the likelihood can actually be
+25:26 - used to discriminate between different kinds of inputs.
+25:31 - And in order to do well, you really
+25:33 - need to understand the relationship
+25:35 - between all the pixels.
+25:35 - You need to figure out that this image is actually
+25:38 - different from this image.
+25:40 - And so it means that those conditionals
+25:42 - that you learn through the autoregressive model
+25:44 - are actually doing a pretty good job
+25:45 - at discriminating these very subtle differences.
+25:49 - Basically, if you want to compute the probability,
+25:51 - you just use the autoregressive chain rule computation.
+25:54 - And so you evaluate the probability
+25:56 - of the first pixel, the second pixel given the first one.
+25:59 - Just multiply all those things together.
+26:01 - And that gives you the likelihood.
+26:02 - That's the formula from an autoregressive model.
+26:05 - And you do that for every input image, the same logic,
+26:08 - the same function.
+26:09 - And then you get different results
+26:11 - because the images are different in some fundamental way.
+26:17 - Yeah, so the x dimension is essentially
+26:20 - p of x, the probability--
+26:22 - the different probability values that are assigned by the model.
+26:25 - And it's in bits per dimension because it's
+26:26 - normalized by the number of dimensions
+26:28 - that you have in the images.
+26:31 - But think of it as p of x rescaled so that it's
+26:34 - a little bit more meaningful.
+26:35 - But roughly, it's the probability.
+26:38 - And on the y-axis, you have how many images are assigned--
+26:43 - it's a histogram-- how many images are assigned
+26:45 - different probability values.
+26:47 - And so you get this kind of Gaussian
+26:49 - where even all the images in the training set,
+26:52 - they are given different probability values.
+26:54 - But roughly, they range--
+26:55 - they are usually in this range between 1 and 4.
+27:00 - And if you look at adversarial attacks,
+27:02 - they are significantly separated.
+27:03 - So they're different in probability.
+27:06 -
+27:09 - Cool.
+27:09 - And then they can also be used for speech,
+27:12 - but let me skip that.
+27:13 - And the summary is that autoregressive models
+27:16 - are pretty general.
+27:18 - They're good because it's easy to sample from them.
+27:21 - It's easy to evaluate probabilities,
+27:23 - which are useful in itself because you can do things
+27:26 - like anomaly detection.
+27:29 - You can extend it to continuous variables.
+27:31 - One issue with autoregressive models
+27:33 - is that there is not really a natural way to cluster data
+27:36 - points or get features.
+27:39 - We'll see that latent variable models are going to be much more
+27:43 - natural for that.

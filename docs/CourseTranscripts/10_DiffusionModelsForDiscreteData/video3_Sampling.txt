@@ -1,1 +1,385 @@
-
+00:00 -
+00:05 - SPEAKER: So now, now that we have
+00:07 - a way of learning the concrete score,
+00:08 - the next question is, how can we sample using a concrete score?
+00:11 - We have this way of estimating the concrete score,
+00:14 - learning the ratio of the data distribution,
+00:17 - how do we generate new samples?
+00:19 - And this is really diffusion oriented.
+00:21 - So in order to do this, we have to define a diffusion process
+00:25 - for our discrete tokens.
+00:30 - And as we all know, diffusion is just
+00:32 - a probabilistic evolution, a way to go from p 0 to some p t.
+00:36 - So we can work off of this direction directly Our p t now
+00:40 - is just a big vector.
+00:41 - We can think about it as a big vector
+00:44 - because each of-- our probability
+00:47 - at a certain sequence is basically just some number that
+00:50 - is greater than or equal to 0, and everything sums up to be 1.
+00:53 - So we can think about it as a big vector.
+00:57 - And in a way that we evolve our distribution
+00:59 - is with an ordinary differential equation.
+01:01 - This is the most natural way of doing things.
+01:04 - So our p t is a vector.
+01:06 - We take a time derivative with respect to that,
+01:09 - and then we can compute the transition based off
+01:11 - of this matrix Q t times our initial vector, p t.
+01:17 - So we do a matrix vector multiplication.
+01:20 - And some things about this diffusion matrix
+01:23 - that are not obvious but these are just hard requirements,
+01:27 - we need to make sure that this diffusion matrix has
+01:30 - columns, which sum up to be 0.
+01:32 - And also, we need to make sure that this diffusion
+01:34 - matrix is non-negative at all non-diagonal points, basically.
+01:40 - And the idea here is that Q t controls
+01:42 - how often we go-- if we jump from one state to another.
+01:45 - And we can do this pretty directly here.
+01:48 - So basically, if we want to jump from a state i
+01:50 - to state j over a period of delta t,
+01:53 - then basically we just take a look at whether or not
+01:56 - we stay at the current function and then we just add
+01:58 - the following matrix term times delta t.
+02:00 - And then we have some second order-like term
+02:02 - that we get rid of for practical purposes.
+02:04 - This is kind of the analog of Euler--Maruyama sampling
+02:08 - for diffusion models, this time discretization of our sampling
+02:12 - process.
+02:13 - And so we clearly see here that our Q t is--
+02:17 - these matrix entries are the jump transition rates between i
+02:21 - to j.
+02:24 - Yeah.
+02:24 - And so once we have this setup, we
+02:27 - can let's take a look at a couple of examples.
+02:29 - This is not a very intuitive thing.
+02:31 - But let's take a look at the following Q t.
+02:33 - Our Q t is given by this matrix, this negative 2, negative 2,
+02:37 - negative 2 on the diagonal 1, 1, 1, everywhere else matrix.
+02:41 - And let's say we take an initial distribution of 0.5, 0.2, 0.3.
+02:46 - When we multiply this stuff out, we
+02:49 - get a transition rate of negative 0.5, 0.1, 0.4.
+02:54 - And what's interesting about this
+02:56 - is that the values sum up to be 0, which is important, in order
+03:00 - to maintain the fact that our probability is always sums up
+03:03 - to be one, and also it's always a valid transition
+03:07 - rate between different states.
+03:11 - For this type of setup, we can actually
+03:13 - compute the intermediate densities p t
+03:15 - by just exponentiating out this matrix times this 0.5, 0.3,
+03:19 - 0.2 initial vector, which allows us
+03:22 - to compute intermediate densities by solving the ODE,
+03:24 - basically.
+03:27 - And if we do this, we can actually
+03:30 - also check to make sure that the transition actually
+03:33 - satisfies this above statement, basically.
+03:35 - Or for the first value, you're losing mass
+03:38 - at a rate of negative 0.5, and then the other two
+03:41 - are gaining mass 0.1, 0.4.
+03:44 - So the total mass remains the same,
+03:45 - but the relative ratios change.
+03:48 - Building off of that, basically generally speaking, yeah,
+03:51 - we'll take a Q t is equal to a sigma--
+03:54 - a noise level times a Q matrix.
+03:57 - And then once we have that, this becomes a linear ODE.
+04:00 - Everything linearizes.
+04:02 - We have a linear ODE.
+04:03 - And in order to solve--
+04:05 - basically just very general, we can
+04:07 - solve the intermediate densities by solving
+04:09 - this-- doing this matrix exponentiation in order
+04:12 - to solve the linear ODE.
+04:13 - Basically here in many ways to compute this exponentiation,
+04:17 - but simpler is better.
+04:18 - And the idea here is that we can calculate the transition rates,
+04:21 - with a long horizon transition rates, through this--
+04:24 - by taking column--
+04:26 - by taking entries of our exponentiated matrix, basically.
+04:32 - So yeah, this is great.
+04:34 - And another thing that's also important for diffusion
+04:37 - is that as t goes to infinity, our p t will go to p base,
+04:41 - basically.
+04:42 - So this is just making sure that we approach like a nice base
+04:45 - distribution, basically.
+04:48 - I guess the other thing to--
+04:49 - I mean, in this case, we can take a look at the following
+04:52 - matrix as negative 2 matrix.
+04:53 - We exponentiate out with respect to some t,
+04:56 - and we get this thing, basically.
+04:58 - It's not as bad as it looks.
+05:00 - And then as we go to infinite time,
+05:03 - we just go to a random value, basically.
+05:05 - So this is a uniform transition matrix.
+05:06 - We just go from an initial point to any other point, randomly,
+05:10 - eventually.
+05:12 - Similarly, we have this masking thing
+05:14 - where we add a new dimension.
+05:16 - We add a new dimension to our three-dimensional case.
+05:18 - And basically, we only have transitions to this new state.
+05:22 - And our exponentiated matrix looks like this.
+05:25 - And as we take infinite time, the diagonal disappears,
+05:29 - and everything goes to MASK, basically.
+05:31 - This is a MASK transition.
+05:33 - Well, the first case, basically, the idea
+05:35 - here is you just randomly go from your initial value
+05:39 - to any other random value.
+05:40 - And the second case is you randomly
+05:43 - go from your initial value to a MASK value, basically.
+05:46 - It just determines where you're moving.
+05:49 - We have this continuous time Markov chain setup.
+05:52 - And generally, if we're looking at sequences,
+05:55 - the idea here is a set of perturbing from sequence
+05:57 - to sequence, which would be very expensive because we have
+06:00 - to consider the transitions between our sequence
+06:04 - to any other sequence.
+06:06 - And this is computationally intractable.
+06:08 - We instead go from token to token.
+06:10 - So instead, we just flip one token at a time,
+06:12 - kind of would be the idea.
+06:14 - And as such, this is O of d squared because we only
+06:18 - have to consider one token.
+06:20 - And because of this, when we do our overall transition
+06:23 - between sequences, this becomes the overall transitions
+06:26 - between tokens.
+06:27 - So it factorizes, basically.
+06:28 - This is just like another point there.
+06:33 - And what's nice about this is that we
+06:36 - can change this with our score entropy
+06:38 - to estimate the intermediate density ratios.
+06:41 - So if we assume that our samples are from--
+06:43 - assume we have some samples x 0 given from p 0,
+06:47 - then we can learn our s theta.
+06:49 - We now add a t value in order to estimate the p t over--
+06:54 - p t values, p t ratios.
+06:55 - We have another extra t input, but it's the same setup.
+06:59 - And then we have our denoising score entropy loss function.
+07:03 - And the idea here is like, yeah, now
+07:07 - we can take these transition values, this transition
+07:09 - between two different states.
+07:11 - This is all given by our initial rate matrix Q, basically.
+07:16 - So more or less what this is saying
+07:17 - is that we can optimize our denoising
+07:20 - score entropy using this Q setup,
+07:23 - using this diffusion setup.
+07:24 - It's all very natural.
+07:27 - And so the question here is that, OK,
+07:29 - now we have a way of going from data to noise,
+07:32 - where we also have a way of estimating
+07:34 - the intermediate ratios, what can we do with this?
+07:36 - Well, the idea here is we can reverse the diffusion process.
+07:40 - So if we go from p 0 to p t, which
+07:42 - is p data to p base, roughly speaking--
+07:46 - the idea here is, can we go back from p base back to p data?
+07:50 - And actually, there is a way of doing this.
+07:52 - So there is this other type of diffusion, reverse diffusion
+07:56 - process, where basically we take the time derivative.
+07:59 - But in here, like we were going backwards in time,
+08:02 - and we have a new matrix Q bar, which is like a bit
+08:05 - more different.
+08:07 - And the idea behind Q bar is that q bar is like--
+08:10 - an input j and I, this is equal to the density ratio p
+08:14 - t of j over p t of i and times this initial Q t i j.
+08:18 - For any i and j not equal, basically we
+08:21 - have this following like relationship
+08:24 - between the forward and reverse diffusion matrices,
+08:26 - which is pretty neat.
+08:28 - And also, I guess the other thing to note here,
+08:30 - I won't write it out, is that for Q t i of i
+08:32 - or bar Q t i of I. I'm not going to write that out
+08:36 - because you just need to make sure the columns sum to 0.
+08:38 - So we just assume it's just some--
+08:41 - we can extract it from the other values, basically.
+08:44 - This i and j represents like an index basically.
+08:47 - So I mean, for our purposes, it will be like a sequence,
+08:50 - but this is hard to write out.
+08:51 - But you can think about, in matrix,
+08:53 - you just take the a matrix and vector.
+08:55 - So the matrix, you just take the j-th row, i-th column entry,
+09:01 - and then you take the ratio between-- the ratio
+09:04 - between the two corresponding entries
+09:06 - in the vector, which is the probability vector, but yeah.
+09:10 - So yeah, we have this reverse setup.
+09:12 - And again, what's nice is that we
+09:14 - have this appearance of our ratio,
+09:18 - basically, of our concrete score.
+09:21 - So in particular, we can approximate it
+09:23 - with our learned concrete score function-- or score
+09:25 - network s theta.
+09:27 - And what's holding this--
+09:28 - this kind of goes back to the reason why
+09:30 - we like parametrize everything this way,
+09:33 - is that the way that we do it is that we have initial state i,
+09:36 - and then we basically compute the concrete score of s theta i
+09:40 - t, and this goes over all the various j indices.
+09:44 - And if we do this, it allows us to, in parallel,
+09:46 - jump to any of the other like states
+09:48 - that we want to jump in because of the way
+09:50 - that we parameterize things.
+09:52 - So everything kind of works its way together in this setup.
+09:55 -
+09:57 - As an example, we can have this initial matrix here.
+10:00 - We multiply it out.
+10:01 - This is the rate, negative 0.5, 0.1, 0.4.
+10:05 - And then we can construct the corresponding reverse matrix
+10:09 - here.
+10:09 - This reverse matrix, if you work itself out,
+10:12 - it looks something like this, basically,
+10:13 - where we add in the ratios of the data--
+10:17 - the data vector at the time.
+10:19 - And then we multiply this reverse matrix
+10:22 - by this probability vector.
+10:24 - And actually, what you'll get out
+10:25 - is like the exact reverse-- it's like the exact reverse--
+10:28 - the 0.5, negative 0.1, negative 0.4.
+10:31 - So here we can see that just it works, basically.
+10:36 - And as an example, we also we can visualize as
+10:39 - follows between the uniform, where we, basically,
+10:41 - just go to other random values and eventually the noises
+10:44 - to some like initial sequence.
+10:46 - And also, we have it for the MASK,
+10:48 - basically, where we can go from MASK to our initial tokens.
+10:53 - So this is all pretty nice, and we have this nice setup.
+10:57 - And well, there's only one other problem that we kind of have,
+11:01 - which is basically when we try to actually do
+11:04 - this reverse sampling, when we try to go through the various--
+11:07 - when we try to simulate the reverse, it's pretty slow.
+11:10 - The reason why it's like so slow is because we are jumping
+11:14 - from-- this is all fundamentally comes down
+11:16 - to our computational consideration.
+11:19 - Basically, our x 1 to x d, we're only
+11:22 - jumping between that and another sequence, which
+11:25 - only differs at one point, or at one position.
+11:28 - And so when we construct the reverse,
+11:31 - we can only also jump between sequences that differ only
+11:35 - by one position, which you can imagine
+11:37 - would be like very expensive, especially
+11:39 - if you need a jump-- if you need to continuously refined
+11:42 - the individual position as such.
+11:46 - And so we cheat, basically.
+11:47 - That's how we sample.
+11:48 - We basically allow multiple steps within--
+11:51 - we allow one to sample multiple jumps in one sample step,
+11:56 - basically.
+11:57 - So instead of going individually, individually
+11:59 - unmasking the tokens, let's say, it was the MASK of MASK,
+12:03 - we just unmask both of these tokens simultaneously.
+12:05 - We can do it as pretty easily, given our setup.
+12:08 - But it's more or less kind of a way we can do this.
+12:12 - And we can just--
+12:13 - instead of sample, it was the best of times in one step,
+12:16 - allowing us to go through two different jumps at once.
+12:22 - So yeah, we can put everything together.
+12:23 - We have an entire setup built so the first idea is
+12:27 - that we get some samples from our desired data distribution
+12:29 - that we want the model.
+12:31 - We define a forward diffusion process,
+12:33 - whether it be the uniform, or the MASK, or whatever, or maybe
+12:37 - something more exotic for diffusion process,
+12:41 - given the transitions.
+12:43 - Now we can learn the ratios using our score entropy loss
+12:47 - function that we've defined.
+12:50 - And then we can use these ratios to reverse the diffusion
+12:53 - process, including some adding and some discretization
+12:56 - to make sampling faster.
+12:58 - And let's see how this works.
+13:00 - So this is like an example of a text sequence
+13:02 - that we were able to generate just randomly from our corpus.
+13:06 - This is like a GPT-2-level sampling procedure,
+13:11 - or GPT-2-level data set and model set, model size.
+13:15 - And yeah, it's reasonably coherent,
+13:18 - and everything is like it works.
+13:22 - That's kind of an idea, it works.
+13:24 - But the idea here is, how does it
+13:25 - compare with autoregressive modeling
+13:27 - on the scale of data set?
+13:30 - So we can compare samples as such.
+13:33 - And we have a GPT-2, we're calling our model
+13:35 - like score entropy discrete diffusion, so SEDD, "sedd."
+13:38 - And so we have the GPT-2 model at the top.
+13:41 - We have an SEDD model with an absorbing transition.
+13:44 - Which is you go to the masked token, and we have a uniform--
+13:49 - set with a uniform transition set
+13:51 - u, which means that you go from your token
+13:53 - to another random token whenever you transition.
+13:56 - And generally, we're able to see that our SEDD, "sedd," models,
+14:01 - tend to outperform GPT-2 in terms of coherence,
+14:04 - when we do this baseline sampling
+14:06 - method, when we try to sample from the distribution.
+14:09 - And we can also visualize this more
+14:11 - like as a function of number of sampling steps versus quality.
+14:16 - So in this graph on the right here, we have our GPT-2 models.
+14:22 - And if we try to generate out long sequences,
+14:25 - it tends to look something like this, where we generate out--
+14:27 - it takes 1024 network evaluation,
+14:30 - functional evaluations in order to generate
+14:32 - one of these outputs.
+14:34 - And yeah, it tends to be pretty high--
+14:37 - when we like feed in these generated sequences
+14:40 - into another larger model, they tend to say,
+14:44 - hey, these sequences are very high perplexity,
+14:46 - these sequences are kind of very low likelihood.
+14:49 - These sequences don't make sense, basically.
+14:51 - So we can see here that as GPT-2 tends to pretty--
+14:56 - it tends to be pretty bad in terms of our evaluation
+14:59 - as such, even from both the small and the medium.
+15:02 - But these lines which are the our SEDD models, basically,
+15:05 - we can trade off the compute versus the number of-- we
+15:09 - can try to trade off quality and compute, basically.
+15:11 - So if we only take 64 steps, which
+15:13 - means that we're doing a lot of discretization,
+15:16 - we take a lot of simultaneous jumps,
+15:18 - we end up with this kind of a model that kind of matches GPT-2
+15:22 - in terms of its generated quality,
+15:24 - but it's much faster, basically.
+15:27 - And also, if we really crank up the number of iteration steps--
+15:31 - so we take, let's say, 1024, or even 2048 sampling
+15:34 - discretization steps, what we see here
+15:37 - is that our quality gets progressively better and better
+15:39 - in a log-log-linear type of fashion.
+15:42 - So basically, we're able to generate sequences that are just
+15:46 - significantly lower in terms of generative perplexity, which
+15:49 - means that they're much better sequences if we like just
+15:52 - crank up the number of steps.
+15:54 - We can't do it with GPT-3 or GPT-4, mostly because
+15:56 - of model size.
+15:58 - In this case, our model sizes are like pretty small,
+16:00 - like 100 million parameters, 400 million parameters.
+16:03 - So we're matching the models by color, so blue models are small,
+16:08 - orange models are medium.
+16:09 - For GPT-3 and GPT-4, the other issue
+16:11 - is that data set is private, basically.
+16:13 - But for our GPT-2 the data set is like web text or open web
+16:18 - text, which is why we can do an apples to apples comparison.
+16:22 - Yeah.
+16:24 - So the conclusion here is that-- yeah, so quite surprisingly,
+16:27 - and pretty nice--
+16:30 - and this is a pretty strong motivating factor
+16:33 - is that this discrete diffusion model with score entropy
+16:36 - tends to outperform autoregressive transformers,
+16:39 - at least for generation quality and speed.
+16:41 - And I guess another interesting thing,
+16:43 - and this is another important thing
+16:44 - is, that for this type of generative modeling
+16:47 - technique, what we need to do is we need
+16:49 - to have controllable generation, we
+16:50 - need to be able to control how we generate.
+16:53 - And at least in this case, we can do this something similar.
+16:56 - We can do prompting.
+16:58 - But the new and interesting thing
+17:00 - is that we can prompt from an arbitrary location.
+17:02 - So if we have this top one here, we
+17:05 - can take our blue prompt text.
+17:07 - And the idea here is that when we
+17:08 - like generate our new sequence, we just generate a random.
+17:10 - We just don't we don't change the prompt text,
+17:12 - but we just generate everything else around it.
+17:14 - This actually is principled if you go through the math.
+17:17 - And it allows you to fill in the rest of the information there.
+17:21 - So we also have something like in the middle, where
+17:24 - we have these two prompt tokens, sequences
+17:26 - of prompt tokens in the middle we just generate around it,
+17:29 - and this allows us to infill.
+17:31 - And yeah, it typically tends to produce
+17:33 - pretty coherent statements, basically,
+17:36 - which means that we're able to control the generation process
+17:39 - in a new more interesting way.
+17:43 - And which this is not-- yeah, you
+17:44 - can't do this with a typical autoregressive model.

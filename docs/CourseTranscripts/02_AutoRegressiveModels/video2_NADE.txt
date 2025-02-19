@@ -1,0 +1,332 @@
+00:00 -
+00:05 - SPEAKER: So how can we make things more better?
+00:09 - Let's use a deeper neural network, right?
+00:11 - That's the natural thing to do.
+00:17 - And if you do that, you get a model
+00:18 - that is called NADE, neural autoregressive density
+00:21 - estimation.
+00:22 - And the simplest thing you can do
+00:24 - is to just use a single-layer neural network
+00:27 - to replace the logistic regression classifier.
+00:32 - So what would it look like?
+00:34 - Basically, what you do is for every index i, for every pixel,
+00:41 - you take all the previous pixel values
+00:43 - and you pass them through, first, a linear layer, then
+00:47 - some non-linearity.
+00:49 - And then you pass the non-linearity--
+00:56 - what you get, these features, these hidden vectors
+00:58 - that you get--
+00:59 - through a logistic regression final output layer,
+01:03 - that would give you the parameters of this Bernoulli
+01:06 - random variable.
+01:07 - So it will tell you whether or not--
+01:09 - what is the probability that the i'th pixel is on or off?
+01:14 - And as you can see now, we have a slightly more flexible model
+01:17 - because you don't just have the alphas,
+01:21 - the parameters of the logistic regression classifier,
+01:24 - or the final layer of the network,
+01:25 - but now you also have the first layer.
+01:27 - So you have a slightly more flexible model.
+01:29 -
+01:34 - And so it would look something like this.
+01:36 - So you would-- and again, the issue here is that you have--
+01:45 - if you have n random variables, you
+01:46 - have n separate kind of classification problems.
+01:49 - And so, in general, you would-- you could use completely
+01:53 - sort of like decoupled models.
+01:55 - And so the first model would have, let's say,
+01:58 - a single input, x1.
+02:01 - And so the shape of this matrix would be just a column vector,
+02:04 - basically.
+02:05 - And then if you have two inputs, x1 and x2,
+02:08 - to predict the third pixel, then this matrix
+02:10 - would have two columns, essentially, and and so forth.
+02:15 - Basically, a hidden vector, h, which we could have.
+02:19 - It's not necessarily a scalar.
+02:22 - That hidden vector is then passed to a logistic regression
+02:25 - classifier.
+02:25 - And so it's then mapped down to a scalar through this expression
+02:30 - here, which might be-- so there's a dot product there.
+02:33 -
+02:38 - All right, and so this, in principle, all
+02:43 - works, but you can see the issue is that you are basically--
+02:46 - we're separately training different models
+02:48 - for every pixel, which doesn't seem great.
+02:51 - Perhaps there is some common structure.
+02:53 - At the end of the day, we're kind
+02:54 - of solving related problems.
+02:56 - We're trying to predict a pixel given part of an image,
+02:59 - given another-- given the previous part of the image.
+03:02 - And so there might be an opportunity
+03:04 - for doing something slightly better
+03:06 - by tying the weights to reduce the number of parameters,
+03:10 - and as a byproduct, speed up the computation.
+03:15 - And so what you can do here is you can basically tie together
+03:21 - all these matrices, A2, A3, A4, that you would
+03:26 - have if you were to think of them as separate classification
+03:29 - problems.
+03:30 - What you can do is you can basically just
+03:33 - have a single matrix and then you kind of tie together
+03:38 - all these--
+03:41 - the weights that you use in the prediction problems--
+03:43 - we're basically selecting the corresponding slice
+03:47 - of some bigger matrix.
+03:49 - So before, we had the first matrix
+03:52 - that we would use to call A2 and then A3 and then A4,
+03:55 - and they were completely decoupled.
+03:58 - You could choose any values you want
+04:00 - for the entries of those matrices.
+04:02 - What you can do here is you can basically
+04:04 - choose the first row-- the first column
+04:06 - to take some set of values.
+04:10 - And then you're going to use that for all the subsequent kind
+04:13 - of classification problems.
+04:16 - So you're equivalently trying to extract the same features
+04:20 - about the first--
+04:21 - about x1.
+04:22 - And then you're going to use them
+04:25 - throughout all the classification problems
+04:27 - that you have in the--
+04:31 - when you're trying to model the full image.
+04:33 - Yeah, so the question is reducing--
+04:35 - or is overfitting also potentially a concern?
+04:38 - Yeah, reducing the number of parameters
+04:40 - is also good for overfitting issues.
+04:44 - Tying together the classification problems
+04:46 - might be good.
+04:49 - You might learn a better solution
+04:50 - that generalizes better.
+04:51 - And as we'll see, it also makes it faster.
+04:54 - And the good news is that this can reduce
+04:57 - the number of parameters.
+04:59 - So if you have size d for this hidden vector, h,
+05:07 - that you're using to make the predictions,
+05:11 - how many parameters do you need?
+05:14 - It's no longer quadratic in n.
+05:18 - That's the kind of big takeaway.
+05:20 - Before, we had something that was quadratic in n.
+05:23 - Now it's basically linear because there's basically
+05:25 - a single matrix that you have to store.
+05:27 - And then you can reuse it all the time.
+05:29 -
+05:34 - So that's good.
+05:35 -
+05:38 - Now the other advantage that you have with this kind of model
+05:42 - is that you can evaluate probabilities more efficiently,
+05:46 - because, basically, whenever you go--
+05:48 - remember, if you want to evaluate
+05:50 - the probability of a data point, you
+05:52 - have to evaluate all these conditionals.
+05:54 - You have to go through every conditional.
+05:56 - And you basically have to evaluate
+05:58 - this kind of computation if there
+06:00 - is no structure on the matrices and you
+06:01 - have to redo the computation because there is nothing shared.
+06:05 - But if you have some shared structure,
+06:07 - then you can reuse the computation.
+06:10 - So if you've already computed this dot product,
+06:12 - this product here, this matrix vector product here,
+06:15 - and then if you are adding an extra column,
+06:21 - then you can reuse the computation
+06:23 - that you've done before.
+06:25 - You can just add in an extra copy.
+06:28 - There is an assumption-- again, you're
+06:30 - kind of saying that this conditional probability tables
+06:33 - could be arbitrary, somehow can be
+06:35 - captured by prediction models that
+06:38 - have this sort of structure.
+06:40 - So somehow, that there is some relationship
+06:43 - between the way you would predict one pixel--
+06:46 - different pixels in an image.
+06:47 - Whether or not it's reasonable, it
+06:50 - becomes an empirical question.
+06:52 - I think I have the results here.
+06:55 - And it tends to work significantly better
+06:57 - than, let's say, the previous logistic regression model.
+07:00 - So it does seem like this kind of structure
+07:02 - helps modeling natural images or toy kind of images like MNIST.
+07:09 - So here you can see some examples.
+07:12 - You have MNIST binarized--
+07:15 - or no, actually, I don't have--
+07:17 - I don't have the samples for MNIST.
+07:18 - Here, what you have here is samples from the model trained
+07:22 - on MNIST on the left and the conditional probabilities
+07:26 - corresponding to these samples on the right.
+07:30 - So remember that when you generate samples
+07:32 - autoregressively, you actually get
+07:34 - probabilities for each pixel, given the previous ones,
+07:38 - and then you sample from them to generate--
+07:40 - to actually pick a value.
+07:42 - And so the images on the left are binary, 0, 1.
+07:47 - The images on the right are kind of soft because for every pixel,
+07:51 - you get a number between 0 and 1,
+07:53 - then you sample from to generate a color, in this case, 0, 1.
+07:58 - And so you can see they kind of look a little bit
+08:00 - better because they're a little bit more soft.
+08:03 - But you can see that it's doing a reasonable job at capturing
+08:07 - the structure of these images.
+08:09 - So the numbers are corresponding to the samples that you see.
+08:13 - So basically, what this is saying is that--
+08:15 - what you would actually do when you sample
+08:18 - is you would take the first pixel, you have a probability,
+08:23 - and then you plot it on the right.
+08:24 - Then you sample a value from that on the left.
+08:27 - Then you go-- based on that value, based
+08:29 - on the actual binary value, you come up
+08:31 - with a probability for the second pixel, which is just
+08:35 - a number between 0 and 1.
+08:37 - You plot it on the right image, then you sample from it,
+08:40 - and you keep going.
+08:41 - So it's basically these numbers, the predicted probabilities
+08:45 - for every pixel, which are the x hat i, so the probability
+08:48 - that that pixel is on or off.
+08:51 - And then-- but they are matching,
+08:53 - so that's why they look the same because the sample
+08:55 - that you see on the left is what you
+08:57 - get by sampling from those distributions.
+09:00 - So the question is should we take advantage of the fact
+09:04 - that maybe we have labels for the data set?
+09:06 - And so we know that there is different types of digits.
+09:09 - That there is maybe 10 digits, and then we
+09:11 - want to take advantage of that.
+09:15 - So here, I'm assuming that we don't have access
+09:17 - to the label y.
+09:18 - If you had access to the label y,
+09:20 - you could imagine trying to learn a joint distribution
+09:23 - between x and y.
+09:25 - And perhaps you would get a better model,
+09:28 - or perhaps you can assume you don't
+09:29 - have that kind of structure.
+09:31 - You just learn a model and you can
+09:33 - try to use the model to see whether it indeed figured out
+09:38 - that there are 10 clusters of data points
+09:40 - and that there's a bunch of data points
+09:42 - that kind of have this shape of a--
+09:44 - that look like a--
+09:45 - kind of like an oval, and that's a zero.
+09:47 - And that's the kind of third point
+09:50 - of how do you get features out of these models.
+09:52 - Presumably, if you have a model that
+09:54 - can generate digits that have the right structure
+09:57 - and it generates them in the right proportions,
+09:59 - it has learned something about the structure of the images
+10:02 - and what they have in common.
+10:03 - And so that was the third point of getting features
+10:06 - of unsupervised learning.
+10:08 - We'll talk about how to do that.
+10:10 - But yeah, there is two ways to see it.
+10:13 - You can either do it unsupervised,
+10:14 - or if you have access to the label,
+10:16 - then perhaps you can include it into the model.
+10:18 - You can do conditional generation
+10:20 - or you can jointly learn a distribution over x and y.
+10:23 - To check whether the model is doing a good job,
+10:25 - you could try to see what is the proportion.
+10:27 - If in the original training set, all the images come,
+10:31 - they are uniformly--
+10:32 - you see an equal proportion of the different digits,
+10:35 - then you apply an MNIST classifier to your samples,
+10:38 - and you can see, does it generate digits
+10:41 - in the right proportion?
+10:42 - If it doesn't, then there's probably
+10:43 - something wrong with the model.
+10:45 - If it does, it's doing something right.
+10:47 - Whether it's correct or not, it's hard to say.
+10:51 - Cool, so that's the NADE.
+10:54 - Now you might wonder what do you do
+10:57 - if you want to model color images, let's say?
+11:02 - So if-- the variables are no longer binary,
+11:06 - but if they can take, let's say, K different values, how do you--
+11:10 - maybe pixel intensities ranging from 0 to 255, how do you do it?
+11:15 - Now what you need to do is the output
+11:18 - of the model has to be a categorical distribution
+11:20 - over however many different values the random variables can
+11:23 - take.
+11:24 - So you can basically do the same thing.
+11:26 - You first get this kind of hidden vector or latent
+11:32 - representation, h.
+11:34 - And then you, instead of applying some kind of mapping it
+11:38 - down to just the parameters of a Bernoulli random variable,
+11:42 - you can use some kind of softmax output layer
+11:45 - to map it down to a vector of--
+11:48 - if you have k different outputs that you care about,
+11:52 - a vector of K probabilities, p i 1 through p i K.
+12:01 - And which basically would represent the probability that
+12:03 - the i'th random variable should take one of the K different
+12:07 - values that the random variable can take.
+12:10 - And that's the natural generalization
+12:13 - of the sigmoid function we had before.
+12:15 - It's just one way to take K numbers, which are not
+12:19 - necessarily non-negative.
+12:21 - And they might not be normalized.
+12:23 - And it's just a way to normalize them
+12:24 - so that they become a valid probability distribution.
+12:29 - So specifically, you just do something like this.
+12:32 - If you have a vector of arbitrary numbers,
+12:34 - you apply the softmax operation.
+12:36 - It produces another vector.
+12:38 - You apply an exponential to every component
+12:41 - to make sure it's non-negative.
+12:44 - And then you divide by the sum of these exponentials, which
+12:47 - is basically making sure that the entries are normalized.
+12:50 - So that if you sum the probabilities
+12:53 - of all the possible things that can happen, you get 1.
+12:56 -
+12:58 - And so natural generalization of what we had before.
+13:05 - Now you might wonder, what do you
+13:07 - do if you want to model continuous data.
+13:11 - So maybe you have-- you're dealing with speech
+13:13 - and it's more--
+13:14 - it's not very natural to discretize the--
+13:18 - I mean, even for images, perhaps you
+13:20 - don't want to discretize the random variables.
+13:23 - And you want to model them as continuous random variables.
+13:28 - So the solution is to basically, again,
+13:32 - use the same architecture, but now
+13:34 - the output of the neural network will
+13:37 - be the parameters of some continuous distribution.
+13:41 - It's no longer the parameter of a Bernoulli,
+13:43 - or the parameters of a categorical,
+13:45 - it could be the parameters of a Gaussian
+13:47 - or a logistic or some continuous probability density function
+13:55 - that you think should work well for your data set.
+13:59 - And so, for example, one thing you could do
+14:02 - is you could use a mixture of K Gaussians.
+14:08 - So what you have to do is you need
+14:10 - to make sure that the output of your neural network
+14:13 - gives you the parameters of K different Gaussians, which
+14:18 - are then mixtured together, let's say,
+14:21 - uniformly to obtain a relatively flexible kind of probability
+14:26 - density function.
+14:28 - Like you see here, an example where
+14:29 - there is three Gaussians with different means
+14:32 - and different standard deviations.
+14:34 - Then you combine them together and you
+14:35 - get a nice kind of green--
+14:38 - red curve, where you're allowed to move the probability mass.
+14:42 - And you're allowed to say maybe there
+14:44 - is two different values that the random variable can take.
+14:50 - Two modes, one here and one here.
+14:52 - And you're allowed to move the probability mass around
+14:55 - by changing the mean and the standard deviation
+14:57 - of the Gaussians.
+14:58 - So I think I have the more precise thing here.
+15:01 - So you would say, the conditional probability of X i,
+15:04 - given all the previous values is a mixture of K Gaussians.
+15:09 - Each one of them having a different mean
+15:11 - and a different standard deviation.
+15:14 - And as usual, you have to basically use the neural network
+15:19 - to get the parameters of these distributions.
+15:22 - So in this case, as was suggested,
+15:24 - you could use the same trick.
+15:26 - And then as an output layer, you can no longer
+15:28 - use a softmax or a sigmoid.
+15:30 - You have to use something else that
+15:32 - gives you the parameters of these random variables.
+15:34 - And so you need two K numbers.
+15:36 - You need K means and you need K standard deviations.
+15:41 - And I guess you need to be careful about if you use--
+15:47 - depending on how you parameterize,
+15:49 - like if you parameterize a variance,
+15:50 - then it has to be non-negative, but that's
+15:53 - relatively easy to enforce.

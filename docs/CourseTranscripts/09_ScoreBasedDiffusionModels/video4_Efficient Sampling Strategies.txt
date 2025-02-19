@@ -1,1 +1,268 @@
-
+00:00 -
+00:06 - SPEAKER: The other thing that you can do
+00:08 - is you can get accelerated samples.
+00:11 - Specifically, DDIM is very often used as a sampling strategy,
+00:16 - where instead of having to go through, let's say,
+00:19 - 1,000 different denoising steps, which
+00:21 - is what you would do if you had a DDPM kind of model,
+00:25 - essentially what you can do is you can coarsely
+00:29 - discretize the time axis.
+00:31 - Let's say you only look at 30 different steps instead
+00:36 - of 1,000, and then you take big steps, essentially.
+00:40 - You take big jumps.
+00:41 - And you're going to pay a price because there's going
+00:45 - to be more numerical errors.
+00:48 - But it's much faster.
+00:51 - And in practice, this is what people use.
+00:54 - And there is a little bit more--
+00:55 - you can be a little bit more clever
+00:57 - than this because there is some special structure like a piece
+01:00 - of the ODE is linear, so you can actually
+01:02 - solve it in closed form.
+01:03 - But essentially, we this is how you get fast sampling.
+01:07 - You just coarsely discretize the time axis,
+01:10 - and you take big steps.
+01:13 - So you can generate an image.
+01:15 - Instead of doing 1,000 steps, you, maybe,
+01:17 - only need to do 30 steps.
+01:20 - And that becomes a parameter that you
+01:22 - can use to decide how much compute you want to use,
+01:26 - how much effort you want to put in at inference time.
+01:30 - The more steps you take, the more accurate
+01:32 - the solution to the ODE becomes, but, of course, the more
+01:37 - expensive it actually is.
+01:39 - Just to clarify, there is not a score function for the ODE
+01:43 - and one for the SDE.
+01:45 - There is just a single score function
+01:47 - which is the score function of the data density plus noise.
+01:51 - And so it's the same, whether you take the ODE perspective
+01:55 - or the SDE perspective.
+01:57 - The marginals that you get with the two perspectives
+02:00 - are the same, and so the scores are the same.
+02:04 - And they are always learned by score matching.
+02:06 - Then at inference time, you can do different things.
+02:09 - At the inference time, you can solve the SDE,
+02:11 - you can solve the ODE.
+02:14 - But the scores are the same.
+02:17 - This is one way to get very fast sampling,
+02:21 - and there is a lot of better now--
+02:23 - there is a lot of other kind of clever ways of solving
+02:28 - ordinary differential equations, Heun kind of solvers,
+02:32 - where you take half steps.
+02:34 - There is a lot of clever ideas that people
+02:37 - have developed for numerically solving ordinary differential
+02:41 - equation pretty accurately with relatively small amounts
+02:44 - of compute.
+02:46 - And yeah, this can give you very high-- very, very big speed-ups
+02:49 - with comparable sample quality.
+02:51 -
+02:55 - Another fun thing you can do is you can actually use parallel.
+02:57 - This is actually a recent paper that we
+02:59 - have on using these fancy ODE solvers, which are basically
+03:07 - parallel in time, where instead of trying to compute
+03:10 - the trajectory of the solution of the ODE one step
+03:14 - at a time, which is what the DDPM would do,
+03:17 - you can try to guess the whole trajectory by leveraging
+03:21 - many, many GPUs.
+03:23 - And so instead of trying to go one step at a time,
+03:28 - trying to find a good approximation
+03:29 - to the true underlying trajectories,
+03:32 - you use multiple GPUs to kind of denoise
+03:36 - the whole bunch of images, basically, a batch of images
+03:42 - in parallel.
+03:43 - And so if you're willing to trade more compute for speed,
+03:49 - you can actually get exactly the same solution
+03:51 - that you would have gotten if you
+03:52 - were to go through individual steps
+03:55 - using a lot more parallel compute but in a vastly
+03:59 - smaller kind of amount of wall clock time.
+04:02 - So I'm not going to go into too much detail,
+04:06 - but basically there are tricks for using, again,
+04:09 - advanced ODE solvers to further speed up the sampling process.
+04:16 - And let's see whether I can get that.
+04:17 - Basically, what you're doing is instead of going--
+04:21 - DDPM would go one step at a time,
+04:23 - trying to compute the trajectory, which
+04:25 - is the brown dot that you see moves slowly.
+04:30 - What we're doing is we're using multiple GPUs
+04:32 - to compute a whole piece of the trajectory in parallel.
+04:38 - So it's a way to basically trade off compute for reduced wall
+04:42 - clock time.
+04:45 - Another thing you can do is distillation.
+04:49 - The basic idea is that you can think of DDIM as a teacher
+04:54 - model.
+04:55 - So you have a DDIM model that would compute,
+04:59 - let's say, the solution of the ODE
+05:01 - based on some kind of discretization of the time axis.
+05:05 - And then what you do is you train a teacher--
+05:08 - a student model that basically does in one
+05:11 - step what the DDIM would do in two steps.
+05:16 - So DDIM, maybe, would take two steps
+05:18 - to go from here to here, and then from here to here.
+05:21 - And you can train a separate student model,
+05:24 - which is another score-based model,
+05:27 - that is trying to skip and doing basically--
+05:31 - it's trying to define a new score function such
+05:34 - that if you were to take one step according to that score
+05:38 - function, you would get the same result as what you would have
+05:41 - gotten if you were to take two steps of the original score
+05:45 - function under DDIM.
+05:47 - So again, it's kind of trying to distill the solution of the ODE
+05:52 - according to a different-- or find a different kind of ODE
+05:58 - that would give you the same sort of solution
+06:00 - but using less steps.
+06:04 - And then what you do is you recursively apply this.
+06:09 - So then you use this new student model as the teacher,
+06:12 - and you get another student that tries
+06:15 - to do in one step what the other thing does
+06:18 - in two steps, which becomes four steps of the original model.
+06:22 - And you keep doing this until you can distill down
+06:25 - to a very small number of steps.
+06:27 - So these are some of the results, not quite one map.
+06:30 - But these are some of the recent paper
+06:33 - we have on this progressive distillation,
+06:36 - and this is on text-to-image models.
+06:38 - This is with the stability IP possible diffusion,
+06:42 - where you can actually--
+06:44 - let's say you can see here images generated in just two
+06:47 - steps, or four steps, or eight steps
+06:49 - by distilling a model that originally had 1,000
+06:53 - steps, essentially using this trick of reducing in half
+06:59 - and half and half until you get down
+07:00 - to two, four, or eight steps.
+07:02 - And you can see the quality is pretty good in terms
+07:05 - of the sample quality.
+07:07 - And this is, of course, much more efficient.
+07:09 - It's also tempting to get at the idea of kind
+07:13 - of generating in one step.
+07:17 - Consistency models directly try to do it in just one step.
+07:24 - And so they directly try to learn the mapping
+07:26 - from what you would get at the end
+07:30 - of this progressive distillation.
+07:31 - And they do it with a different loss.
+07:33 - So there is no progressive distillation.
+07:36 - They just do it in one shot, essentially,
+07:39 - but they're trying to get at a very similar kind of result.
+07:47 - Cool.
+07:48 - And so, yeah, distillation is a good way
+07:53 - to achieve fast sampling.
+07:55 - There's also this thing called consistency models
+07:57 - that is essentially anything you might have seen--
+08:00 - Stability, I recently released a model yesterday,
+08:02 - I think, on real time that allows
+08:05 - you to do real-time generation, and it's
+08:07 - something like this, some version of score distillation
+08:12 - plus some GAN that they throw in.
+08:14 - But it's kind of a combination of this thing plus a GAN
+08:17 - and they were apparently able to generate
+08:20 - to get a model that is so fast that is basically real time.
+08:23 - So you type-- it's a text-to-image model, where
+08:25 - you can type what you want, and it
+08:27 - generates images in real time, using
+08:30 - a combination of these GANs.
+08:31 -
+08:34 - Speaking of Stable Diffusion and Stability AI,
+08:39 - the key difference between what they do
+08:41 - and what we've been talking so far
+08:43 - is that they use a latent diffusion model.
+08:47 - And essentially, what they do is they add an extra--
+08:53 - you think about its usual model as a VAE.
+08:57 - What they do is they add another encoder and decoder
+09:03 - layer at the beginning.
+09:06 - And the purpose of this encoder and decoder
+09:09 - is to reduce the dimensionality of the data
+09:13 - so that instead of having to do a diffusion model over pixels,
+09:19 - you train a diffusion model over the latent space
+09:23 - of an autoencoder, or a variational autoencoder.
+09:26 - But literally, you can think of what's
+09:29 - happening as just an extra--
+09:31 - if you think of the hierarchical VAE,
+09:33 - you just add an extra encoder and an extra decoder
+09:38 - at the very end of the stack.
+09:39 - So those distilled models were actually distilled latent
+09:44 - diffusion models.
+09:46 - So the reason you why want to do this
+09:48 - is that it's a lot faster to train models,
+09:53 - let's say, on low-resolution kind
+09:55 - of images or low-dimensional data,
+09:57 - in terms of the kind of memory that you need
+09:59 - for training a diffusion model.
+10:00 - So it's actually much faster to train a diffusion model
+10:05 - if you could somehow train it not on the original pixel space,
+10:09 - but you could do it over some sort
+10:11 - of low-dimensional representation space.
+10:15 - And the other advantage of this, if you take this perspective,
+10:19 - is that now you can suddenly use diffusion models
+10:22 - for essentially any data modality, including text.
+10:26 - So some of the diffusion models that people have tried on text
+10:31 - essentially take this perspective.
+10:32 - So you start with discrete inputs x,
+10:36 - and then you encode them into a continuous latent space,
+10:40 - and then you decode them back with the decoder,
+10:42 - and then you train the diffusion model over the latent
+10:45 - space, which is now continuous, and so the math works out.
+10:49 - And of course, this only works to the extent
+10:51 - that the original encoder and decoder does a pretty good job
+10:55 - at basically reconstructing the data.
+10:59 - And yeah, what stable diffusion does
+11:02 - is they actually pre-train the autoencoder,
+11:07 - so it's not trained end to end, even though you
+11:09 - could because it's just a VAE.
+11:11 - So you could actually train the whole thing end to end.
+11:14 - What they do is they pre-train the autoencoder,
+11:17 - and they really just care about getting good reconstruction.
+11:21 - So they don't care too much about the distribution
+11:25 - of the latent space to be similar to a Gaussian.
+11:29 - They just care about getting a good autoencoder, essentially.
+11:33 - An then in a separate stage, they
+11:36 - keep the initial autoencoder fixed,
+11:38 - and they just train the diffusion model over the latent
+11:41 - space.
+11:43 - And that works really well.
+11:47 - And these were some of-- they got a lot of success
+11:52 - with this approach.
+11:53 - They were one of the first to train a large-scale model
+11:56 - on a lot of online like large-scale image data sets,
+12:01 - and it's been widely adopted by a lot of the community.
+12:03 - People have actually been successful even
+12:05 - in training diffusion models in pixel space.
+12:09 - But the most successful versions are usually either
+12:16 - on the latent space or downscaled versions
+12:19 - of the images.
+12:19 - So they have kind of this encoder and decoder is more
+12:24 - like a downscaling and an upscaling.
+12:27 - But essentially, the trick is being
+12:30 - able to train a model over a low-resolution data.
+12:32 - Literally, what you do is you can encode all your data
+12:38 - set then pretend that the data is whatever comes out
+12:42 - from the original encoder and train your diffusion model
+12:45 - over whatever you get.
+12:46 - So they regularize it to be close to a Gaussian,
+12:50 - if I remember correctly, but it's a very weak kind
+12:52 - of regularization.
+12:54 - Really, all they care about is reconstruction.
+12:56 - So if you think about the ELBO as reconstruction
+12:58 - plus matching the prior, they don't
+13:01 - care too much about matching the prior
+13:03 - because they're not really going to sample from--
+13:07 - essentially, they use the diffusion model as the prior.
+13:10 - And the diffusion model can generate anything.
+13:13 - It's a very powerful kind of prior distribution.
+13:16 - So you don't have to regularize to have
+13:20 - a distribution over latents that is close to Gaussian
+13:23 - because anyways then you're going to fit a VAE to whatever
+13:26 - comes out from the original-- you're going to fit a diffusion
+13:29 - model to whatever comes out from the encoder of this initial VAE.
+13:33 - And so it's not really necessary to regularize.
+13:36 - So maybe there's kind of two priors.
+13:40 - So if you just think about the basic VAE that
+13:43 - goes from high-dimensional to low-dimensional data,
+13:47 - you could have a prior there, when you pre-train this model.
+13:52 - But since you're not really going
+13:54 - to use that model to sample from,
+13:56 - you don't really care about matching the prior.
+14:01 - In the diffusion model, the prior at this end
+14:05 - is the usual Gaussian.
+14:07 - So the diffusion model that you learn
+14:09 - over the latent space of the initial autoencoder
+14:12 - has a Gaussian prior.

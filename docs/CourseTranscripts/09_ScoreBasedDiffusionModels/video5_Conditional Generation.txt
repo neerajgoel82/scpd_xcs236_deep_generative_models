@@ -1,1 +1,218 @@
-
+00:00 -
+00:05 - SPEAKER: How do you get text into one of these models?
+00:09 - And there are several ways to do it.
+00:12 - So let's say that you have a data set that is not just
+00:15 - images x but it's images and captions,
+00:19 - where I'm denoting the caption with y
+00:22 - here, because it could also be a class label, let's say.
+00:26 - So really what you're trying to do
+00:28 - is you are trying not to learn the joint distribution
+00:32 - over x comma y, because you don't
+00:34 - care about generating images and the corresponding captions,
+00:37 - you just care about learning the conditional distribution
+00:40 - of an image x given the corresponding label
+00:44 - or given the corresponding caption y.
+00:46 -
+00:48 - And essentially if you want to use a diffusion model for this
+00:55 - or a score-based model, this boils down
+00:58 - to learning a score function for this conditional distribution
+01:03 - of x given y.
+01:06 - So now the score function or the denoiser as usual
+01:11 - needs to take as input xt, which is a noisy image.
+01:14 - It needs to take as input t, which
+01:16 - is the time variable in the diffusion process
+01:20 - or the sigma level, the amount of noise
+01:23 - that you're adding to the image.
+01:26 - And now basically the denoiser or the score function
+01:29 - gets this side information y as an extra input.
+01:35 - So the denoiser knows, what is the caption of the image?
+01:38 - And it's allowed to take advantage of that information
+01:41 - while it's trying to guess the noise level
+01:46 - or equivalently denoise the image.
+01:51 - And so in some sense, you can think of it
+01:53 - as a slightly easier problem because the denoiser has access
+01:59 - to the class label y or the caption y
+02:02 - while it's trying to denoise images, essentially.
+02:07 - And so then it becomes a matter of cooking up
+02:10 - a suitable architecture where you're fitting in into the unit,
+02:15 - you're fitting in t, you're fitting in the image xt,
+02:18 - and then you need to fit in y which is let's
+02:20 - say a caption into the architecture.
+02:24 - And the way to do it, it would be
+02:27 - for example you have some pre-trained language model that
+02:31 - somehow can take text and map it to a vector
+02:35 - representation of the meaning of the caption,
+02:37 - and then you kind of incorporate it in the neural network
+02:41 - and there's different ways of doing it.
+02:43 - But maybe doing some kind of cross-attention--
+02:45 - there's different architectures.
+02:47 - But essentially, you want to add the caption-wise and additional
+02:52 - input to your neural network architecture.
+02:57 - This is the most vanilla way of doing things, which is you just
+03:01 - train a conditional model.
+03:02 -
+03:05 - Now the more interesting thing I think
+03:09 - is when you want to control the generation process,
+03:13 - but you don't want to train a different model.
+03:15 - So the idea is that you might have trained
+03:18 - a generative model over images.
+03:21 - And let's say there's two types of images-- dogs and cats.
+03:25 - And then let's say that now we only want to generate back
+03:32 - to the question that was asked initially during the class
+03:34 - is, what if you want to generate an image only of dogs?
+03:40 - So if you have some kind of classifier, p of y
+03:44 - given x that can tell you whether an image x corresponds
+03:48 - to the label dog or not, how do we generate an image x
+03:55 - that would be labeled as a dog--
+03:59 - with a label y equals dog?
+04:02 - Mathematically what we want to do
+04:04 - is we want to combine this prior distribution,
+04:07 - p of x, with this likelihood, p of y given x, which let's say
+04:11 - is given by a classifier.
+04:13 - And what we want to do is we want
+04:15 - to sample from the posterior distribution x given y.
+04:21 - So we know that we want a dog and we want a sample
+04:26 - from the conditional distribution of x
+04:28 - given that the label is dog.
+04:32 - And if you recall, this conditional distribution
+04:36 - of x given y is completely determined
+04:39 - by p of x and p of y given x through Bayes' rule, right?
+04:44 - This thing verse distribution is obtained by that equation
+04:53 - that you see there which is just Bayes' rule.
+04:56 - So if you want to get p of x given y,
+04:58 - you multiply the prior with the likelihood,
+05:00 - and then you normalize to get a valid distribution.
+05:04 -
+05:09 - And when the denominator here is in principle something
+05:14 - you can obtain by integrating the numerator over x, right?
+05:18 -
+05:21 - So what you have in the numerator is p of x comma y.
+05:25 - And in the denominator, you have p of y
+05:27 - which is what you would get if you
+05:28 - integrate over all possible xs, p of x comma y.
+05:33 - So everything is completely determined
+05:35 - in terms of the prior and this classifier.
+05:39 - So in theory, if you have a pre-trained kind
+05:42 - of let's say generative model over images
+05:45 - and somebody gives you a classifier,
+05:48 - you have all the information that you
+05:49 - need to define this conditional distribution of x given y.
+05:55 - It's just a matter of computing that expression
+05:58 - using Bayes' rule.
+06:00 - And unfortunately, even though in theory you have access
+06:05 - to the prior, you have access to the likelihood,
+06:07 - computing the denominator is the usual hard part.
+06:11 - It's the same problem as computing normalization
+06:14 - constants in energy-based models, basically.
+06:17 - It requires an integral over x.
+06:19 - And you cannot really compute it.
+06:23 - And so in practice, even though everything is well-defined
+06:25 - and you have all the information that you need,
+06:27 - it's not tractable.
+06:29 - But if you work at the level of scores.
+06:33 - So if you take the gradients of the log of that expression,
+06:37 - you get that the score of the inverse distribution
+06:42 - is given by the score of the prior, the score
+06:45 - of the likelihood, and then we have
+06:47 - this term which is the score of the normalization constant.
+06:52 - And just like in energy-based models,
+06:53 - remember that, that term goes to zero because it does not
+06:57 - depend on x.
+06:59 - And so basically if you're working at the level of scores,
+07:03 - there is very simple algebra that you
+07:05 - need to do to get the score of the posterior
+07:09 - is you just sum up the score of the prior
+07:11 - and the score of the likelihood.
+07:15 - And what this means is that basically when
+07:20 - you think about that SDE or the ODE, all you have to do is you
+07:24 - have to just replace the score of the prior with the score
+07:30 - of the posterior.
+07:32 - And really all you have to do is if you
+07:34 - know the score of the prior, you have a pre-trained model.
+07:36 - And let's say you have a classifier that
+07:39 - is able to tell you what is the label y for a given x.
+07:43 - As long as it can take gradients of that object with respect
+07:47 - to x, which is basically if you have
+07:48 - a let's say an image classifier, you just
+07:52 - need to be able to take gradients
+07:53 - of the classifier with respect to the inputs.
+07:56 - Then you can just sum them up and you have the exact score
+07:59 - of the posterior.
+08:01 - So if basically you do Langevin dynamics
+08:04 - or you solve the SDE or the ODE, and instead
+08:08 - of following the gradient of the likelihood-- of the prior,
+08:10 - you follow the gradient of the prior plus the likelihood,
+08:15 - you do the right thing.
+08:16 - So intuitively if you think about Langevin dynamics, what
+08:19 - you're doing is you're trying to follow the direction that
+08:23 - increases the likelihood of the image with respect to the prior.
+08:27 - But at the same time, you're trying
+08:29 - to make sure that the classifier will predict that image
+08:33 - as belonging to the class dog.
+08:35 - And so you're just changing the drift in the ODE
+08:38 - to push the samples towards the ones that
+08:41 - will be classified as a dog.
+08:43 - In reality, you would need to have
+08:45 - this classifier with respect to xt,
+08:49 - which is like a noisy version of the image.
+08:53 - But roughly.
+08:55 - And if you had a latent variable model,
+08:56 - then Yeah, it's a little bit more complicated
+08:58 - because you also have to go through the original encoder
+09:01 - and decoder.
+09:02 - But if you're working on pixel space, this can be used.
+09:06 - And we've used it for a number of things
+09:08 - like you can use it to do editing if you want
+09:12 - to go from strokes to images.
+09:16 - Basically, it's possible to define
+09:18 - a forward model in closed form.
+09:20 - And you can follow it and you can do image synthesis
+09:23 - or if y is a caption.
+09:26 - And then you have some kind of image captioning network.
+09:29 - You can kind of steer a generative model towards one
+09:32 - that is producing images that are consistent-- that would be
+09:35 - captioned in a particular way.
+09:37 - And you can use it to do conditional generation.
+09:40 - And you can do text generation and so forth.
+09:45 - You can actually also--
+09:46 - Yeah, medical imaging problems where the likelihood
+09:49 - is specified by how the machine works, like the MRI machine
+09:54 - works and why it's kind of a measurement
+09:56 - that you get from the machine.
+09:57 - And then you can try to create a medical image that
+10:01 - is likely under the prior and is consistent
+10:04 - with a particular measurement that you get from the machine.
+10:07 - So a lot of interesting problems can be solved this way.
+10:11 - And even classifier free guidance
+10:13 - is basically based on this kind of idea.
+10:15 - And I guess we don't have time to go through it.
+10:17 - But it's essentially a trick to essentially get the classifier
+10:23 - as the difference of two diffusion models.
+10:24 - But roughly the same thing.
+10:26 - In practice, you can either approximate it
+10:28 - just with a classifier that works
+10:30 - on clean data by using the denoiser
+10:32 - to go from noisy to clean and then use the classifier,
+10:36 - or in some cases, it can be done in closed form
+10:38 - or you can do this trick where you basically
+10:41 - train two diffusion models, one that is conditional on some side
+10:46 - information, one that is not.
+10:49 - And then you can get the classifier implicitly
+10:51 - by taking the difference of the two,
+10:54 - which is what classifier free guidance does,
+10:56 - which is widely used in state of the art models.
+10:59 - But essentially, they avoid training the classifier
+11:02 - by taking the difference of two diffusion models.
+11:04 - So they train one.
+11:05 - Let's say that is the p of x given y, which
+11:08 - would be just a diffusion model that
+11:10 - takes a caption y as an input.
+11:12 - And they have another model that is essentially not
+11:15 - looking at the captions.
+11:17 - And then during sampling, you push the model
+11:23 - to go in the direction of the images that
+11:25 - are consistent with the given caption
+11:27 - and away from the ones that are--
+11:30 - from the typical image under the prior.
+11:32 - And that's the trick that they use to generate good quality
+11:35 - images.

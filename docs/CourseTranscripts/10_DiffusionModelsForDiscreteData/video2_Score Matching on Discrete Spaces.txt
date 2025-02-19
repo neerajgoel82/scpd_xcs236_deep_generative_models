@@ -1,1 +1,249 @@
-
+00:00 -
+00:04 - SPEAKER: So let's take a look at the outline of how
+00:07 - we can get about doing this.
+00:09 - There's three steps.
+00:10 - The first is how do we extend score matching
+00:12 - to discrete spaces.
+00:13 - This is not like a very well-known--
+00:15 - this is a pretty well-known problem.
+00:17 - And there haven't been really many good solutions that
+00:20 - have been proposed previously.
+00:22 - The next question is that once we
+00:24 - learn to score, which in the discrete case
+00:26 - is called the concrete score, how do we generate new samples
+00:29 - using concrete scores.
+00:31 - And finally, when we build this generative model
+00:34 - to generate new sequences, can we evaluate likelihoods.
+00:37 - And the reason why-- the reason why we want to evaluate
+00:39 - likelihoods is to compare fairly with autoregressive modeling
+00:43 - on a lot of perplexity like tasks.
+00:46 - And so yeah, first point.
+00:48 - Can we look at generalizing score matching
+00:51 - to discrete spaces?
+00:53 - So when we think about--
+00:55 - when we think about the core building
+00:58 - block of the score matching, we really think about the gradient.
+01:01 - And the gradient actually has a nice way that we can build it.
+01:06 - There's a nice generalization of the gradient
+01:08 - to a discrete space.
+01:10 - So the idea here is that our gradient
+01:11 - of a function of f when we evaluate at a position x, this
+01:16 - is actually like a finite difference.
+01:17 - Because a finite difference is the generalization
+01:19 - of a derivative if we assume that we don't-- if we assume
+01:22 - that a space is not continuous.
+01:24 - So yeah, so instead--
+01:25 - so this gradient becomes fy of minus fx.
+01:28 - When we just index over all other y's.
+01:31 - And this is the generalization of a gradient.
+01:34 - And using this, we can build a generalization
+01:36 - of a score function.
+01:38 - So the score function is a gradient
+01:40 - at position x of the log probability.
+01:43 - And really what this is is a gradient
+01:45 - of the probability over the probability when we do chain
+01:48 - rule to get out the logarithm.
+01:50 - And then when we substitute our definition
+01:52 - of our finite difference instead of the gradient
+01:55 - in this second line there.
+01:58 - What we actually get is that this is the collection
+02:00 - of all py over px minus 1.
+02:03 - So this py over px index over all y,
+02:06 - this is our what we'll learn.
+02:08 - This is called the concrete score.
+02:10 - And it's directly generalizes the score
+02:12 - function from continuous space to discrete space, which
+02:15 - is nice.
+02:16 - But how do we learn this?
+02:20 - And, well, there's one thing which
+02:22 - is that for py over px, when we try to model all py's
+02:25 - over px's, this doesn't make a lot of sense computationally.
+02:30 - So in this case for y, if we just
+02:32 - let y be any other neighbor of x, any other value that's not x,
+02:36 - then we end up with this issue where
+02:38 - we have the model too many quantities, O of N
+02:40 - to the power of 2d exponential.
+02:41 - It doesn't work.
+02:43 - But instead, if we model these sequence, these ratios,
+02:48 - we model the ratios between two sequences that
+02:51 - differ by only one position.
+02:53 - So instead, let's model the ratios between any two sequences
+02:56 - that only differ at one point or at one position, which is
+02:59 - a much more local construction.
+03:01 - And if we do this, this is only complexity of O of N times d.
+03:06 - So this is like very much more like computationally feasible.
+03:10 - Thats only the size of our sequence.
+03:13 - And when we model these ratios between two sequences that
+03:16 - differ only at one position, we can actually--
+03:19 - but we'll normally write it out with this first value,
+03:23 - this py over px for all of our derivations.
+03:26 - But all the derivations can generalize pretty easily
+03:29 - to this multi-dimensional case here,
+03:31 - just like as a precursor for the rest
+03:33 - of the talk because it's simpler to write it out this way.
+03:36 - But yeah, we can also model our these ratios pretty easily
+03:42 - with a neural network.
+03:44 - So if we feed into the neural network a sequence x1 to xd,
+03:47 - we push it through a sequence of sequence neural network.
+03:50 - And then we can get out another sequence
+03:52 - with another dimension attached to it as such.
+03:56 - And we can have probability of 1x2 all the way to xd over
+04:00 - probability of x1 all over xd.
+04:03 - And we have these.
+04:04 - We can directly model these ratios
+04:06 - of all successive neighbors, which differ only
+04:10 - at one point this way.
+04:11 - Sequence to sequence.
+04:12 - So you just go from this sequence--
+04:13 - this one-dimensional sequence to a d dimensional-- or d
+04:16 - dimensional sequence.
+04:17 - So we just push it through a neural network in parallel.
+04:19 - So you can think about it as a non-autoregressive Bert style
+04:22 - transformer.
+04:24 - So yeah, this is the idea.
+04:25 - We have a sequence to sequence model.
+04:27 - We can generate the ratios of places that
+04:30 - differ only at one position.
+04:32 - So how do we learn it as is a very obvious question?
+04:36 - How do we learn this concrete score?
+04:40 - How do we do this?
+04:42 - So yeah, our goal here is to learn a neural network as theta
+04:44 - x, such that when we parameterize
+04:47 - x theta of x at a position y, then
+04:49 - we can get the relative ratio py over px.
+04:52 - And this we need to find a way to do
+04:56 - this in a very principled manner,
+04:57 - as in we can't allow negative values for our s theta.
+05:01 - And also, when we have enough data,
+05:03 - we should also be able to recover
+05:04 - a ground truth, or enough data, enough model capacity.
+05:07 - And so the way that we do this is
+05:09 - very similar to score matching, which is the following loss
+05:12 - function.
+05:14 - We're calling a score entropy because it's
+05:17 - based off of a very--
+05:18 - it's very related to stuff like cross entropy.
+05:20 - But I guess the idea here is that it's very--
+05:23 - the idea here is that it's a discrete generalization of score
+05:26 - matching, in the sense that we first
+05:28 - sample-- we take an integral over all x in our probability
+05:31 - function p.
+05:32 - And then we sum over all of our y that are neighbors.
+05:36 - And then we minimize this type of new type
+05:39 - of divergence function in the middle
+05:42 - here in order to optimize it.
+05:44 - And yeah, the reason why this is in such a way
+05:48 - as we'll see it-- we'll see why we
+05:50 - need to do this type of construction soon.
+05:53 - But the idea here is that we have this score entropy.
+05:55 - It's a generalization of score matching,
+05:57 - but for our discrete scores instead.
+06:00 - And you might not believe me.
+06:02 - But actually, this score entropy function actually
+06:04 - does recover our ground truth.
+06:06 - So if we just get rid of all the x and y,
+06:09 - if we simplify our notation a bit,
+06:11 - and we want to minimize the following quantity.
+06:14 - Well, this quantity is minimized when our derivatives-- we just
+06:18 - set the derivative to be 0.
+06:20 - And we get this 1 minus py over px times 1 over s equal to 0.
+06:26 - And then we move it back over.
+06:27 - We multiply it out.
+06:28 - And we get that.
+06:29 - When we minimize it correctly, this s value
+06:32 - should be equal to py over px.
+06:35 - And we can also visualize the loss function for something
+06:38 - like a ground truth ratio of 0.2.
+06:40 - And we can clearly see that it satisfies
+06:42 - all of our requirements.
+06:43 - Basically it's convex.
+06:46 - It will recover the true value if we just minimize this.
+06:49 - And finally, we can do this between for all pairs x and y.
+06:54 - So we can just do this independently
+06:56 - for all of our x and y, which means
+06:58 - that if we learn everything correctly,
+07:00 - we should recover the ground truth for every pair x and y,
+07:04 - basically.
+07:05 - So yeah, we have this score entropy
+07:08 - loss function and how do we actually optimize it,
+07:11 - very similarly to score matching.
+07:14 - Here's the issue.
+07:15 - We have this loss function, but this py over px
+07:18 - is ground truth value is not known to us at all.
+07:21 - I mean, if we knew it, we could just use it.
+07:22 - So it would make sense that we have
+07:24 - to find a different way around this in order to learn it.
+07:28 - And we have two different ways of doing this.
+07:32 - One of these is-- one of these alternative loss
+07:35 - functions, which we're calling implicit score entropy.
+07:37 - This is a natural generalization of implicit score matching.
+07:40 - But we won't be covering it in this lecture, but just
+07:42 - nice to know that exists.
+07:44 - And we also have another loss function
+07:45 - called de-noising score entropy or de-noising score entropy.
+07:49 - And this is analogous to de-noising score matching
+07:51 - for our score entropy case to look at denoising score entropy.
+07:58 - Here's the idea.
+07:59 - If we assume that our px is equal to a convolution
+08:03 - between a base distribution po and some kernel p,
+08:10 - well, then we can write out our probability
+08:12 - as this summation over all x0.
+08:15 - And when we do that, we can take a look at our initial score
+08:20 - entropy loss.
+08:23 - Yeah, the idea here is that we can just remove the expectation
+08:26 - as first.
+08:26 - So we instead, we just move in to px.
+08:28 - And this gets rid of the px in the denominator.
+08:31 - But do summation over all x.
+08:34 - Then in order to look at things more concretely,
+08:38 - we take a look at this decomposition above.
+08:40 - And we just apply it to this py term
+08:43 - to get out this following decomposition, which
+08:45 - is basically, we add in an expectation over x0.
+08:51 - We can basically move around our values a bit.
+08:54 - So we can move the summation term to the front
+08:56 - by Fubini's theorem.
+08:57 - And we can also add in a p of x given x0 given--
+09:03 - over p of x given x0.
+09:04 - So we can rework it here.
+09:07 - And then once we have everything in this setup,
+09:11 - then we can basically just take the last two terms
+09:13 - into our expectation.
+09:15 - We just move those terms.
+09:16 - Take them away from the summation.
+09:18 - And move it into our expectation.
+09:19 - And it just gives us an equivalent form.
+09:21 - And the nice thing that we'll notice for this equivalent form
+09:24 - here is that we only have this relative ratio of p of y given
+09:29 - x0 over p of x given x0.
+09:32 - Not like p of y over p of x.
+09:34 - And as such, this is possible to compute.
+09:38 - And this is something that's possible to compute
+09:40 - because we can assume that our transition kernel
+09:42 - p is tractable.
+09:45 - But we can't assume that our data distribution
+09:47 - p is tractable, basically.
+09:50 - This x0 is how you base the data point.
+09:53 - And this transition kernel, it can be anything, basically.
+09:56 - It can be anything.
+09:57 - So much more than just this type of noise.
+10:00 - But in the continuous case, you would also
+10:02 - write out like this, like this.
+10:04 - But for practical reasons that's why
+10:07 - people choose to use a small Gaussian addition in order
+10:11 - to do this same exact thing.
+10:13 - But this is basically the same exact thing.
+10:15 - So we have this way to get rid of the py over px.
+10:20 - And as such, we have the following de-noising score
+10:23 - entropy loss function.
+10:24 - And it's like particularly scalable
+10:26 - because we can sample an x0.
+10:28 - We can sample through this--
+10:30 - we can sample through the perturbation kernel.
+10:32 - And then we only need to compute this s theta of x
+10:35 - once for this summation value because we were only
+10:38 - using s theta of x.
+10:40 - And then finally, we can compute this ratio
+10:43 - of transition kernels, by just the way that we define it.
+10:47 - So everything becomes computationally tractable.
+10:49 - And we can optimize this loss.

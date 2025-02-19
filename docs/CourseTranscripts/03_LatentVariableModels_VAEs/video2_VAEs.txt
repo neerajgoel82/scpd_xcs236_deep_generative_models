@@ -1,1 +1,214 @@
-
+00:00 -
+00:05 - SPEAKER: So an alternative motivation
+00:07 - is that it's a very powerful way of combining simple models
+00:12 - and get a more expressive one out, like using latent variables
+00:16 - allows you to have this kind of mixture model behavior, which
+00:20 - is a very good way of building very flexible generative models.
+00:26 - And you can see in the example of the mixture of Gaussian,
+00:31 - if you have three Gaussians--
+00:33 - a blue, an orange, and a green one, and you
+00:36 - can see they have different means
+00:38 - and different standard deviations.
+00:39 - So they have all these bell curves.
+00:41 - If you think about the corresponding marginal
+00:44 - distribution over x, has this very interesting red shape.
+00:50 - So even though each of the individual components
+00:53 - is pretty simple, it's just a bell curve
+00:55 - and there is not too much you can do about changing
+00:57 - the shape of the function.
+00:58 - The moment you start mixing them together,
+01:00 - you can get much more interesting shapes
+01:03 - for the probability density that you get.
+01:07 - And the reason is that when you want
+01:09 - to evaluate the probability under this mixture model,
+01:13 - the probability of a data point x, what is that object?
+01:17 - Well, it's the marginal.
+01:18 - You basically need to say, what was
+01:20 - the probability of generating that point under the blue curve
+01:23 - plus the probability of generating
+01:25 - that point under the orange curve and plus the probability
+01:28 - under the green curve?
+01:31 - And this is just the definition of the marginal probability.
+01:36 - You marginalize out the z.
+01:38 - In this case, the joint is just something
+01:40 - that looks like this, where p of z
+01:42 - is just a categorical distribution and the p of x
+01:46 - given z is again something very simple, just
+01:48 - a Gaussian with different means and different standard
+01:51 - deviations.
+01:52 - So you can see that even though the components, the p of x given
+01:56 - z is, are super simple just Gaussians,
+01:58 - the marginal that you get is much more interesting in terms
+02:02 - of the shape that you can get.
+02:04 -
+02:07 - And that's the one way to think about why
+02:11 - this variational autoencoders are so powerful, because it's
+02:13 - basically the same thing, except that now you
+02:16 - don't have a finite number of mixture components.
+02:20 - So the z variable is no longer a categorical random variable 1,
+02:24 - 2, 3, 4, 5, k.
+02:26 - Now z can take an infinite number of different values.
+02:30 - There is a Gaussian distribution that you sample z from.
+02:33 - So there is-- essentially you can
+02:35 - think of it as an infinite number of mixture components.
+02:37 - So even though p of x given z is again Gaussian,
+02:43 - now we have a mixture of an infinite number of Gaussians.
+02:48 - And what we're giving up is that in this Gaussian mixture model
+02:56 - case, we were able to choose the mean
+02:58 - and the standard deviations of these Gaussians any way
+03:01 - we wanted because you basically have a lookup table.
+03:04 - And so you have complete flexibility
+03:07 - in choosing the mean and the standard deviation
+03:09 - of the Gaussians.
+03:10 - In the VAE world, the means and the standard deviations
+03:14 - of all these Gaussians are not arbitrary.
+03:19 - They are chosen by fitting z through this neural network,
+03:24 - through two neural networks.
+03:26 - Let's say mu and sigma that will basically give you
+03:30 - the mean and the standard deviation for that Gaussian
+03:33 - component.
+03:35 - There's no longer a lookup table,
+03:36 - now it's whatever you can describe using a neural network.
+03:43 - Basically the z can take an infinite number of values
+03:46 - because this continues.
+03:48 - The question is yeah, can't we just use a uniform distribution?
+03:51 - Yeah, you can.
+03:52 - This is just-- I'm just showing a Gaussian,
+03:54 - but yeah, a uniform distribution would work as well.
+03:57 - Process to sample would be the same as before.
+03:59 - Like in the Gaussian mixture model,
+04:01 - you pick a component, sample a value of z.
+04:05 - Then you do your lookup, you get the mean,
+04:06 - the standard deviation, and then you sample from the Gaussian.
+04:09 - The sampling process here is the same.
+04:11 - You sample a z, now it's a Gaussian.
+04:13 - Then you feed it through the two neural networks
+04:15 - to get the means and the standard deviations
+04:18 - of the corresponding Gaussian.
+04:19 - And then you sample from p of x given z.
+04:21 - So you sample from a Gaussian with that mean
+04:23 - and that standard deviation.
+04:25 - The question is, would you want it to be discrete,
+04:28 - I guess, or continuous?
+04:29 - And if you're trying to model discrete sort of clusters,
+04:33 - is this the right way of doing things?
+04:35 - And yeah, you're right.
+04:37 - That's sort of like, here z is continuous.
+04:39 - So you have some way of transitioning
+04:41 - between the clusters, which might or might not make sense.
+04:45 - And it might need to find strange kind of axes
+04:48 - of variation to make that happen.
+04:50 - You can also have a mixture of discrete and continuous,
+04:53 - like this is the setting that VAE uses.
+04:57 - And it tends to work well in practice.
+05:00 - Intuitively, it just means that z is no longer
+05:03 - a categorical random variable.
+05:04 - So there is not a finite number of choices that you can make.
+05:07 - But it's more like what I had here,
+05:09 - where the z variables can take values in this 2D space.
+05:15 - So there is not really even necessarily
+05:17 - a notion of what you have to pick either here or here.
+05:21 - You can be in between.
+05:23 - Yeah, the question is, does z-- in a mixture of Gaussians,
+05:26 - does z have to be a uniform distribution?
+05:29 - It doesn't have to, no.
+05:31 - Yeah.
+05:31 - So that's kind of to some extent an arbitrary choice,
+05:35 - like you can choose other priors.
+05:37 - The key insight is that it just has
+05:39 - to be something simple that you're going
+05:41 - to sample from efficiently.
+05:43 - The conditional-- the p of x given z also something simple.
+05:47 - Here I'm using a Gaussian.
+05:48 - But you use a logistic-- like a factorized logistic
+05:51 - or it can be anything as long as it's simple.
+05:54 - And all the complexity is really in these neural networks
+05:57 - that would figure out how to map the parameters-- how
+06:00 - to map the latent variable to the parameters
+06:01 - of this simple distribution.
+06:03 - And you're going to get different results depending
+06:05 - on the choices you make.
+06:06 - This is the simplest, Gaussian and Gaussian.
+06:10 - There is no neural network, it's just a lookup.
+06:14 - So it's the most flexible kind of mapping
+06:16 - you can think of because you're allowed
+06:18 - to choose any value you want for the different values
+06:22 - that z can take.
+06:23 - So it's kind of more like a Bayesian network
+06:25 - world, where you're allowed--
+06:27 - it's a lookup table, which is great
+06:29 - because it's super flexible, it's
+06:31 - bad because it doesn't scale at the moment you have many, many.
+06:35 - In this world, I'm assuming that the prior is fixed.
+06:38 - There is no learnable parameter.
+06:40 - As usual, the learnable parameters
+06:42 - are the theta, which in this case
+06:43 - would be the parameters of these two neural networks.
+06:45 - So you might have a very simple, a very shallow linear neural
+06:49 - network where to get the mean, you just
+06:52 - take a linear combination of the z variables
+06:54 - and then you apply some non-linearity.
+06:56 - And then similarly, another simple neural network
+07:00 - that would give you the parameters
+07:02 - of the covariance matrix.
+07:03 - Perhaps you can make a diagonal, something like this.
+07:07 - So the marginal basically becomes an integral.
+07:10 - So instead of being a sum over all possible values of z,
+07:13 - you have an integral over all the possible values
+07:15 - that you can take.
+07:16 - But it's the same machinery.
+07:18 - So what is the dimension of z in practice?
+07:20 - Typically, the dimension of z would be much lower
+07:23 - than the dimensionality of x.
+07:25 - And the hope is that you might discover
+07:27 - a small number of latent factors of variation
+07:30 - that describe your data.
+07:33 - So we'll see another kind of generative model
+07:35 - that will basically be identical to this,
+07:38 - except that z will have exactly the same dimensionality of x.
+07:41 - And that's, for example, what a diffusion model does.
+07:44 - So you might not necessarily always want
+07:48 - to reduce the dimensionality.
+07:49 - Having the same dimensionality will
+07:51 - allow you to have sort of nice computational properties.
+07:55 - Yes.
+07:56 - Yes.
+07:56 - You can certainly find more information.
+07:58 - And I think there are two ways to think about it.
+08:00 - One is if the prior is more complex,
+08:02 - like instead of having a Gaussian,
+08:03 - you can put an autoregressive model over the latent variables,
+08:06 - you're going to get an even more flexible kind of distribution.
+08:10 - The other way to do it would be if you already
+08:13 - have some prior knowledge about the types of--
+08:16 - maybe you know that there is a bunch of classes.
+08:19 - There's 1,000 classes or 10 classes,
+08:20 - then maybe you want to have one categorical random variable.
+08:24 - So if you have some prior over what you--
+08:28 - what kind of latent factors of variation
+08:30 - you expect to exist in the data, you
+08:32 - can try to capture that by choosing suitable priors.
+08:36 - And then so what you would do then
+08:38 - is you would somehow try to fit this model to data.
+08:41 - And in this case, the parameters that you
+08:44 - can choose from for that you can choose
+08:46 - are all this neural network, the parameters of these two neural
+08:49 - networks mu and sigma.
+08:53 - And again, the takeaway is the same as the Gaussian mixture
+08:57 - model.
+08:58 - Even though p of x given z is super simple,
+09:00 - it's just a Gaussian, the marginal
+09:03 - that you get over the x variables is very flexible.
+09:08 - It's kind of a big mixture model.
+09:12 - And so that's the recap, two kind of ways to think about it.
+09:15 - One is to define complicated marginals in terms
+09:19 - of simple conditionals.
+09:21 - And then this idea of using the latent variables to cluster data
+09:25 - points.
+09:26 - And again sort of being able to model them
+09:29 - through relatively simple conditionals
+09:31 - once you've clustered them.
+09:33 - And now we'll see the no free lunch part,
+09:35 - which is going to be much harder to learn these models compared
+09:38 - to autoregressive, fully observed kind of models
+09:42 - that we've seen so far.

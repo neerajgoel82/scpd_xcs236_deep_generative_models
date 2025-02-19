@@ -1,1 +1,547 @@
 
+00:00 -
+00:05 - SPEAKER: There's kind of two approaches
+00:06 - that we're going to talk about.
+00:08 - The first one is called the denoising score matching.
+00:12 - And the idea is that instead of trying
+00:14 - to estimate the gradient of the data,
+00:17 - we're going to try to estimate the gradient of the data
+00:21 - perturbed with noise.
+00:23 - So you can imagine that there is a data distribution that
+00:26 - might look like this.
+00:27 - And then there's going to be a noise
+00:31 - perturbed data distribution shown in orange denoted q
+00:35 - sigma where we're basically just adding noise to the data
+00:40 - or convolving the data density, in this case,
+00:43 - with a noise distribution q sigma of x tilde given
+00:48 - x, which might be something like a Gaussian in this case.
+00:52 - We're kind of smoothing the original data density
+00:56 - by essentially adding noise.
+01:00 - Then it turns out that if you're estimating
+01:04 - the score of this distribution that you get after adding noise
+01:07 - is a lot easier computationally.
+01:10 - And so to the extent that you choose the noise
+01:14 - level to be relatively small, this
+01:16 - might be a reasonable approximation.
+01:19 - If you don't add too much noise, then this yellow density
+01:22 - will be pretty close to the blue one.
+01:24 - And so this course that you estimate for the yellow density,
+01:29 - the noise-perturbed density are going
+01:31 - to be pretty close to what you want because basically,
+01:39 - q sigma is going to be pretty close to the original data
+01:41 - density when sigma is small.
+01:44 - That's the high-level idea.
+01:47 - And so it works like this.
+01:50 - You have a data density which could be over images
+01:53 - and then you add noise to the images
+01:55 - by using this Gaussian kernel q sigma.
+02:00 - And then you get a new distribution over images
+02:03 - plus with noise and we're going to try
+02:05 - to estimate the score of that.
+02:08 - And the way we're going to try to fit
+02:14 - our model to this noise-perturbed data density
+02:17 - is again using the Fisher divergence.
+02:20 - But now instead of doing a Fisher divergence between model
+02:23 - and data, we do Fisher divergence
+02:25 - between model and this noise-perturbed data density.
+02:32 - So it's the same thing as before,
+02:34 - except we replace Pdata with q sigma, which is data plus noise,
+02:40 - basically.
+02:43 - And then which is just this.
+02:46 - So the expectation is just this integral with respect
+02:50 - to q sigma.
+02:52 - So just like before, the norm of the difference
+02:55 - between the estimated gradient and the true gradient,
+02:58 - except that now instead of using the real-data density
+03:01 - we use this q sigma which is the noise-perturbed data density.
+03:07 - And then we do just when we're doing integration
+03:11 - by parts, we expand this square and get three terms.
+03:17 - We get the norm of the first term,
+03:20 - the norm of the second term, and then we
+03:22 - have this inner product between the two pieces, the red term,
+03:29 - which is going to be the complicated one.
+03:31 - Basically, just like in the integration by part trick,
+03:35 - you can see that the blue term does not depend on theta,
+03:39 - so we can ignore it.
+03:40 - The green term depends on theta in an easy way.
+03:46 - So it's just basically the usual thing.
+03:49 - And a complicated piece is the red one.
+03:53 - Or we have this dot product between the score
+03:56 - of the noisy data and the estimated score.
+04:00 - So q is defined as--
+04:03 - yeah, basically, you get a sample from q sigma
+04:06 - by randomly drawing from the data,
+04:10 - randomly drawing some Gaussian noise and adding it to the data.
+04:14 - So if we achieve that that is going
+04:15 - to be tractable in the sense that we're
+04:18 - going to get rid of that trace of the Jacobian term.
+04:21 - So we're going to get a loss function that
+04:24 - is going to be scalable in high dimensions.
+04:26 - So that's going to be the--
+04:29 - we're doing this because the trace of the Jacobian
+04:32 - was too expensive.
+04:34 - This introduces an approximation because you're
+04:36 - no longer estimating the score of the data density
+04:39 - or estimating the score of this other thing,
+04:42 - but it turns out that we're going
+04:43 - to be able to do it much more efficiently.
+04:46 - It's going to reduce this problem to denoising.
+04:49 - So basically, this score-matching objective will
+04:54 - end up being equivalent to the problem of--
+04:57 - given this x tilde, try to remove noise
+05:01 - and try to estimate the original image you started with,
+05:04 - basically.
+05:07 - It's going to be mathematically equivalent.
+05:10 - Basically, we are going to rewrite this red term in a sum--
+05:13 - where do I have-- my cursor here,
+05:15 - we're going to rewrite this red term in some way
+05:17 - and we're going to show it's going
+05:18 - to be equivalent to denoising.
+05:22 - So OK.
+05:23 - So we can order the blue term.
+05:24 - It doesn't depend on theta.
+05:25 - Then we have this green term, which is easy,
+05:27 - and then we have this red term, which is tricky,
+05:31 - but we're going to rewrite it.
+05:33 - So focusing on the red term, it looks like this.
+05:37 - And just like in the integration by part kind of trick,
+05:42 - we can write the gradient of the log as 1
+05:46 - over the argument of the log times the gradient
+05:48 - of the argument of the log.
+05:50 - This is the basic.
+05:52 - I just basically expanded the gradient of the log of q sigma.
+05:58 - And now you see that this q sigma here and q sigma
+06:01 - down here will cancel with each other.
+06:05 - And so we end up with something a little bit simpler,
+06:08 - which is the dot product basically
+06:10 - between the gradient of the noise-perturbed density
+06:16 - and the gradient and the score model at every point.
+06:20 - And now we can write the expression
+06:24 - for q sigma, which is just this integral.
+06:29 - Basically, the probability of any particular sigma x tilde
+06:33 - is going to be the probability of sampling any data point
+06:37 - x times the probability of generating x tilde by adding
+06:42 - noise to x, basically.
+06:46 - Just think about the sampling process.
+06:48 - What is the probability of generating an x tilde?
+06:50 - You have to look at every possible x
+06:52 - and you have to check what was the probability of generating
+06:55 - x tilde by adding noise to x.
+06:58 - And that's basically what this integral here is giving you.
+07:02 - It's just the definition of q sigma
+07:03 - that we had in the previous slide.
+07:07 - And now we can see that this is linear,
+07:11 - so we can push the gradient inside the integral.
+07:17 - And that's where things become a lot simpler because now you
+07:19 - see that now we are getting a gradient of this Gaussian
+07:25 - density basically and we no longer have
+07:28 - to deal with the gradient of the data density, basically.
+07:33 - And now we can further push out the--
+07:39 - well, now we can use again this trick
+07:42 - here that the gradient of the log of q
+07:44 - is 1/q times the gradient of q.
+07:46 - And we can rewrite the gradient of the transition
+07:48 - of the Gaussian density as a q times the gradient of log q.
+07:54 - Because if you take the gradient of log q,
+07:56 - you're going to get the gradient of q times 1 minus q,
+07:59 - and so these two things are obviously the same.
+08:03 - And now you push the expectation out
+08:06 - and we basically have an expression
+08:08 - that looks very much like the original one
+08:12 - that we started with.
+08:13 - But we no longer have to deal with this gradient of the log
+08:16 - data density perturbed with noise,
+08:18 - but we have to look at the gradient
+08:20 - of this conditional distribution of x tilde
+08:22 - given x, which is just a Gaussian density.
+08:29 - And so overall, basically, we've rewritten
+08:33 - this complicated object up here into something
+08:36 - that is a little bit simpler because now it
+08:38 - involves only the gradient.
+08:40 - It basically involves the score of this q
+08:43 - sigma of x tilde given x, which is just going to be Gaussian.
+08:46 -
+08:49 - And so bringing it together, this
+08:51 - is what we started with estimating the score of the data
+08:55 - density perturbed with noise.
+08:59 - You could write it this way.
+09:01 - And through this algebra that we just did,
+09:03 - we could also rewrite the red term in terms of this.
+09:08 - And now you can basically see that essentially, you
+09:18 - can write it as the square difference between s theta
+09:21 - and the gradient of this Gaussian transition kernel
+09:24 - that we have here because when you
+09:27 - take the square of this term, it would give you the red one.
+09:29 -
+09:32 - The square term of this one will give you this brown term.
+09:35 - That way we're subtracting out.
+09:37 - And then the dot product between these two
+09:39 - is exactly this red term that we just derived.
+09:44 - So all in all, basically, what we've shown
+09:47 - is that if you want to estimate the score of the q
+09:50 - sigma, the noise-perturbed data density,
+09:53 - it's basically equivalent to trying
+09:55 - to estimate the score of this transition
+10:00 - kernel, this Gaussian density that we
+10:02 - use to add noise across different x's
+10:07 - and different x tildes that are sampled from the noise
+10:10 - distribution.
+10:13 - So a lot of algebra, but basically, up to constants
+10:19 - we can rewrite the score-matching objective
+10:22 - for the noise-perturbed data density
+10:24 - into a new score-matching objective
+10:26 - that now involves terms that are relatively easy to work with.
+10:31 - And in particular, if you look at this expression,
+10:37 - it turns out that this gradient of the log of q sigma x
+10:41 - tilde given x is easy to compute because that's just a Gaussian.
+10:45 - So q sigma x tilde given x is just
+10:48 - a Gaussian with mean x and standard deviation and variance
+10:55 - sigma squared identity.
+10:57 - So that's just a squared exponential.
+11:01 - When you take the log it just becomes a quadratic form.
+11:04 - When you take the gradient you just get a relatively--
+11:08 - basically, an expression that looks like that.
+11:12 - And so when you plug in this expression in here,
+11:18 - you get something easy to work with.
+11:23 - Maybe I don't have it here, but basically, you
+11:27 - end up with an objective that no longer involves
+11:31 - traces of the Jacobians.
+11:33 - It's an L2 loss between a theta compared to this x tilde minus x
+11:40 - over x over sigma squared, which is basically
+11:44 - a denoising objective as we will see
+11:48 - in our next couple of slides.
+11:51 - So the key takeaway here is you don't
+11:54 - have to estimate the trace of the Jacobian anymore.
+11:59 - If you're willing to estimate the score, not
+12:03 - of the clean data, but if you're willing to estimate
+12:05 - the score of this q sigma which is data plus noise.
+12:08 -
+12:11 - So practically, the algorithm is something like this.
+12:15 - You have a minibatch of data points sampled from the data.
+12:18 - You perturb these data points by adding Gaussian noise.
+12:24 - So literally just add noise to each xi with the variance sigma
+12:31 - square.
+12:33 - And then you just estimate the denoising score-matching loss,
+12:37 - which is just based on the minibatch, which is just
+12:40 - the loss on these data points and it's just
+12:43 - basically this expression.
+12:45 - And recall that if this q sigma is Gaussian,
+12:50 - then the loss looks something like this.
+12:54 - And so it has a very intuitive kind of interpretation
+12:59 - because what we're saying is that what this score model needs
+13:03 - to do at every data point, x tilde.
+13:05 - So the score model is being evaluated at these noisy
+13:09 - data points x tilde.
+13:10 - And for each data point, what the score model is trying to do
+13:14 - is it's trying to estimate the noise that was
+13:17 - added to xi to produce x tilde.
+13:21 - Yeah.
+13:22 - So you'd want sigma to be as small as possible
+13:25 - because you want q sigma to be as close as possible to Pdata.
+13:30 - On the other hand, the variance goes to infinity of this loss
+13:35 - as sigma goes to 0.
+13:37 - So you can't actually choose sigma to be too small.
+13:40 - So in practice, you need to try to choose the sigma as
+13:43 - small as possible such that you still optimize the loss,
+13:48 - but there is always an approximation.
+13:50 - But that's the trade-off.
+13:51 - You don't have Hessians or traces of the Jacobian anymore,
+13:56 - but you're not estimating the score of the clean data,
+13:59 - you're estimating the score of the noisy data.
+14:03 - We're no longer estimating--
+14:04 - I mean, we're changing the goalpost.
+14:06 - We're no longer estimating the--
+14:08 - you can think of this as basically
+14:10 - a numerical approximation of it.
+14:12 - In some sense, we're adding Gaussian noise
+14:14 - and we're trying to estimate derivatives
+14:16 - through a finite difference kind of thing, basically.
+14:21 - That's one way of deriving.
+14:24 - The same thing if you like that sort of approximation route,
+14:28 - it has the flavor of basically estimating the derivatives
+14:34 - through a perturbation.
+14:35 - When is this loss 0?
+14:37 - Maybe I have it on the next slide.
+14:41 - Yeah.
+14:42 - So if you think about it, the loss function looks like this,
+14:48 - so the original loss function was this,
+14:50 - and then we were able to rewrite it as this.
+14:52 - And so what are you doing?
+14:54 - You're starting with a clean image,
+14:56 - then you add noise to generate x tilde, then look at this loss.
+15:01 - What we're saying is that the score model
+15:04 - takes x tilde as an input.
+15:06 - And to make this L2 loss as small as possible,
+15:10 - you're trying to match this x minus x
+15:13 - tilde, which is exactly the noise that we added.
+15:16 -
+15:18 - And so to make this loss as small as possible,
+15:22 - s theta has to match the vector of noise
+15:25 - that we added to this image.
+15:29 - So that's why it's a denoiser because it gets to see x tilde
+15:34 - and it needs to figure out, what do I subtract to this x tilde
+15:38 - to get back a clean image?
+15:41 - Yes.
+15:42 - That's called Stein unbiased risk estimator.
+15:46 - That's the key trick that is used.
+15:48 - You can still evaluate the quality of an estimator
+15:51 - without actually knowing the ground truth in some sense.
+15:55 - So the axis and the x tilde you're generating them yourself,
+15:58 - but s theta doesn't see the clean data.
+16:00 - So x theta only sees the noise data
+16:02 - and you're trying to predict the noise.
+16:04 - This is not restricted to Gaussian noise.
+16:07 - If you look at the math, the only thing
+16:08 - you need to be able to compute is these gradients of--
+16:13 - basically, as long as the distribution
+16:16 - that you use to add noise that you can compute likelihoods
+16:19 - and you can get the gradient in closed form, then
+16:21 - you can get a denoising loss for that.
+16:25 - You're going to end up estimating the score.
+16:30 - We are estimating the score of q sigma, right,
+16:33 - which is if you're adding Gaussian noise,
+16:36 - it's going to be basically theta plus Gaussian noise.
+16:39 - If you add another kind of perturbation,
+16:43 - you're going to get another type of perturbed data
+16:49 - and you're estimating the score of that.
+16:52 - So you're right.
+16:53 - We're not estimating the score of the clean data density,
+16:56 - we're estimating the score of the data plus noise.
+17:00 - The hope is that you need to add just a small amount of noise
+17:04 - so that if sigma is small enough that these images are
+17:08 - indistinguishable from the clean ones, then
+17:11 - the approximation is not too bad.
+17:14 - And what we gain by doing that is that it's much more scalable.
+17:18 - That's the magic of denoising score matching
+17:20 - that basically these two objectives are equivalent
+17:24 - up to a constant.
+17:25 - So by minimizing the bottom one, the denoising,
+17:28 - you are actually also minimizing the top objective
+17:32 - where you're really estimating the score of the distribution
+17:37 - of the data convolved basically with Gaussian noise,
+17:39 - the smoothed version of the data density.
+17:43 - Even though, you can just work at the level
+17:45 - of the individual conditionals.
+17:47 - That's the beauty of these denoising score matching.
+17:50 - And another way to say it maybe is that denoising is not
+17:52 - too hard as a problem.
+17:54 - And so we have pretty good neural networks
+17:57 - that can do denoising.
+17:58 - And so to some extent, we've reduced the problem
+18:01 - of generating images to the problem
+18:03 - of denoising, which is a relatively easy task
+18:08 - for our neural network.
+18:09 - So to the extent that you can do well at denoising,
+18:12 - you're going to do well at estimating the score.
+18:15 - And we know that the score is basically, to some extent,
+18:18 - equivalent to having a likelihood.
+18:22 - So we haven't yet talked about how
+18:24 - do you actually generate samples from these models,
+18:26 - but essentially, we'll do MCMC.
+18:28 - And so after all these steps, we've
+18:32 - reduced generative modeling to denoising,
+18:34 - which is an easy task, probably one of the easiest tasks
+18:38 - that you can think of.
+18:40 - It doesn't have to be Gaussian as long as the machinery like,
+18:43 - yeah, basically, as long as you can compute
+18:46 - this gradient of whatever distribution
+18:50 - you use to add noise, the math works out.
+18:54 - And really if you think about what happened in the proof,
+18:57 - really the only thing that matters
+18:59 - is that the gradient is linear.
+19:01 - Gradient is a linear operator and so
+19:03 - this whole machinery works.
+19:05 - So here we've seen the score matching reduces the denoising.
+19:08 - So estimating the score is the same as estimating
+19:11 - the noise that was added to the data point.
+19:14 - And so the reason this is true or another way
+19:17 - to think about this is that there is something called
+19:21 - Tweedie's Formula, which is basically
+19:24 - an alternative way of deriving the same result, which
+19:27 - is kind of like, it's telling you
+19:31 - that indeed as was suggested by you, that the optimal denoising
+19:38 - strategy is to basically follow the gradient
+19:40 - of the perturbed log-likelihood.
+19:43 - So you can imagine that if you had a data density that
+19:47 - only has three images.
+19:51 - So it's kind of like three deltas.
+19:53 - And this is like a toy picture, but just
+19:57 - for visualization purposes, you can
+19:59 - imagine that if you add noise to these three images,
+20:02 - you're going to get a density that looks like this.
+20:05 - And then you can imagine-- let's say you're trying to denoise,
+20:09 - and what we've just shown is that the best way to denoise
+20:13 - is to follow the gradient.
+20:15 - So if somehow somebody gives you a data point to the left here,
+20:20 - how should you denoise it?
+20:22 - You should follow the gradient to try
+20:23 - to go towards high-probability regions, which makes sense.
+20:29 - If you're trying to denoise, try to change the image,
+20:31 - and push it towards high-probability regions.
+20:34 - And in fact, the optimal denoising strategy
+20:37 - is to take the noisy sample and follow a step
+20:40 - plus with the right scaling, but basically,
+20:43 - follow the gradient of the log of perturbed data density.
+20:48 - So for these results, the denoising score-matching stuff
+20:54 - it's still true.
+20:57 - What it's good about Gaussian is the following.
+21:02 - Maybe I will clarify.
+21:04 - So essentially, what you can look at
+21:07 - is there is the data, clean data,
+21:12 - and then there is the noisy data and then there
+21:14 - is the posterior distribution of the clean data
+21:17 - given the noisy data.
+21:19 - And we know the definition of the noisy data distribution.
+21:25 - And basically, Tweedie's Formula is telling you
+21:28 - that the expected--
+21:31 -
+21:35 - given a noisy image x, the expected value
+21:39 - of the clean image is given by this expression.
+21:43 - And so if you want to minimize the L2 loss,
+21:45 - the best thing you can do is to output
+21:47 - the conditional expectation of x given x tilde.
+21:51 - And so from that perspective, you want to follow the gradient.
+21:56 - And this particular version of the formula
+22:00 - is only true for Gaussians.
+22:03 - The other way to make things efficient
+22:07 - is to take random projections.
+22:10 - We still have time.
+22:10 - So another alternative way of coming up
+22:15 - with an efficient approximation to original score-matching loss
+22:21 - that does not involve traces of the Jacobians
+22:24 - is to basically take random projections.
+22:28 - So you can imagine at the end of the day, what we're
+22:30 - trying to do is we're trying to match the estimated vector
+22:34 - field to the true vector field.
+22:36 - And if these vector fields are really the same then
+22:41 - they should also be the same if we project them
+22:44 - along any kind of direction.
+22:47 - So you can take this direction and this direction,
+22:51 - and you can project the arrows along that direction.
+22:55 - And if the vector fields are the same then
+22:58 - the projections should match.
+23:02 - And so in particular if these projections are just
+23:04 - x's aligned, then individual components of these vectors
+23:08 - should match.
+23:08 -
+23:11 - And the idea is that working on the projection space
+23:16 - is going to be much more efficient because now it's
+23:18 - going to be a one-dimensional problem.
+23:21 - And so that's basically a variant
+23:26 - of the Fisher divergence, which we call the sliced Fisher
+23:30 - divergence, which is exactly what we had before.
+23:32 - But before comparing the data to the model gradients,
+23:38 - we project them along a random direction v.
+23:43 - So you randomly pick a direction v, and then at every data point,
+23:48 - you compare the true gradient and the estimated gradient
+23:52 - along this direction v. And note that after you take this dot
+23:58 - product, these are scalars.
+24:00 - So these are no longer vectors, they are scalars.
+24:04 - And it turns out you can still do integration by parts.
+24:08 - And you end up with an objective function that looks like this.
+24:13 - And it still involves the Jacobian,
+24:17 - but crucially now it involves basically
+24:19 - Jacobian vector products, which are basically
+24:23 - directional derivatives and are things
+24:25 - that you can estimate using backpropagation efficiently.
+24:28 - So the second term is just the usual thing.
+24:33 - It's efficient.
+24:33 - It's just the output of the network times dot
+24:37 - product with a random vector, so that's efficient to evaluate.
+24:41 - Now we have something that looks like this.
+24:43 - We have this Jacobian matrix left multiplied by this vector v
+24:48 - and right multiplied by the same vector v.
+24:51 - And it turns out that basically this thing is just
+24:54 - like a directional derivative and that's
+24:57 - something you can compute with backpropagation efficiently.
+25:00 - So if you think about it, this is the expression
+25:04 - we started with, which you can equivalently
+25:06 - write as the gradient of the dot product.
+25:10 - And that's something that you would compute like this.
+25:13 - So you have a forward pass that computes as theta, then
+25:19 - you take the dot product with v and that gives you a scalar.
+25:24 - Now you do a single backpropagation
+25:26 - to compute the gradient of that scalar with respect
+25:29 - to all the inputs.
+25:31 - And then you take another dot product to get back
+25:35 - the derivative or the quantity.
+25:39 - And so this can basically be done roughly
+25:42 - at the cost of a single backpropagation step.
+25:45 - The v is sampled from some distribution.
+25:49 - And let me see if I have it here.
+25:53 - So this is what it would look like.
+25:55 - So with sample data, for every data point,
+25:57 - you would randomly sample a direction
+26:00 - according to some distribution.
+26:03 - And then you just optimize this objective function,
+26:07 - which as we've seen is tractable to estimate
+26:10 - and it does not involve a trace of the Jacobian.
+26:14 - And there's a lot of flexibility in terms
+26:18 - of choosing this pv like how do you choose the directions.
+26:21 - And you can choose for example Gaussian or Rademacher vectors.
+26:26 - And they both work in theory.
+26:28 - Then the variance can vary, but basically, there's
+26:32 - a lot of flexibility in terms of choosing
+26:34 - these random directions.
+26:37 - Before you have to compute the partial derivatives
+26:39 - of every output with respect to every input.
+26:41 - So you need a d back props.
+26:44 - And here you can do a single one because it's basically
+26:46 - a directional derivative.
+26:47 - Basically, these are essentially unbiased estimators
+26:51 - of the original objective.
+26:52 - You can also think of it that way.
+26:54 - There is variance that you're introducing because you're
+26:57 - comparing projections of the vectors
+27:00 - instead of comparing the vectors fully,
+27:03 - which is what the original score-matching loss would do.
+27:08 - So that's the price you pay, basically.
+27:10 - And you can use variance reduction techniques
+27:12 - to actually make things more stable in practice.
+27:16 - Different distributions.
+27:18 - What you can do is you can take--
+27:20 - if you are willing to pay a little bit more computation
+27:24 - cost, you can take multiple random projections
+27:26 - per data point.
+27:28 - You can just try to match, not just
+27:31 - sample of v1, x1 along direction v1,
+27:34 - but you can take a bunch of them and then average them.
+27:38 - And so there is a natural way of reducing variance
+27:40 - by taking more projections, but then it becomes more expensive.
+27:43 - Eventually, if you take n projections, where
+27:46 - n is the dimensionality, and you compare
+27:48 - on every single coordinate, it goes back to the original one.
+27:52 - And you are free to choose something in between.
+27:54 - In practice, one projection works.
+27:57 - Here there is no noise.
+27:59 - The advantage of this is that you are actually
+28:01 - estimating the score of the data density as opposed
+28:04 - to the data density plus noise.
+28:06 - Yeah.
+28:06 -
+28:10 - And here you see some plots kind of showing
+28:14 - that if you do vanilla score matching, how long it
+28:17 - takes per iteration as a function of the data dimension.
+28:20 - It can go up to 300 to 400 dimensions
+28:22 - and then you run out of memory.
+28:24 - This was a few years ago, but it kind of
+28:26 - scales poorly linearly with respect to the dimension.
+28:29 - And if you have these sliced versions
+28:31 - they are basically constant with respect to the data dimension.
+28:35 - And in terms of PF model quality, it actually performs.
+28:41 - Not super important what this graph means,
+28:43 - but it's what you get with sliced versions
+28:45 - of score-matching matches.
+28:46 - It's pretty much what you would get
+28:48 - with the exact score-matching objective.
+28:52 - You still need to do the integration by parts trick.
+28:55 - This one you don't know it.
+28:56 - So the original loss would basically just at every x,
+29:00 - you take the dot product of the true gradient, the estimated
+29:03 - gradient, and then you square the difference.
+29:07 - You can't evaluate that loss because it
+29:10 - depends on the true gradient which you don't know.
+29:12 - But then you can do integration by parts
+29:14 - and you can rewrite it as this thing, which
+29:18 - is what we had before and it no longer depends
+29:21 - on the true score.

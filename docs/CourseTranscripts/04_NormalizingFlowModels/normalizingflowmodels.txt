@@ -1,0 +1,2693 @@
+00:00 -
+00:05 - SPEAKER 1: So far we've seen autoregressive models.
+00:07 - We've seen variational autoencoders,
+00:10 - where the marginal probability, marginal likelihood is
+00:13 - given by this mixture model, this integral over the latent
+00:17 - variables.
+00:18 - And we've seen that autoregressive models
+00:21 - are nice because you don't have to use variational inference.
+00:24 - You directly have access to the probability of the data
+00:26 - and you don't have to deal with these encoders and decoders.
+00:31 - And VAEs are nice because, while you get the representation z
+00:36 - and you can actually define pretty
+00:41 - flexible marginal distributions, you can generate in one shot.
+00:44 - So they have some advantages the other autoregressive
+00:47 - models don't have.
+00:49 - But the challenge with a latent variable model was that, well,
+00:53 - we cannot evaluate this marginal probability,
+00:56 - and so training was a pain and we have to come up with
+00:59 - the ELBO.
+01:00 - And so what flow models do is, it's
+01:03 - a type of latent variable model, kind of a VAE
+01:06 - that has spatial structure so that you
+01:08 - don't need to do variational inference
+01:10 - and you can train them in a more direct way.
+01:13 - So it's actually very efficient to evaluate
+01:16 - the probability of observed data x
+01:19 - even though you have latent variables.
+01:21 - And so, which means that you can train them
+01:23 - by maximum likelihood.
+01:26 - And so the kind of idea is that we
+01:33 - would like to have a model distribution
+01:35 - over the visible data, over the observed
+01:37 - data that is easy to evaluate and easy to sample from,
+01:42 - right, because then we can generate
+01:44 - efficiently at inference time.
+01:46 - And we know that there is many simple distributions that
+01:49 - would satisfy these properties, like a Gaussian distribution
+01:53 - or a uniform distribution, but what
+01:57 - we want is some kind of distribution that
+01:59 - has a complicated shape, kind of the one you see here.
+02:02 - So here the colors represent probability, density, mass.
+02:07 - And so if you have a Gaussian, it
+02:09 - has this relatively simple shape,
+02:11 - where all the probability mass is centered around the mean.
+02:14 - And so if you think about modeling images
+02:16 - with something like a Gaussian, it's
+02:17 - not going to work very well because there's only
+02:19 - going to be a single point and all the probability
+02:21 - mass is shaped around it.
+02:24 - The think about a uniform distribution,
+02:25 - again, it's not going to be very practical to model real data.
+02:30 - And you want something much more multi-modal,
+02:32 - something that looks like this, where you can have a probability
+02:35 - mass somewhere and then have no--
+02:38 - The probability decreases a lot, and then goes up, and then
+02:42 - decreases like you want complicated shapes for this p
+02:46 - theta of x, which is the same reason we were using mixtures
+02:51 - as one way of achieving this kind of complicated shapes
+02:54 - by taking a mixture of many simple distributions.
+02:59 - The way flow models do is, they instead
+03:02 - try to transform essentially simple distribution into more
+03:08 - complicated ones by applying invertible transformations.
+03:13 - And that's essentially kind of a variational autoencoder.
+03:19 - So it's going to be a very-- the same kind of generative model,
+03:24 - where you have a latent variable z that you sample from.
+03:28 - And that's, again, sampled from a simple prior distribution,
+03:31 - like a unit Gaussian, fixed Gaussian with fixed mean,
+03:36 - and some kind of, let's say, identity covariance.
+03:40 - And then you transform it in a VAE.
+03:44 - What you would do is, you would compute
+03:48 - the conditional distribution of x
+03:50 - given z by passing z through some two neural networks.
+03:54 - And what we've seen is that this is
+03:58 - one way of getting a potentially complicated
+04:01 - marginal distribution because of this mixture in behavior.
+04:04 - But you have this issue that, when you want to evaluate
+04:07 - the probability of one x, you have to go through all possible
+04:11 - z's to figure out which ones are likely to produce that
+04:15 - particular image, let's say, x'z that you have access to, right?
+04:21 - And this enumeration over all possible z's is the tricky part,
+04:26 - is the hard part.
+04:27 - And there could be multiple z's that produce the image
+04:31 - or even just finding which z is producing the--
+04:35 - is likely to have produced the image x that you have access to
+04:38 - is not easy.
+04:39 - And the way the VAEs get around this
+04:41 - is by using the encoder that is essentially trying to guess,
+04:45 - given the x which z's are likely to have produced the image
+04:49 - that you have access to.
+04:51 - And one way to get--
+04:54 - to try to get around the problem by design
+04:58 - is to construct conditionals such that inverting
+05:02 - them is easy.
+05:05 - And one way to do that is to apply a deterministic invertible
+05:12 - function to the latent variable z.
+05:15 - So instead of passing the z through these two
+05:17 - neural networks and then sampling from a Gaussian defined
+05:22 - by the neural networks, we directly transform the latent
+05:25 - variable by applying a single deterministic invertible
+05:30 - function.
+05:31 - And the reason this is good is that, if we do this, then
+05:35 - it's trivial to figure out what was the z--
+05:38 - what was the z to produce that x because we
+05:40 - know there is only one.
+05:41 - And the only thing you have to do
+05:43 - is you have to be able to invert the mapping.
+05:46 - So to the extent that by design these functions that we use
+05:50 - are invertible, and they're easy to invert hopefully,
+05:55 - and deterministic so that there's always only one z that
+05:59 - could have produced any particular x then
+06:01 - that solves the problem at the root
+06:05 - that we had when we were dealing with variational autoencoders.
+06:09 - And that's really the whole idea of this class
+06:13 - of generative models, called flow models, which
+06:16 - you can think of it as a VAE where the mapping from z to x
+06:20 - is deterministic and invertible, which makes, as we'll see,
+06:27 - learning much easier.
+06:29 - So that's going to be one of--
+06:30 - one of the-- that will come up, but that's a great observation,
+06:34 - that if we want this mapping to be invertible, then
+06:37 - we're sort of requiring z and x to have the same dimensionality.
+06:42 - And so one of--
+06:44 - one of the things you lose if you
+06:46 - do this is that there is no longer this idea
+06:48 - of a compressed representation because now z and x
+06:51 - end up having the same number of dimensions.
+06:54 -
+06:59 - OK, so that's kind of the high level motivation, the high level
+07:02 - idea.
+07:02 - Now, let's see how it's actually done in practice.
+07:06 - So just as-- and let's start with a simple refresher
+07:10 - on what happens if you take random variables
+07:13 - and you transform them through, let's say, invertible functions.
+07:18 - And so just to start, let's say that we
+07:20 - have a single continuous random variable x.
+07:25 - And you might recall that one way
+07:28 - to describe the random variable is
+07:30 - through the CDF, the cumulative density function, which
+07:34 - basically tells you for every scalar a
+07:36 - what is the probability that the random variable is less than
+07:39 - or equal to a.
+07:41 - And then the other way to describe the random variable
+07:43 - is through the PDF, which is just the derivative of the CDF,
+07:49 - all right.
+07:50 - And typically we describe random variables
+07:54 - by specifying a kind of functional form for this PDF
+08:00 - or CDF.
+08:01 - In the case of a Gaussian, it might look something like this.
+08:04 - You have two parameters, the mean and the standard deviation.
+08:07 - And then you get the shape of the PDF
+08:12 - by applying the function.
+08:15 - And no-- or it could be uniform, in which case,
+08:18 - the PDF would have this kind of functional form, where it's--
+08:23 - if it's uniform between a and b, then
+08:26 - the PDF is 0 outside that interval
+08:30 - and it's 1 over the length of the interval when x is between a
+08:35 - and b.
+08:36 - And same thing holds when you have random vectors.
+08:42 - So if you have a collection of random variables,
+08:45 - we can describe this collection of random variables
+08:49 - through the joint probability density function.
+08:52 - And again, an example would be if these random variables are
+08:56 - jointly distributed as a Gaussian distribution,
+08:59 - then the PDF would have that kind of functional form.
+09:03 - So now, x is a vector, so it's a sequence of numbers.
+09:07 - And you can get the probability density at a particular point
+09:10 - by evaluating this function.
+09:13 - And again, the problem here is that this kind of simple PDFs,
+09:18 - they are easy to evaluate, they are easy to sample from,
+09:21 - but they are not very complicated.
+09:23 - The shape is pretty simple.
+09:25 - I mean, the probability only depends on how far
+09:28 - x is from this mean vector mu.
+09:32 - And that determines the shape, and you
+09:34 - don't have many parameters to change the shape of this--
+09:38 - of this function.
+09:38 -
+09:41 - OK, now, let's see what happens when
+09:44 - we transform random variables by applying functions to them.
+09:49 - So let's say that Z is a uniform random variable between 0 and 2
+09:55 - and PZ is the density of this random variable.
+09:59 - Now, what is the density PDF evaluated at 1?
+10:05 - Yeah, so 1/2, and it's a sanity check.
+10:08 - If you integrate over the PDF over the interval 0 to 2,
+10:11 - you get 1.
+10:12 - That's what you would want.
+10:15 - Now, let's say that we define a new random variable X
+10:19 - by multiplying it by 4.
+10:22 - And so now we have two random variables, X and Z.
+10:24 - And X is just 4X.
+10:27 - Now, let's say that we want to evaluate
+10:29 - the-- we want to figure out what is
+10:31 - the PDF of this new random variable
+10:33 - that we've constructed just by multiplying by 4.
+10:36 - And one thing you might be tempted to do
+10:38 - is to do something like this.
+10:41 - And this is going to be wrong.
+10:42 - So the probability, let's say, if you want to evaluate it at 4,
+10:46 - is the probability that X takes value 4.
+10:50 - And we know that X is 4Z.
+10:52 - And so this is kind of the probability
+10:54 - that Z takes value 1, which is what we had before,
+10:58 - which is 1/2.
+11:00 - And this is wrong.
+11:02 - This is not the right answer.
+11:03 - It's pretty clear that 4Z's is going
+11:06 - to be a uniform random variable between 0 and 8.
+11:09 - And so the density is actually 1/8
+11:12 - because it has to integrate to 1 over the integral--
+11:15 - over the interval, right?
+11:17 - So this replacing change of variables inside the PDF
+11:23 - calculation is not correct.
+11:26 - And what you have to do is you have
+11:28 - to use the change of variable formula, which you might
+11:31 - have seen in previous classes.
+11:34 - The idea is that when you apply some invertible transformation,
+11:40 - and so you define Z, X as f of Z.
+11:48 - F is invertible, and so equivalently you
+11:51 - can get Z by applying the inverse of f to X, which
+11:55 - we're going to denote h.
+11:57 - So h is the inverse of f, or h applied
+12:01 - to f is the identity-- is the identity function.
+12:05 - And if you want to get the density of this random variable
+12:09 - that we get by transforming Z through this invertible mapping,
+12:14 - it is a kind of p of z evaluated at h of X. So
+12:18 - that's the kind of thing we're doing before,
+12:20 - but you have to rescale by the absolute value of the derivative
+12:24 - of this function h.
+12:27 - And so in the previous example, let's say,
+12:31 - the function is just multiplying by 4.
+12:35 - And so if you were to apply the formula, in this case,
+12:38 - the inverse function is just dividing by 4.
+12:43 - And then the derivative of h is just 1/4.
+12:47 - It's just a constant.
+12:49 - And so if we want to evaluate the probability
+12:51 - of this transformed random variable evaluated at 4,
+12:54 - what you do is you evaluate the probability of Z at 4 over 4,
+13:00 - which is 1, but then you have to multiply by this scaling
+13:04 - factor, which is the derivative evaluated at 4, which is--
+13:08 - or the absolute value of the derivative.
+13:10 - And this is giving us the right answer, 1/8.
+13:15 - So this part here, Pz of 1, is kind of the naive thing
+13:21 - we try to do that was wrong.
+13:23 - And it becomes right if you account for this derivative of h
+13:28 - term that is rescaling things.
+13:32 - So then we get 1/8.
+13:34 - And a more interesting example could be something like,
+13:38 - if instead of multiplying by 4, we take the--
+13:41 - we apply an exponential function.
+13:44 - So we have Z, which again, is something simple,
+13:47 - a uniform random variable between 0 and 2.
+13:50 - But now we define X as the exponential of Z.
+13:54 - And now we can work out what is the density
+13:56 - of this new random variable that we get through this--
+13:59 - through this transformation.
+14:01 - What is the inverse of the exponential function?
+14:06 - The log, right?
+14:08 - So h of X is the log.
+14:10 - And then we can apply.
+14:12 - If you want to evaluate the density
+14:14 - of this random variable X at a particular point, what we do
+14:18 - is we evaluate the density of Z at the inverse,
+14:21 - and then we scale by the derivative.
+14:25 - So we take X, we invert it to get the corresponding Z.
+14:30 - And there is only one Z that maps to that
+14:32 - X. We evaluate the density of that Z
+14:35 - under the prior distribution p of z.
+14:38 - And then we always rescale by this--
+14:40 - by this derivative.
+14:43 - And so in this case, p of z is uniform,
+14:47 - so it's just the 1 1/2 everywhere because it's uniform
+14:54 - between 0 and 2.
+14:55 - And then the derivative of the logarithm
+14:58 - is 1/X. And so now we see that the PDF
+15:02 - of this random variable X has this more interesting shape.
+15:07 - It's 1/2 X.
+15:09 - So we started out with something pretty simple,
+15:11 - just a constant basically.
+15:13 - And by applying a invertible transformation,
+15:16 - we got a new random variable which
+15:17 - is a more interesting kind of shape.
+15:19 -
+15:23 - Again, hopefully this is just a recap of formulas
+15:27 - that you've seen before, but this
+15:29 - is kind of a change of variable that we're doing here.
+15:32 - And you have to account for this derivatives
+15:38 - when you apply a change of variables here.
+15:42 - Now, let's see.
+15:44 - This is the formula for the 1D case.
+15:47 - And you can see a proof actually.
+15:50 - It's actually pretty simple.
+15:53 - We can work out the level of the CDFs.
+15:55 - So the probability that this new transformed random variable
+15:58 - is less than a particular number is just
+16:00 - the CDF evaluated at one point.
+16:03 - Now, we know that X is just f of Z. So the probability
+16:07 - that X is less than or equal to some number is
+16:10 - the probability that f of Z is less than
+16:12 - or equal to that number.
+16:14 - Then if you apply the inverse of f
+16:17 - on both sides of this inequality, which
+16:19 - you can because it's monotonic, it's
+16:22 - a monotonic function, then you get
+16:24 - that expression, which is just the CDF of Z evaluated
+16:29 - at h of x.
+16:32 - And now, just we know that the PDF is
+16:35 - just the derivative of the CDF.
+16:39 - So if you want to get the density of this random variable,
+16:43 - you just take the derivative of the left-hand side
+16:45 - or equivalently you can take the derivative of this expression
+16:49 - that we have here.
+16:50 - And then you just use chain rule.
+16:52 - So you get exactly what we had before,
+16:54 - where you need to evaluate the original variable at h of x.
+17:00 - You take x you invert it, you evaluate the density
+17:03 - at the corresponding Z point.
+17:05 - But then because of the chain rule,
+17:08 - you have to multiply by h prime.
+17:10 -
+17:15 - That's where the format comes from.
+17:17 - And you can see, yeah, you need an absolute value because I
+17:20 - guess it could be decreasing.
+17:22 -
+17:25 - And now, there's an equivalent way
+17:31 - of writing the same expression, which will turn out
+17:34 - to be somewhat useful.
+17:37 - If you want to compute the derivative of the inverse
+17:39 - of a function, you can actually get it
+17:43 - in terms of the derivative of the original function.
+17:48 - There is this simple calculus formula
+17:52 - that you might have seen before.
+17:53 - So if you want to compute the derivative of the inverse
+17:56 - of a function, which is h prime, which is what we have here,
+17:58 - you can get it in terms of the derivative of f,
+18:01 - which is the original function evaluated at the inverse point.
+18:06 - So an equivalent way of writing what we have here
+18:10 - is that you can just evaluate the original PDF
+18:15 - at the inverse point.
+18:17 - And then you can multiply by 1 over f prime of z,
+18:20 - where f is the forward map.
+18:23 - So you can basically either write it
+18:25 - in terms of the derivative of the inverse or you can write it
+18:28 - in terms of the derivative of the forward map
+18:30 - and you just do one over instead of--
+18:33 - these two things are the same.
+18:35 - OK, so that's the easy thing.
+18:37 - And now let's see what happens when we transform random vectors
+18:42 - because if you think about VAE, we
+18:45 - want to transform random vectors into random vectors
+18:48 - so we need to understand what happens if we apply
+18:52 - an invertible transformation to a random variable that
+18:55 - has a simple distribution.
+18:57 - So let's say our random variable is a--
+19:00 - our random vector Z is now uniform over this unit
+19:06 - hypercube.
+19:07 - So we have n dimensions, and each one of them is uniform.
+19:14 - And we want to understand what happens if we
+19:16 - transform that random variable.
+19:19 - And as the-- just to get some intuition,
+19:22 - we can start with linear transformations
+19:24 - just like before.
+19:25 - We started by saying multiply by 4 and see what happens.
+19:30 - We can do the same thing, and instead
+19:32 - look at what happens if we linearly
+19:33 - transform a random vector, which means that we basically
+19:37 - just multiply it by a matrix A.
+19:41 - And we want this transformation to be invertible,
+19:44 - which in this case just means that the matrix itself
+19:47 - has to be invertible so that you can go-- there
+19:50 - is a unique correspondence between X and Z.
+19:54 - And we're going to denote the inverse of h with W.
+20:02 - And the question is, how is X distributed?
+20:05 -
+20:08 - And what happens if you start with basically uniform
+20:14 - and then you pass it through a matrix?
+20:16 - You multiply it by a matrix, you get another random variable.
+20:19 - How is that distributed?
+20:21 - You see that A is linear.
+20:23 - It's going to stretch things somehow.
+20:27 - And essentially what happens is that it's mapping the hypercube
+20:33 - to a parallelotope, which is just
+20:37 - kind of like a parallelogram.
+20:39 - And so in 2D it would look something like this.
+20:42 - So you have a uniform.
+20:44 - So if n is 2, then you have a Z is
+20:47 - distributed uniformly between 0 and 1 in both directions.
+20:51 - So it's less uniform in this square.
+20:54 - And then what happens if you multiply it
+20:55 - by this matrix A, which is just a, b, c, d?
+20:58 - You're going to get this parallel-- you're
+21:00 - going to get a uniform distribution
+21:02 - over that parallelogram.
+21:04 - You can see that the vertices correspond
+21:07 - to what you would get.
+21:08 - If you were to multiply the matrix by 0, 0,
+21:11 - you're going to get zero 0, 0.
+21:12 - If you multiply this matrix by 1, 0, this corner,
+21:16 - you're going to get this corner a, b.
+21:17 - And if you multiply by 0, 1, you get this corner c, d.
+21:21 - And if you multiply by 1, 1, you get this corner up here,
+21:24 - and then it's all the other points.
+21:27 - OK.
+21:27 - So now we have some intuition for what happens here, Z, X,
+21:33 - which is what we got in multipl-- while multiplying
+21:36 - A by Z. It should be a uniform random variable
+21:39 - over this red area essentially.
+21:43 - And so what is the density?
+21:46 - Well, we need to figure out what is the area
+21:48 - or the volume of that--
+21:51 - of that object, because if it's uniform,
+21:53 - then it's just going to be 1 over the total area of that--
+21:57 - of that parallelogram, of this red thing here.
+22:01 - And I don't know if you might have seen this,
+22:04 - but you can get the area of the parallelogram
+22:07 - by basically computing the determinant of the matrix.
+22:12 - And here, there is a geometric proof
+22:15 - showing that indeed if you can get
+22:18 - the area of the parallelogram by taking
+22:20 - the area of this rectangle and subtracting off
+22:25 - a bunch of parts, you get the that expression.
+22:28 - So this is the determinant, a, d minus c, b.
+22:32 - And that's the area of the parallelogram.
+22:36 - And so what this means is that X is
+22:40 - going to be uniformly distributed
+22:42 - over this parallelotope of area absolute value
+22:46 - of the determinant of A, which means that the density of X
+22:52 - is going to be the density of the original variable evaluated
+22:56 - at the inverse.
+22:57 - And then, again, we have to basically divide
+23:00 - by the total area, which is the determinant of--
+23:05 - the absolute value of the determinant of this matrix.
+23:09 - All right, and so what equivalently because--
+23:13 -
+23:16 - if W is the inverse of A, then the determinant of W
+23:20 - is going to be 1 over the determinant of A.
+23:22 - And so you can equivalently, just like before,
+23:25 - write it in terms of the derivative of the inverse
+23:28 - of the mapping defined by A, which is
+23:33 - just the determinant of W here.
+23:36 - And so you take X, you map-- you should take a point in here,
+23:40 - you map it back to the unit cube by multiplying it by W,
+23:46 - which gives you the corresponding X--
+23:48 - the corresponding Z, sorry, you evaluate the density.
+23:51 - And then you have to take into account
+23:53 - the fact that basically the volume is stretched by applying
+23:57 - this linear transformation.
+23:59 - And so things have to be normalized,
+24:01 - and so you have to divide by the total area
+24:04 - to get a uniform random variable.
+24:06 - And just like before, you have to account by basically
+24:11 - by how much the volume is shrinked or stretched when you
+24:15 - apply a linear transformation.
+24:17 - The question is, does it only apply to a unit hypercube?
+24:20 - No.
+24:20 - It applies for this formula here as general.
+24:24 - Whatever is the density you begin with,
+24:27 - as long as you apply an invertible transformation,
+24:30 - you can get the density of the Wx--
+24:34 - or WZ, sorry, I think I have here--
+24:36 - yeah, or AZ.
+24:38 - So if Z has an arbitrary density Pz, you can get the density of X
+24:43 - through this Formula.
+24:45 - And in which case Pz might not be uniform,
+24:48 - it could be a Gaussian or something,
+24:50 - this still can still be used.
+24:52 -
+24:56 - So again, we are getting towards this idea
+24:58 - of starting from something simple, the Z, transforming it,
+25:02 - and then being able to somehow evaluate
+25:05 - the density of the transformed random variable.
+25:09 - So recall, this is kind of a VAE.
+25:12 - We have a latent variable Z. We have the observed variable X.
+25:15 - But now through these formulas, we
+25:17 - are able to evaluate the marginal probability of a data
+25:21 - point without having to compute integrals,
+25:23 - without having to do variational inference.
+25:25 - We get it through this calculus formula--
+25:29 - by these formulas basically.
+25:32 - And the key idea is that given an X,
+25:35 - there is only one corresponding Z.
+25:37 - And so it's just a matter of finding it by multiplying it
+25:40 - by X, by W in this case, and then taking
+25:43 - into account the fact that the geometry changes a little bit.
+25:47 -
+25:51 - And now, and notice, yeah, this is the same--
+25:57 - not surprisingly, this is strictly
+26:00 - more general than what we had before in the 1D case,
+26:03 - but it's kind of the same thing.
+26:05 - Yeah, so the question is, is this P of x, is this a PDF?
+26:10 - If you integrate over all possible values of X,
+26:12 - do you get 1?
+26:13 - And you have-- basically the reason you have to apply--
+26:17 - you have to divide by the determinant is to make sure that
+26:20 - it is indeed uniform because if you were not to do that,
+26:25 - then you would--
+26:26 - it's kind of like the wrong calculation
+26:29 - that we did at the beginning, where you just map it back
+26:31 - and you evaluate.
+26:32 - But to make sure that things are normalized,
+26:34 - you have to take into account the fact
+26:36 - that the area of that parallelogram
+26:38 - might grow a lot by applying certain kinds of A's or it
+26:42 - might shrink a lot if you apply very small coefficients.
+26:47 - And so you have to renormalize everything
+26:49 - through this determinant.
+26:51 - That's why they are called normalizing flows
+26:53 - because this change of variable formula
+26:55 - takes care of the normalization for you
+26:57 - and guarantees that what you get is indeed a valid PDF.
+27:01 -
+27:07 - Cool.
+27:07 - Now, we know how to do these things
+27:12 - for linear transformations.
+27:15 - What we want to do is we want to use deep neural networks.
+27:18 - So we need to understand what happens if we apply nonlinear
+27:25 - transformations--
+27:26 - invertible nonlinear transformations.
+27:30 - So now, instead of just multiplying by a matrix,
+27:34 - we want to feed X into some kind of neural network
+27:37 - and get an output Z. And assuming
+27:40 - that somehow we are able to construct a neural network that
+27:43 - is invertible, we still need to understand
+27:45 - how that changes the distribution of the variables.
+27:48 - So if you have a simple random variable Z,
+27:51 - you feed it through a neural network f,
+27:54 - the output is some other random variable X.
+27:57 - And we need to somehow understand
+27:59 - what is the PDF of that object.
+28:03 - And it turns out that it's basically the same thing,
+28:06 - that if you understand what happens in the linear case,
+28:10 - all you have to do is to basically linearize
+28:12 - the function by doing essentially
+28:14 - a Taylor approximation.
+28:15 - So you compute the Jacobian of the function,
+28:18 - and then it's the same formula.
+28:20 - It's the determinant of the Jacobian,
+28:21 - which is a linearized approximation to the function.
+28:26 - And so, again, this is probably something
+28:28 - you might have seen in some calculus class,
+28:31 - but it's essentially the same formula.
+28:34 - So if you have, again, a random variable X that
+28:39 - is obtained by feeding a simple random variable
+28:42 - through some kind of invertible neural network f,
+28:45 - you can work out the density of the output
+28:48 - of the neural network, which is X, by basically computing--
+28:52 - by inverting it and computing the density of the input that
+28:56 - generated that particular output.
+28:59 - And as usual, you have to account
+29:01 - for how much the volume is stretched locally,
+29:07 - which is just the determinant of the Jacobian
+29:12 - of the inverse mapping.
+29:15 - Just like before, we were always looking at the derivative
+29:19 - of the inverse mapping.
+29:20 - In the 1D case, the multivariate extension
+29:25 - is the determinant of the Jacobian.
+29:28 -
+29:30 - And so just, again, as a sanity check,
+29:35 - recall the simple formula that we
+29:36 - proved was something like this, which
+29:39 - is exactly what you would get if f is just a scalar function.
+29:46 - So instead of having determinant of Jacobian, you just have--
+29:51 - or absolute value of the determinant of the Jacobian,
+29:53 - you just have absolute value of the derivative
+29:56 - of the inverse of the function.
+29:57 -
+30:02 - And let's see.
+30:05 - And just like before, if you have an invertible matrix,
+30:10 - the determinant of the inverse is the--
+30:14 - it's one over the determinant of the original matrix.
+30:19 - And so you can equivalently write things,
+30:22 - just like before, in terms of the Jacobian
+30:24 - of the forward mapping.
+30:26 - So here things are--
+30:28 - if you go from Z to X, then the formula basically
+30:33 - involves the Jacobian of the mapping from X
+30:37 - to Z. You can also write things in terms
+30:43 - of the Jacobian of the mapping and, just like before,
+30:48 - you just do one over instead.
+30:52 - You can also compute directly the Jacobian of f,
+30:55 - and then you compute the determinant of that,
+30:58 - and then you do one over.
+30:59 - And that's the same thing, just like before.
+31:02 -
+31:05 - Remember, before we had the formula where you could write
+31:07 - things in terms of h or you could write things
+31:10 - in terms of f, and this is the same thing.
+31:14 - But this might be computationally, as we'll see,
+31:18 - sometimes it's easier depending on whether you model--
+31:23 - when you start using neural networks to model f,
+31:26 - it might be more convenient to use one or the other.
+31:28 - And that's the reason these formulas are handy.
+31:33 - This is just math so far.
+31:35 - We haven't really built a generative model.
+31:36 - But yeah, you should think of the Z
+31:38 - as having some simple distribution
+31:41 - and then you pass them through a decoder f, which is now
+31:45 - an invertible transformation, and then
+31:47 - you get your samples, X images out.
+31:51 -
+31:55 - And now you can evaluate the density
+31:58 - over the images, which is what you
+31:59 - need if you want to do maximum likelihood through this formula.
+32:05 - So you don't have to do variational inference,
+32:06 - you don't have to compute elbows,
+32:08 - you don't have to use an encoder to the extent
+32:11 - that you can invert the mapping by construction.
+32:14 - Then you're done.
+32:17 - You just need to invert and take into account this changing
+32:22 - volume essentially given by the linearized transformation.
+32:27 - The question is, do they have to have the same dimension?
+32:29 - Are they-- do they need to be continuous?
+32:31 - So yeah, they need to be to have the same dimension, which
+32:33 - is what we were discussing before if you
+32:35 - want things to be invertible.
+32:37 - How does it apply to images?
+32:39 - Well, you can think of images as being continuous.
+32:41 - I guess the kind of measurements that you
+32:44 - get are often discrete because you have maybe
+32:47 - some kind of fixed resolution.
+32:50 - But you can pretend that things are continuous
+32:53 - or you can add a little bit of noise to the training data
+32:58 - if you want.
+33:00 - It's basically not a problem, and you can train these models
+33:03 - on images.
+33:04 - If f is not really invertible, then the formula doesn't quite
+33:08 - work and you're back in VAE land, which basically means
+33:12 - that there could be multiple Z's that map to the same X.
+33:16 - And so if you want to compute the probability of having
+33:18 - generated this particular X, you're no longer guaranteed
+33:22 - that there is only one Z, you just
+33:23 - have to compute it and apply the formula.
+33:25 - You would still have to work through all the possible Z's
+33:29 - that produced that X.
+33:32 - And people have looked at extensions
+33:33 - of these models, where maybe you're
+33:35 - guaranteed that there is only a up to K. It's almost invertible.
+33:40 - If you know all the possible-- all you have to know
+33:43 - is basically all the possible X's
+33:45 - that could have produced-- all the possible Z's that could
+33:47 - have produced any particular X.
+33:50 - As long as you construct things such
+33:52 - that that's always the case, then
+33:54 - you can still apply similar tricks.
+33:56 - But in general if there could be a lot, if it's
+33:59 - very-- it's highly non-invertible, then
+34:02 - you're back in VAE land.
+34:03 - And then you need some kind of encoder that guesses,
+34:05 - that inverts the function for you,
+34:08 - and you have to train them jointly so that the encoder is
+34:11 - doing a good job, but inverting the decoder.
+34:14 - And so then you might as well use the ELBO.
+34:17 -
+34:22 - Cool.
+34:23 - And just let's see one example just worked out
+34:27 - what that actually means, just to be a little bit
+34:29 - more concrete.
+34:30 - You might imagine that you have the prior.
+34:34 - That's just two random variables, Z1 and Z2,
+34:37 - with some kind of joint density.
+34:40 - Maybe it could be Gaussian.
+34:41 -
+34:44 - And then we have this invertible transformation.
+34:46 - And this is a multivariate function,
+34:50 - two inputs, two outputs.
+34:53 - So you can, for example, denote it
+34:54 - in terms of two scalar function U1 and U2.
+34:59 - So each one of them takes two inputs and map it to one scalar.
+35:04 - So it's multivariate, two inputs, two outputs.
+35:08 - And we're assuming that these things are invertible.
+35:11 - So there is an inverse mapping v, which always maps you back.
+35:15 - And again, it's two inputs, two outputs in this case.
+35:21 - And then we can define the outputs.
+35:24 - So if you take this simple random variables Z1 and Z2
+35:27 - and you feed them through this neural network, which
+35:30 - takes two inputs and produces two outputs,
+35:33 - you're going to get two random variable, X1
+35:36 - for the first output of the network
+35:38 - and X2 for the second output of the network
+35:41 - just by applying U1 and U2.
+35:45 - And similarly, you can go back.
+35:49 - Given the outputs, you can get the inputs
+35:52 - by using these v functions.
+35:55 - Two inputs, two outputs again.
+35:58 - And what you can try to do is, you
+36:00 - can try to get the density over the outputs
+36:03 - of this neural network U.
+36:06 - So how do you figure out what is the density at X1 and X2
+36:12 - when these random variables are obtained by transforming Z
+36:16 - through some neural network u?
+36:19 - And it's usually-- it's always the same thing, where
+36:23 - what you do is you take the outputs, which are X1 and X2,
+36:26 - you invert the network.
+36:28 - So you figure out which were the two inputs that produced
+36:31 - the outputs that we have.
+36:33 - And then you evaluate the density, the original density,
+36:36 - the input density at those points.
+36:39 - This is the same calculation that we did,
+36:43 - the wrong calculation that we did at the beginning.
+36:45 - Just invert and evaluate the original density
+36:49 - at the inverted points.
+36:50 - And then as usual, you have to fix things
+36:53 - by looking at how the volume is stretched essentially locally.
+37:00 - And what you would do in this case,
+37:01 - is you would get the absolute value
+37:04 - of the determinant of the Jacobian of the inverse mapping.
+37:09 - The inverse mapping is v. The Jacobian
+37:12 - is this matrix of partial derivatives.
+37:15 - So we have two outputs, two inputs.
+37:18 - So you have four partial derivatives
+37:23 - that you can get, first output with respect
+37:25 - to the first input, first output with respect
+37:28 - to the second input, second output with respect
+37:31 - to the first input, and so forth.
+37:35 - That's a matrix.
+37:36 - You get the determinant of that matrix,
+37:38 - you get the absolute value, and that gives you the density
+37:41 - that you want.
+37:41 -
+37:45 - To what extent you can compute that, you
+37:47 - have a way of evaluating densities for the outputs.
+37:52 - Or equivalently, you can do it in terms
+37:55 - of the Jacobian of u, which is the network that you
+37:58 - use to transform the simple variable.
+38:00 - And so, again, you can evaluate it directly at the--
+38:04 - at the Z's, the corresponding inputs, and then you
+38:08 - apply this--
+38:10 - the Jacobian of the other-- the mapping in the other direction.
+38:14 -
+38:18 - And we'll see that sometimes one versus the other
+38:21 - could be more convenient computation.
+38:24 - The question is, when are flow models suitable?
+38:26 - And flow models are pretty successful.
+38:28 - In fact, you can even think of diffusion models
+38:31 - as a certain kind of flow model.
+38:34 - And if you want to evaluate which diffusion models are state
+38:37 - of the art right now for images, video, speech,
+38:40 - there is an interpretation of diffusion models as flow models,
+38:44 - infinitely deep flow models.
+38:46 - And these formulas here are what you need-- what you use to--
+38:51 - or an extension of the formula is basically
+38:54 - what you use to evaluate likelihoods in diffusion models.
+38:58 - So there is going to be two interpretations of them.
+39:01 - And flow models help you if you want to evaluate likelihoods,
+39:05 - because if you have-- if you think of it as a stack VAE,
+39:07 - we don't have likelihoods.
+39:09 - If you want likelihoods, then you
+39:10 - can think of them as flow models.
+39:12 - And then you can get likelihoods through exactly this form.
+39:15 - So the question is, yeah, how do you--
+39:18 - I guess it seems like we need to do a bunch of things.
+39:21 - You need to be able to invert the function.
+39:23 - You need to be able to compute the Jacobian.
+39:27 - You need to get the determinant of the Jacobian, which
+39:29 - in general the determinant of a matrix
+39:31 - is kind of an n-cube operation.
+39:34 - So what's going to come next is how you parameterize functions
+39:40 - with neural networks that have the properties we
+39:42 - want so they're easy to invert and they give--
+39:47 - it's easy to compute Jacobians and it's
+39:48 - easy to compute determinant of Jacobians.
+39:52 - The pure version of a diffusion model
+39:54 - would be defining pixel space.
+39:55 - And the latent variables have the same dimension as the--
+39:59 - as the inputs.
+40:00 - And that's why you can think of it as a flow model.
+40:03 - Yeah, so the question is, can you still think of them
+40:05 - as latent variables?
+40:06 - Are-- you-- I mean, it is a latent variable to some extent,
+40:11 - but then it has the same dimensionality so it doesn't
+40:13 - really compress in any way.
+40:16 - It has a simple distribution.
+40:18 - It is distributed in a simple form which
+40:21 - is desirable to some extent.
+40:23 - But it's really more like a change of variables.
+40:25 - It's like you're measuring things in pixels or meters,
+40:31 - and then you change and you start measuring things in feet.
+40:35 - But it's not really changing anything.
+40:37 - You're just really changing the units of measure in some sense.
+40:41 - At least if you were to do just linear scaling,
+40:43 - that would just be changing the units of measure.
+40:45 - Here, you are doing nonlinear, so you're
+40:47 - changing the coordinate system in more complicated ways,
+40:51 - but there is no loss of information.
+40:53 - Everything is invertible.
+40:55 - And so it's really just looking at the data
+40:57 - from a different angle that makes things
+41:00 - more simpler to model, because if you start
+41:04 - looking at things through the lens of f inverse,
+41:10 - then things become Gaussian.
+41:11 - And so somehow by using the right units
+41:15 - of measure or by looking at the-- by changing
+41:18 - the axes in the right way and stretching them
+41:20 - in the right way, things become much easier to model.
+41:24 - And so that's a better way to probably think what
+41:26 - flow models are really doing.
+41:28 - The question I guess is whether this can be applied
+41:30 - to discrete or whether--
+41:32 - yeah, so there are extensions of this ideas to discrete,
+41:37 - but then you lose a lot of the mathematical-- a lot
+41:39 - of the mathematical and computational advantages
+41:42 - really rely on continuity.
+41:44 - So people have looked at--
+41:46 - I mean, the equivalent of an invertible mapping in a discrete
+41:50 - space would be some kind of permutation-- some kind of--
+41:54 - yeah, kind of a permutation essentially.
+41:56 - And so people have tried to discover ways to permute things
+42:03 - in a way that makes them easier to model,
+42:04 - but you lose a lot of the mathematical structure.
+42:07 - And so it's not easy to actually do.
+42:10 - After you've trained a model, then you
+42:12 - can certainly discretize.
+42:14 - But for training, you really want
+42:16 - to think of things as being continuous.
+
+
+0:00 -
+00:05 - SPEAKER: The plan for today is to continue talking
+00:08 - about normalizing flow models.
+00:11 - So recall that in the last lecture,
+00:15 - we've introduced this idea of building a latent variable
+00:19 - model that will allow us to evaluate likelihoods exactly.
+00:24 - So without having to rely on variational inference.
+00:27 - And so it's going to be similar to a variational autoencoder
+00:32 - in the sense that there's going to be two sets of variables.
+00:35 - There's going to be observed variables x and latent variables
+00:39 - z.
+00:40 - And the key difference is that the relationship
+00:43 - between these two sets of random variables is deterministic.
+00:47 - So in a VAE, you would say sample x
+00:52 - given z by using some simple distribution,
+00:56 - like a Gaussian where the parameters of x given z
+00:59 - might depend on the particular value of the latent variables.
+01:02 - In a flow model, the relationship
+01:05 - is deterministic and invertible.
+01:07 - So you obtain x by applying this transformation, which
+01:12 - we denote f theta here.
+01:15 - And because the mapping is invertible,
+01:17 - you can also go back.
+01:19 - So inferring the latent variables given the observed one
+01:24 - only requires you to somehow be able to compute
+01:28 - the inverse of this mapping.
+01:30 - And here we are denoting these mappings f theta
+01:33 - because they are going to be parameterized
+01:35 - using neural networks.
+01:37 - And what we'll see today is that we're
+01:39 - going to think about ways to parameterize
+01:43 - this kind of invertible transformations
+01:45 - using neural networks and then learn them
+01:47 - from data, essentially.
+01:50 - And the nice thing recall of using
+01:54 - an invertible transformation is that the likelihood
+01:58 - is tractable.
+01:59 - So you can evaluate the probability
+02:02 - that this particular model generates
+02:04 - a data point x by essentially using
+02:07 - the change of variable formula, which is fairly intuitive,
+02:11 - especially the first piece is very intuitive.
+02:13 - You're saying if you want to evaluate
+02:15 - the probability of generating an image let's say x, what you do
+02:19 - is you invert to compute the corresponding z.
+02:23 - And then you evaluate how likely that z
+02:25 - was under the prior, which is this distribution pz.
+02:30 - And then recall that this is not enough.
+02:34 - If you just do that, you're not going to get a valid probability
+02:37 - density function to get something that is normalized.
+02:41 - So it integrates to 1 if you go through all possible xs.
+02:45 - You have to rescale things by this absolute value
+02:49 - of the determinant of the Jacobian of the inverse mapping.
+02:54 - And that's basically telling you intuitively
+02:58 - what you do is you linearize the function locally
+03:01 - by looking at the Jacobian.
+03:04 - And then the determinant of the Jacobian tells you how much
+03:08 - or how little that transformation expands
+03:13 - or shrinks like a unit volume around the data point x.
+03:18 - And so it's very similar.
+03:19 - Remember, we worked out the example of the linear mapping
+03:22 - in the last lecture where we define a random variable
+03:26 - by transforming a simple random vector through
+03:32 - by multiplying it by a matrix.
+03:34 - Essentially this is what's going on here.
+03:36 - And you have the same expression.
+03:39 - And so the key thing to note is that this
+03:42 - can be computed exactly.
+03:45 - And basically without introducing any approximation
+03:51 - to the extent that you can compute these things.
+03:53 - You can invert the mapping, you can compute the determinant
+03:56 - of the Jacobian, you can do those things,
+03:58 - then you can evaluate likelihoods exactly.
+04:01 - So you don't have to rely on variational inference
+04:03 - where you had to use this encoder to try to guess the z
+04:08 - given an x.
+04:09 - And you had to do that integral because there
+04:12 - is many possible zs that could give you any given x.
+04:15 - So you don't have to do any of this.
+04:17 - And so this is as nice as having something
+04:20 - like an autoregressive model where
+04:22 - you can evaluate likelihoods exactly just
+04:24 - using this equation.
+04:27 - And one of the various limitations
+04:33 - of this kind of model family is that x and z
+04:38 - need to have the same dimensionality.
+04:40 - And so that's different from a variational autoencoder,
+04:43 - where we've seen that z could be very low dimensional and you can
+04:47 - use it to discover some compact representation of the data ,
+04:52 - that's no longer possible in a flow model,
+04:55 - because for the mapping to be invertible,
+04:58 - z and x need to have the same dimensionality.
+05:03 - Cool.
+05:03 - So now how do we actually do this?
+05:07 - I mean, how do we turn this math, this general idea
+05:11 - into a model that you can actually use in practice?
+05:16 - Well, the idea is the usual story
+05:19 - like in deep learning is to combine
+05:23 - relatively simple building blocks to define
+05:26 - flexible architectures.
+05:28 - And so a normalizing flow is essentially a generative model
+05:34 - based on what we are going to use essentially neural networks
+05:38 - to represent these mapping, f theta,
+05:40 - which is really the only thing.
+05:42 - And you have the prior over z, and the f theta
+05:44 - mapping, that's the only thing you can really change.
+05:47 - And It's called a normalizing flow
+05:50 - because the change of variable formula
+05:52 - gives us a normalized density if you
+05:54 - account for the determinant of the Jacobian.
+05:58 - And it's called a flow, exactly what
+06:00 - I was saying because it's like this deep learning
+06:02 - idea of defining the mapping that we need
+06:06 - by composing individual blocks, which
+06:10 - could be relatively simple.
+06:12 - So we're going to essentially define an architecture where
+06:19 - there's going to be multiple layers of invertible mappings
+06:24 - where we essentially start with a random vector z0, which could
+06:31 - be let's say described by the prior, a Gaussian or something
+06:35 - like that.
+06:36 - And then what we do is--
+06:39 - or it could even be, Yeah, depending which way
+06:41 - you want to see it, we start on one end with a random vector z0,
+06:46 - and then we apply these transformations f1, f2, f3, fn
+06:53 - all the way through m in this case.
+06:55 - And essentially what this notation means
+07:00 - is that what we do is we take z0,
+07:04 - we pass it through the first neural network,
+07:07 - and then we take the output of that
+07:09 - and we pass it through the second neural network,
+07:11 - and so forth.
+07:12 - And we denote this architecture that we
+07:17 - get by stacking together multiple invertible
+07:20 - layers f theta.
+07:22 - And it's pretty easy to see that as long as each individual layer
+07:25 - is invertible, the combination of multiple layers that you
+07:30 - get by doing this kind of operation is also invertible.
+07:36 - And so to the extent that we are able to come up
+07:39 - with reasonable neural network architectures that
+07:42 - define an individual layer, we're
+07:44 - going to be able to stack them together and get something
+07:47 - more flexible.
+07:48 - This notation is a little bit overloading here,
+07:51 - the meaning of theta.
+07:53 - The parameters of the individual mappings
+07:55 - are going to be different.
+07:56 - So they are not necessarily tied together.
+07:59 - There's going to be--
+08:00 - we're going to use theta to denote
+08:02 - the union of all the parameters that you need to specify
+08:06 - each individual layer.
+08:07 -
+08:10 - And so that's the story of this flow of transformations.
+08:15 - You start with a simple distribution for z0.
+08:18 - The first let's say at the topmost level of your flow,
+08:22 - for example by sampling from a Gaussian distribution,
+08:25 - this is the usual prior, the same thing
+08:27 - you had in a variational autoencoder.
+08:29 - And then you apply this sequence of invertible transformation
+08:34 - to obtain your final sample.
+08:37 - And so you feed it through all these different layers.
+08:41 - And then let's say after m of them,
+08:43 - you get your final sample x.
+08:47 - And the good thing is that if each individual mapping is
+08:51 - invertible, then the combination is also going to be invertible.
+08:54 - And you can actually work out what's
+08:58 - the corresponding kind of change of variable formula.
+09:00 - And to the extent that you understand the determinant
+09:04 - of the Jacobian of each individual layer, then
+09:08 - you can work out the corresponding determinant
+09:14 - of the Jacobian of the combination of these mappings.
+09:17 - So all you have to do is you have
+09:19 - to be able to invert this function f theta
+09:23 - that you get by combining all these neural networks.
+09:26 - And if you can invert each individual layer,
+09:28 - you can of course invert the full function.
+09:32 - And to the extent that you can linearize basically
+09:35 - and you understand how each of the individual layers
+09:38 - behave locally, so you understand
+09:40 - how that determinant of the Jacobian looks like, then
+09:45 - you can get the determinant of the Jacobian
+09:47 - of the full mapping.
+09:50 - And this is because, yeah, basically the determinant
+09:52 - of the product equals the product of determinants,
+09:56 - or equivalently you can also get this rule,
+09:58 - like if you recursively apply a change of variable formula,
+10:01 - you get this expression.
+10:03 - Or to figure out by basically by how much the full mapping
+10:10 - distorts the volume locally, you just
+10:13 - need to figure out by how much the individual layers distort
+10:18 - the space, and then you just combine the cumulative effect
+10:22 - of all these various layers.
+10:25 - And so what this is saying is that we are in a good place
+10:30 - if we can somehow define classes of neural networks
+10:34 - that are invertible, ideally that we can invert efficiently,
+10:38 - and that we can compute the determinant of the Jacobian
+10:43 - also efficiently.
+10:44 -
+10:47 - And here is a visualization of this,
+10:52 - how a normalizing flow works.
+10:54 - This is a particular type of normalizing flow called a planar
+10:57 - flow.
+10:58 - It's not super important.
+11:00 - But to give you the intuition, you
+11:02 - start on one end with this random variable z0,
+11:05 - which let's say is Gaussian.
+11:07 - And then you get a new random variable z1
+11:09 - by transforming it through the first layer and z2
+11:13 - by transforming the z1 by another simple layer
+11:16 - and so forth.
+11:17 - And you can see the effect of these transformations.
+11:20 - So you start let's say with a two-dimensional random variable
+11:23 - z0, which is just a unit Gaussian.
+11:26 - So this is just a Gaussian with spherical covariance, which
+11:30 - basically has a density that sort of looks like this, that
+11:33 - is the mean in the middle and the probability mass
+11:36 - has a relatively simple shape.
+11:38 - It's not something you can use to model complicated data sets.
+11:42 - But then you apply let's say a first invertible transformation
+11:45 - and you get a new random variable
+11:47 - z1 which now has a more complicated kind of density.
+11:52 - Then you apply another one and you get something even more
+11:54 - complicated.
+11:55 - And after 10 layers, after 10 individual,
+12:01 - after 10 invertible transformations,
+12:03 - you can get something that is much more interesting.
+12:06 - And it has the flavor of a mixture distribution, where
+12:10 - you can spread out the probability mass in a much more
+12:14 - flexible way.
+12:15 - There is certainly a mapping that
+12:19 - could be an invertible mapping that would get you
+12:22 - from the beginning to the end, which
+12:23 - is just the composition of these neural networks.
+12:27 - The beauty of the deep learning strategy
+12:30 - is that the individual layers are
+12:31 - going to be relatively simple.
+12:33 - So the individual f theta i that we will see
+12:38 - are actually relatively simple transformations.
+12:40 - Think about it's not quite linear, but something almost
+12:44 - linear.
+12:45 - And even though that's simple by stacking them together,
+12:48 - you can get some very flexible transformations.
+12:51 - So it's similar to a deep neural network
+12:53 - and maybe the individual layers are not
+12:54 - particularly complicated.
+12:56 - Maybe it's just a linear combination or a non-linearity.
+12:59 - But if you stack them together, you can get a very flexible map.
+13:03 - And that's what's going on here.
+13:06 - The question I think is, how do you
+13:08 - ensure that if you learn these thetas,
+13:11 - you get a mapping that is invertible?
+13:13 - And so what we will have to do is
+13:14 - we will have to design architectures
+13:16 - in a very special way, such that you are guaranteed that
+13:20 - regardless of how you choose the parameters,
+13:22 - the mapping is invertible.
+13:23 - And not only that, we'll also need
+13:25 - to be able to invert it efficiently, ideally
+13:28 - because if you want to-- you need to be able to go both ways.
+13:31 - And that's also not enough.
+13:33 - You also need to be able to compute
+13:35 - that determinant of the Jacobian relatively efficiently
+13:38 - because naively, it could take you
+13:40 - n cube, where n is the number of variables,
+13:43 - the number of dimensions, the number of pixels
+13:45 - that's horrible basically.
+13:47 - So that's what's going to come up
+13:48 - next, kind of ways of defining these mappings,
+13:51 - and then how to learn them from data,
+13:53 - which is going to be trivial because we have access
+13:55 - to the likelihood.
+13:55 - Right.
+13:56 -
+14:00 - And so here's another example.
+14:02 - This is a different what you see at the bottom.
+14:05 - Same idea.
+14:06 - But the prior is uniform.
+14:09 - So here the prior is Gaussian and we transform it to something
+14:12 - like this.
+14:13 - Here the prior is a uniform random variable,
+14:15 - again two-dimensional.
+14:17 - So all the probability mass is let's say between 0,1, 0, 1.
+14:22 - So it's like a square.
+14:24 - And then by applying these invertible transformations,
+14:27 - you are able to map it to, again, something much more
+14:31 - interesting.
+14:33 - And you can see, so it's normalizing
+14:36 - because each individual random variable that you
+14:39 - get by applying an invertible transformation
+14:41 - is automatically normalized by the change of variable formula.
+14:44 - And it's a flow because you're applying many transformations
+14:49 - one after the other.
+14:50 - So the probability mass is flowing around
+14:53 - through these transformations.
+14:56 - So this is a planar flow which is
+14:58 - one way of defining an invertible layer
+15:01 - through a neural network.
+15:02 - And so the functional form is the same at every layer,
+15:07 - but the parameters are different,
+15:08 - what was asked before.
+15:09 - So it's like the same transform-- the same layer
+15:14 - but with different parameters.
+15:15 -
+15:19 - And yeah, so you can see the takeaway
+15:22 - is this is this sort of intuition.
+15:24 - This is the only thing that is easy to visualize.
+15:26 - But you can imagine we're going to try
+15:28 - to do something similar over a much higher dimensional space,
+15:32 - where we're going to try to model let's say images
+15:36 - on the right hand side.
+15:40 - Cool.
+15:40 - So how do we do?
+15:42 - The first thing is, well, we need to parameterize somehow
+15:45 - this mapping.
+15:46 - And that's going to be the main topic of this lecture.
+15:50 - The other thing that we need to do
+15:52 - is we need to be able to do learning.
+15:53 - So once you've defined a space of invertible mappings,
+15:57 - how do you choose these parameters theta ideally
+16:01 - to fit some data distribution?
+16:03 - And it turns out that that's very easy.
+16:06 - Because we have access to the likelihood,
+16:08 - we can basically do the same thing
+16:09 - that we did for autoregressive models.
+16:11 - So the most natural way of training a flow model
+16:15 - is to just pick parameters theta that
+16:18 - maximize the probability of a given data set or the log
+16:23 - probability of a particular data set.
+16:26 - Or equivalently you go through your data set D
+16:29 - and you try to find parameters that
+16:31 - maximize the probability assigned to
+16:34 - or the log-- the average log probability across all the data
+16:37 - points in your data set.
+16:39 - So intuitively, you're trying to find--
+16:43 - you have a bunch of data points which you can
+16:45 - think of points in this space.
+16:47 - And then you're trying to find the parameters of the flows
+16:50 - to put as much probability mass around the data
+16:54 - points that you have in the training set.
+16:58 - And the good thing, again, is that
+17:01 - unlike a variational autoencoder,
+17:04 - we can actually evaluate this likelihood.
+17:06 - We can figure out what was the probability of generating
+17:10 - any particular data point x.
+17:12 - All you have to do is you use the usual formula of the change
+17:15 - of variable formula.
+17:17 - So you take the data point, you invert it,
+17:19 - you find the probability with respect
+17:22 - to the prior, which is whatever something simple, pz
+17:26 - is again what you have here on the left.
+17:28 - It could be a Gaussian.
+17:29 - It could be uniform.
+17:30 - Something simple.
+17:32 - And then you account for that determinant of the Jacobian.
+17:37 - And because it's a log of product,
+17:39 - it becomes a sum of logs.
+17:41 - So again, all you have to do is to basically--
+17:46 - well, maybe it's on the next.
+17:48 - No.
+17:48 - It's not on this slide.
+17:49 - But basically you have to figure out
+17:51 - how much what is the log determinant of the Jacobian
+17:55 - for the full transformation, which can also be broken down
+17:58 - into the log determinant of the Jacobians
+18:01 - of the individual pieces that define your flow model.
+18:04 -
+18:07 - And then what you do is if you can evaluate this loss
+18:12 - or I guess this is not a loss because we're
+18:14 - trying to maximize this.
+18:15 - But if you can evaluate this function as a function of theta,
+18:21 - then you can take gradients and you can try
+18:23 - to optimize it, essentially.
+18:28 - So to the extent that you can invert this function
+18:31 - and to the extent that you can evaluate those Jacobian,
+18:36 - determinant Jacobian term efficiently,
+18:38 - we have a loss that we can try to optimize
+18:41 - as a function of theta.
+18:42 -
+18:46 - So you can do exact loss likelihood evaluation
+18:50 - by using this inverse mapping.
+18:52 - So go from data to prior.
+18:54 - And then after you've trained the model,
+18:56 - you can generate new samples.
+18:58 - So you want to generate new images or you want
+18:59 - to generate new speech or sound or whatever
+19:04 - you're trying to model.
+19:05 - Then we know how to do it.
+19:06 - It's just basically just the forward direction,
+19:08 - just like in a VAE.
+19:10 - That has not changed.
+19:11 - You sample z from the prior and then
+19:14 - you transform it through your mapping
+19:18 - and that produces an output.
+19:19 -
+19:24 - And if you care about getting latent representations, kind
+19:28 - of in VAE, in VAE, you would use the encoder
+19:32 - to try to infer z given x.
+19:34 - In a flow model is relatively again
+19:36 - easy to figure out what is the corresponding z
+19:39 - for any particular x.
+19:41 - All you have to do is you have to invert the mapping.
+19:45 - But again, it's questionable whether this
+19:47 - can be thought as a latent variable
+19:48 - because it has the same dimension as the data.
+19:51 - And so it's not going to be compressed in any way.
+19:55 - So I'll show you that training models on images,
+19:57 - then you can do interpolation in the latent space
+20:00 - and you get reasonable results.
+20:02 - So it's certainly doing something meaningful.
+20:04 - But it might not be compressive as you would expect a VAE,
+20:09 - for example.
+20:10 - So it's a different kind of latent variable.
+20:11 - But it's still a latent variable for sure.
+20:14 - So good question.
+20:15 - Do we parameterize f theta or do we parameterize f theta inverse?
+20:19 - You only parameterize one because the other one
+20:22 - is obtained directly by hopefully
+20:26 - it's really invertible.
+20:27 - And so hopefully you can actually do it.
+20:30 - But it's a good question, whether you should parameterize
+20:33 - f theta, like the direction that you need for sampling,
+20:38 - or should you directly parameterize the inverse
+20:41 - because that's what you need during training.
+20:43 - And so those are two valid choices.
+20:46 - And there might be--
+20:48 - I mean, if you have to let's say numerically invert a--
+20:51 - maybe it's invertible.
+20:52 - But maybe it's not cheap.
+20:55 - And that may be computing an inverse requires
+20:57 - you to solve a linear system of equations or something.
+21:02 - It's invertible.
+21:03 - It's possible to compute this f theta minus inverse.
+21:07 - But it's maybe too expensive if you
+21:09 - have to do this over and over during training.
+21:12 - Maybe depending on what you want to do,
+21:15 - you might want to parameterize one or the other
+21:17 - or you might choose an f theta that
+21:18 - can be inverted very quickly.
+21:21 - And so we'll see some kind of trade-offs
+21:24 - that you get by doing one or the other.
+21:27 - So the question is, well, what if it's not quite fully
+21:30 - invertible or could you parameterize both and try
+21:32 - to make them one the inverse of the other?
+21:34 - People have explored these kind of things, where then they
+21:37 - try to make sure that you can do both directions.
+21:41 - And we'll see other way of distilling models
+21:44 - that can be efficiently evaluated in one direction
+21:48 - into ones that can be efficiently evaluated
+21:50 - in the other direction.
+21:51 - So yeah, we'll talk a little bit about this.
+21:53 -
+21:57 - Cool.
+21:58 - All right.
+21:58 - So what do we want from a flow model?
+22:01 - We have a simple prior that you can sample from efficiently.
+22:04 - And you can evaluate probabilities
+22:06 - because we need that pz here.
+22:09 - When you do this formula, you need
+22:11 - to be able to evaluate probabilities under the prior.
+22:14 - So typically something like a Gaussian is used.
+22:18 - We need invertible mappings that can be tractably evaluated.
+22:22 - So if you want to evaluate likelihoods,
+22:25 - you need to be able to go from let's say x to z efficiently
+22:30 - or as efficiently as possible.
+22:32 - But if you want to sample, then you need to do the opposite.
+22:34 - So again kind of going back to what we were just talking about,
+22:38 - two things depending on what you want to do
+22:39 - or depending which one you want it to be as fast as possible,
+22:43 - you might want to do one or the other.
+22:45 - And then the other big thing is that we
+22:47 - need to be able to compute this determinant of Jacobians.
+22:51 - And these Jacobian matrices are pretty big.
+22:54 - They are kind of n by n, where n is the data dimensionality.
+22:59 - And if you recall computing the determinant of a generic n
+23:06 - by n matrix takes order of n cube operations.
+23:10 - So even if n is relatively small, like 1,000,
+23:16 - this is super expensive.
+23:19 - So computing these kind of determinants naively
+23:21 - is very, very tricky.
+23:23 - And so what we'll have to do is we'll
+23:26 - have to choose transformations, such
+23:27 - that not only they are invertible,
+23:29 - but the Jacobian has a special structure.
+23:32 - So then we can compute the determinant more efficiently.
+23:36 - And the simplest way of doing it is
+23:40 - to choose matrices that are basically triangular,
+23:44 - because in that case, then you can compute the determinant
+23:48 - in basically linear time.
+23:50 - You just multiply together the entries
+23:52 - on the diagonal of the matrix.
+23:56 - And so one way to do it is to basically define the function
+24:03 - f such that basically the Jacobian--
+24:06 - we want to make sure-- we want to define a function
+24:08 - f basically, which again has n inputs and n
+24:12 - outputs, such that the corresponding Jacobian, which
+24:16 - is this matrix of partial derivatives is triangular.
+24:21 - So there needs to be a lot of zeros basically in the matrix.
+24:26 - And one way to do it-- and recall the Jacobian
+24:28 - looks like this.
+24:29 - So this is a function--
+24:33 - f is a vector valued function.
+24:35 - It has n different outputs.
+24:37 - So there is n functions, f scalar functions, f1 through fn.
+24:41 - And the Jacobian requires you to compute basically the gradients
+24:45 - with respect to the inputs of each individual function.
+24:49 - So you can think of each of these columns
+24:52 - as being the gradient of a scalar valued function
+24:54 - with respect to the inputs-- no, with respect to the parameters.
+24:59 - And a triangular matrix is basically
+25:02 - a matrix where all the elements above the diagonal
+25:07 - let's say are 0.
+25:08 - And so how do we--
+25:11 - any guess on how do we make let's say the derivative
+25:15 - of f1 with respect to zn 0?
+25:19 - Yeah, that doesn't depend on it.
+25:21 - And so if you choose the computation graph, such
+25:24 - that the ith output only depends on the previous kind of inputs,
+25:31 - kind of in an autoregressive model, then by definition,
+25:35 - all the derivatives-- a lot of the derivatives
+25:38 - are going to be 0.
+25:39 - And you get a matrix that has the right kind of structure.
+25:43 - So it's lower triangular.
+25:46 - And if it's lower triangular, you
+25:48 - can get the determinant just by multiplying together
+25:51 - all the entries on the diagonal.
+25:55 - And there is n of them.
+25:56 - And so it becomes linear time.
+25:57 -
+26:01 - And so that's one way of getting efficient efficiency
+26:07 - on this type of operation is to choose the computation graph,
+26:11 - such that it reminds us a little bit of autoregressive models
+26:17 - in the sense that there is an ordering, and then
+26:19 - the ith output only depends on the all the inputs that come
+26:25 - before it in this ordering.
+26:26 -
+26:32 - Yeah.
+26:33 - And of course, you can also make it upper triangular.
+26:35 - So if xi, the ith output only depends on the entries of--
+26:43 - the inputs that come after it, then you're
+26:45 - going to get a matrix that is going to be upper triangular.
+26:47 - And that's also something that you can evaluate
+26:49 - the determinant in linear time.
+26:52 -
+26:55 - So just to recap.
+26:59 - Normalizing flows transform simple distribution to complex
+27:03 - with a sequence of invertible transformations.
+27:06 - You can think of it as a latent variable
+27:08 - model with exact likelihood evaluation.
+27:11 - We need invertible mappings and somehow
+27:16 - Jacobians that have special structure so that we can compute
+27:19 - the determinant of the Jacobian and the change
+27:21 - of variable formula efficiently.
+27:24 - And what we're going to see today
+27:25 - is various ways of achieving it.
+27:27 - There is a lot of different kind of neural network architectures
+27:31 - or layers that you can basically use that sort
+27:34 - of achieve these properties.
+
+00:00 -
+00:05 - SPEAKER: The simplest one is something called NICE
+00:09 - and then here you can see more.
+00:12 - The simplest way of doing this is something like this,
+00:15 - it's an additive coupling layer.
+00:19 - So what you do is you partition these z variables
+00:23 - into two groups.
+00:25 - Again, there is an ordering of the z variables
+00:27 - and you take the first d, z1 through zd
+00:31 - and then the remaining n minus d.
+00:33 - So we have two groups of the z variables and you pick a d,
+00:38 - can be anything.
+00:40 - And then to define the forward mapping that gets you
+00:43 - from z to x, what you do is you keep
+00:47 - the first d components unchanged,
+00:50 - so you just pass them through.
+00:52 -
+00:54 - And then you modify the remaining components,
+00:59 - the remaining m minus d components
+01:01 - in the simplest possible way which is just shift them.
+01:05 - So there is a neural network which
+01:07 - can be basically arbitrary which I'm calling m theta, which
+01:11 - takes the first d inputs to this layer
+01:16 - and computes n minus d shifts that then you
+01:20 - apply to the remaining n minus dz variables.
+01:25 - So you can see that the first d components remain the same,
+01:29 - you just pass them through.
+01:31 - The remaining n minus d components,
+01:33 - you obtain them just by shifting the inputs by a little bit.
+01:36 -
+01:39 - And by how much you shift the inputs can
+01:42 - be a learnable parameter.
+01:44 - Now is this mapping invertible?
+01:47 - It's pretty easy to see that it's invertible.
+01:49 - And how do you get the z if you had access to the x?
+01:55 - So how do you get z1 through d if you have access to the x?
+02:02 - Well, the first d components are not changed,
+02:05 - so you just keep them, it's just again,
+02:07 - the identity transformation.
+02:10 - How do we get the remaining if you
+02:14 - want to compute the n minus d inputs
+02:19 - given all the outputs, how do you get them?
+02:24 - You just basically subtract, you just reverse this thing.
+02:28 - You just write a z equals x minus m theta
+02:33 - and crucially we can compute m theta
+02:37 - because the first d component in the input and the output
+02:41 - are the same.
+02:42 - So when we do the inversion we know
+02:43 - by how much we should shift because we're just passing
+02:47 - through the first d components.
+02:49 - So we can apply this shift by doing this.
+02:53 - You can just subtract off m theta
+02:55 - and we can compute m theta as a function of x1
+02:59 - through d because x1 through d is the same as
+03:01 - z1 through d which is what we used to compute the shift.
+03:04 -
+03:07 - And m theta here can be an arbitrary neural network
+03:11 - basically.
+03:12 -
+03:17 - Now the other thing we need to figure out is,
+03:21 - can we compute the Jacobian of the forward mapping?
+03:25 - So what are the matrices of partial derivatives?
+03:31 - It has the right triangular structure
+03:35 - and you can see that the only thing that we're doing
+03:38 - is shifting and so when you look at the partial derivatives
+03:42 - of what happens on the diagonal, it's just all going
+03:45 - to be identity matrices, right?
+03:46 -
+03:49 - So if you look at how does the function on the second line
+03:57 - here depend on the various z's, on the later z's, you
+04:00 - see that it's just a shift.
+04:03 - So that matrix of partial derivatives
+04:05 - that you get here at the bottom right
+04:08 - is just another identity matrix.
+04:12 - So what this means is that, what is the determinant
+04:15 - of the Jacobian of this matrix?
+04:18 - It's just 1, like it's the product of all the elements
+04:21 - on the diagonal, they are all 1's
+04:22 - and so the determinant of the Jacobian
+04:24 - is 1, which means that it's trivial to sort of compute
+04:27 - this term in the change of variable formula.
+04:30 - Is this flexible enough?
+04:32 - I'll show you some empirical results that this model is not
+04:35 - the best one, it's probably the simplest
+04:37 - you can think of but it's already quite powerful.
+04:39 - You can actually already use this to model images
+04:42 - which is pretty surprising because it means
+04:44 - that by stacking a sufficiently large number of these very
+04:47 - simple layers, you can actually transform
+04:49 - a complicated distribution like over images into let's say
+04:52 - a Gaussian.
+04:54 - And now this is called a volume preserving transformation
+04:58 - because recall that basically if the determinant is 1,
+05:00 - it means that you're not expanding that unit hypercube
+05:04 - or you're not shrinking it, it's just stays the same.
+05:08 - But you can move around probability mass.
+05:12 - And now the final component that you use in this model
+05:17 - called NICE is rescaling.
+05:19 - So you can basically imagine many of these coupling layers
+05:24 - where you can change the ordering of the variables
+05:27 - in between, so you don't have to keep the same ordering
+05:30 - in every layer.
+05:31 - You can pick them any order you want
+05:33 - is fine as long as you satisfy that kind of property
+05:36 - that we had before.
+05:38 - And then the final layer is a rescaling.
+05:42 - So again, something super simple,
+05:44 - you just element wise scale all the entries with some parameters
+05:50 - Si which are going to be learned and it's just a scaling
+05:53 - that you apply.
+05:56 - So again, the simplest kind of transformation you can think of,
+06:00 - what is the inverse?
+06:01 - Again, you just divide by 1 over S,
+06:04 - so trivial to compute the inverse mapping.
+06:08 - And the determinant of the Jacobian, well,
+06:12 - if you think about the matrix of partial derivatives
+06:15 - is a diagonal matrix on the elements of on the diagonal
+06:20 - are these Si terms.
+06:22 - And so what is the determinant of a diagonal matrix?
+06:28 - It's just going to be again, the product of all these Si's
+06:30 - basically.
+06:31 -
+06:35 - You might think this is super simple,
+06:38 - how can you possibly learn something
+06:40 - useful with a model like this?
+06:42 - But if you stack enough of these layers,
+06:44 - you can actually learn some decent models.
+06:48 - So if you train a NICE model on MNIST
+06:51 - and then you generate samples, they look like this.
+06:54 - You train it on faces you can get samples that sort of look
+06:57 - like that.
+06:58 - So not the best generative model of course,
+07:01 - but it's already somewhat promising
+07:04 - that something so simple already figured out
+07:06 - how to map a complex distribution over pixels
+07:10 - into a Gaussian basically.
+07:12 - Just by stacking a sufficiently large number of simple coupling
+07:16 - layers like the one we saw before.
+07:18 - This model you would typically use a Gaussian
+07:21 - univariate like a unit Gaussian, so that's what you would use.
+07:27 - Same dimension, every entry is Gaussian
+07:29 - and if you have unit covariance, then you
+07:32 - can just sample each component independently.
+07:35 - So you start with pure noise, then
+07:37 - you fit it through I guess the inverse mapping which
+07:41 - we know how to compute because we know how to,
+07:44 - you just invert layer by layer.
+07:46 - The final layer, you invert it like this, the previous layers
+07:50 - you invert them by applying this transformation.
+07:55 - And then you gradually turn that noise into an image essentially.
+07:59 -
+08:02 - Yeah, question is because the first d components are not
+08:04 - changed, then yeah, we're basically passing them through
+08:07 - and it doesn't have to be half, it can be any d,
+08:11 - it can be an arbitrary fraction that you're basically
+08:15 - keeping unchanged and then you modify the rest
+08:17 - by just shifting essentially.
+08:19 -
+08:23 - So that's perhaps the simplest and here
+08:25 - you can see other examples if you train it
+08:27 - on a data set of SVHN, these are like house numbers,
+08:33 - to train it on CIFAR-10 again, not
+08:35 - the best kind of samples but it's doing something.
+08:40 - You can kind of see numbers here in different colors on the left,
+08:43 - you can see samples on the right.
+08:46 -
+08:48 - Now what's the kind of natural extension of this?
+08:53 - Instead of just shifting, we can shift and scale
+08:57 - and that's a much more powerful model called Real-NVP, which
+09:01 - is basically essentially identical to NICE except that
+09:06 - at every layer, we don't just shift but we shift and scale.
+09:11 - So the forward mapping is kind of
+09:13 - before, we pass through d components,
+09:19 - so we apply an identity transformation,
+09:22 - and then for the remaining ones instead of just shifting,
+09:27 - we shift which is now this neural network mu theta which is
+09:32 - the same m that I had before.
+09:34 - But now we also element wise scale each entry.
+09:39 - And again, the scaling coefficients
+09:41 - are allowed to depend in a complicated way on the first d
+09:45 - components.
+09:46 -
+09:48 - And I'm taking an exponential here so that I'm
+09:52 - guaranteed that these scaling factors are nonzero
+09:55 - and then I can invert them.
+09:56 - But essentially these matrices mu theta, alpha theta
+10:00 - can be anything.
+10:00 -
+10:04 - How do we invert the mapping?
+10:06 -
+10:09 - Again, it's the same thing, right?
+10:12 - These are neural networks, basically arbitrary
+10:16 - neural networks and they're parameterized by theta
+10:19 - and that's what you actually learn.
+10:22 - How do we get the inverse mapping?
+10:24 - How do we get z from x?
+10:28 - Again, the first d components, you don't do anything,
+10:31 - you just look them up and it's again, an identity mapping.
+10:34 - And then for the second one, you have to figure out
+10:36 - how do you recover z given x.
+10:40 - And so what you do you take x, you
+10:42 - shift it by mu and then you divide by exp of alpha
+10:47 - and that gives you the z, like element wise, right,
+10:50 - so which equivalently is like this.
+10:54 - You take the x, you shift it by mu
+10:57 - and then you multiply by e to the minus alpha which
+11:02 - is the same as dividing by e to the alpha which
+11:05 - is dividing by the coefficients that you're
+11:07 - multiplying for here.
+11:09 -
+11:11 - So again, trivial very easy to do the forward,
+11:14 - very easy to do the inverse.
+11:16 - What about the determinant of the Jacobian?
+11:21 - What does the Jacobian look like?
+11:24 - Again, it has the NICE property that it is lower triangular
+11:29 - and now it's a little bit more complicated
+11:32 - the way you operate on these z's because now there
+11:39 - is a scale which is kind of like the last layer of NICE
+11:42 - except that it's learned.
+11:43 - And so it's like what we were doing before,
+11:46 - before we were just shifting.
+11:47 - Now we're shifting and scaling and so
+11:49 - you have all these extra kind of scaling factors
+11:53 - that you're applying to the last n
+11:55 - minus d dimensions of the data.
+11:58 -
+12:01 - And again, this is just what you would
+12:03 - get if you compute partial derivatives of these outputs
+12:07 - with respect to the inputs, you're
+12:08 - going to get this kind of expression.
+12:10 -
+12:13 - And how do you get the determinant?
+12:16 - Well, you multiply together a bunch of 1's and then
+12:21 - you multiply together all the elements of the diagonal
+12:25 - of this diagonal matrix.
+12:27 - And so it's just going to be the product
+12:28 - of the individual scaling factors
+12:30 - that you apply on every dimension
+12:33 - or equivalently it's the exponential of the sum
+12:36 - of these log parameterization.
+12:38 -
+12:42 - So basically, you can choose arbitrary, neural networks, mu
+12:46 - theta, alpha theta, and if you apply that transformation
+12:52 - you get something that is invertible,
+12:53 - it's easy to compute.
+12:55 - The forward mapping, it's easy to compute the reverse mapping
+12:58 - and it's easy to figure out by how much it shrinks
+13:02 - or expand the volume locally, which is just these scalings.
+13:08 - So if the scalings are all 1, then it's
+13:12 - the same as a coupling layer that we had before.
+13:15 - But because alpha thetas are learned,
+13:17 - this is strictly more flexible than what
+13:19 - we had before because it can learn to shrink or expand
+13:24 - certain dimensions.
+13:27 - And of course, this is in general nonvolume preserving
+13:30 - because in general this determinant of the Jacobian
+13:33 - is not always 1, so it can do more interesting
+13:37 - transformations.
+13:39 - So to sample what you would do is you would randomly draw a z
+13:42 - and then you would pass it through this inverse map,
+13:46 - I guess.
+13:47 - Now I'm parameterizing the forward,
+13:48 - so you would just pass it through the forward map.
+13:51 - During training, the z's are computed
+13:56 - by inverting the mapping.
+13:58 - So the z's are obtained from the data.
+14:01 - So you just feed your image at one end
+14:06 - of this big invertible neural network
+14:07 - and then you hopefully are able to invert it.
+14:10 - And if each individual layer has this shape,
+14:12 - then you know how to invert it and then you get a z at the end.
+14:16 - You evaluate how likely the z is under the prior
+14:19 - and then you account for the local shift
+14:22 - and change that you get through the changeover.
+14:25 - So it's not like in a VAE where you have to guess the z,
+14:28 - you get it exactly through the invertible mapping.
+14:31 - The generation process is deterministic
+14:33 - given z because the mapping itself is deterministic,
+14:36 - that's a big limitation but it's also
+14:38 - what gives you tractability basically.
+14:39 - OK?
+14:41 - Now this is a model that works much better.
+14:45 - Here you can see some examples, again,
+14:48 - might seem like a very simple kind of transformation
+14:51 - that you're applying to the data,
+14:52 - but if you train these models on image data sets,
+14:56 - this is starting to generate samples
+14:59 - that are much better in terms of quality
+15:02 - like you can see on bedrooms or people.
+15:06 - These models are pretty decent, they're somewhat low resolution
+15:11 - and everything but it's generating samples
+15:13 - that have kind of the right structure,
+15:15 - they're already pretty decent.
+15:17 - I think you get the samples, these are the training samples
+15:20 - and these are the generations that you see on the right.
+15:24 - So maybe the first row not so good,
+15:27 - but for the bedrooms, I think this is Alison, this
+15:31 - is Sally B I think you can see that it's pretty decent.
+15:34 - And back to the question of what do the z's actually mean?
+15:40 - What you can try to do is you can try to interpolate
+15:42 - between different z's and what they show in this paper is that
+15:45 - basically, if you start with the four actual samples, which
+15:50 - are shown at the corner of this image here
+15:53 - and then you get the corresponding z vectors, which
+15:56 - are z1, z2, z3, z4 but just by inverting the network
+16:01 - and then you interpolate them using
+16:03 - this kind of strange formula which
+16:04 - is because the latent space is Gaussian,
+16:06 - it doesn't matter too much.
+16:08 - And then you get new z's and then you
+16:12 - pass them through the forward mapping to generate images,
+16:15 - you kind of get the reasonable interpolations.
+16:18 - You see that as you go from one person to another person
+16:23 - and it slowly drifts from one to the other.
+16:29 - And you can see examples here on this buildings and you can see.
+16:35 - So basically in each of these images,
+16:37 - the four corners are real images and what you see in between
+16:40 - is what you get if you were to interpolate the z vectors of two
+16:44 - real images and then decode them back into an image.
+16:48 - So even though, yeah, the latent variables are not compressive,
+16:52 - they have the same number of variables,
+16:54 - they have kind of meaningful structure
+16:56 - as we were discussing before in the sense
+16:59 - that if you do interpolations you get reasonable results.
+
+00:00 -
+00:05 - SPEAKER: Actually, autoregressive models
+00:07 - or certain kinds of autoregressive models,
+00:10 - you can also think of them as normalizing flows.
+00:14 - And so just to see this, you can think
+00:17 - about an autoregressive model, a continuous one where
+00:24 - we are defining the density, the full joint
+00:27 - as a product of conditionals.
+00:29 - And let's say that each conditional
+00:32 - is a Gaussian with parameters computed
+00:35 - as usual by some neural network that
+00:38 - takes as input the previous variables
+00:40 - and then computes a mean and a standard deviation,
+00:43 - and that's how you define the i-th conditional
+00:46 - in your autoregressive model.
+00:48 - So this is not kind of the language model version,
+00:51 - where each of these conditionals is a categorical distribution.
+00:55 - This is the continuous version where
+00:57 - the conditionals themselves are, let's say,
+01:01 - Gaussians in this case.
+01:04 - And what I'm going to show you next
+01:06 - is that you can think of this, actually,
+01:08 - as an autoregressive model, as a flow model.
+01:12 - This as defined like this is just an autoregressive model.
+01:16 - You can think about how you would generate samples
+01:19 - from this model.
+01:20 - And the way you would generate samples is something like this.
+01:24 - You could imagine generating one sample
+01:32 - from a standard, normal distribution for every i,
+01:36 - for every component, for every random variable, individual
+01:40 - random variable that you're modeling.
+01:43 - And then what you do is, well, to sample from the conditionals,
+01:47 - you have to--
+01:49 - the conditionals are Gaussian with certain means
+01:51 - and standard deviations.
+01:52 - So kind of using the reparameterization trick,
+01:55 - you can obtain a sample for-- as usual,
+01:59 - you sample the first random variable,
+02:01 - then you sample the second given the first.
+02:04 - And to do that, you need to sample
+02:05 - from these Gaussians, which have certain means
+02:07 - and certain standard deviations.
+02:09 - So you would generate a sample from, let's say,
+02:12 - the first pixel or the first random variable
+02:15 - by just shifting and scaling this unit standard
+02:21 - random Gaussian random variable, which
+02:26 - is just Gaussian distributed.
+02:28 - So it's starting to look a little bit like a real MDP
+02:31 - kind of model, right, where you have the z's and then you shift
+02:34 - and scale them.
+02:35 - How do you sample x2?
+02:38 - Well, you sample x2 given x1, so you take the value of x1.
+02:42 - You feed it into these two neural networks.
+02:44 - You compute the mean and the standard deviation
+02:47 - of the next conditional, and then you sample.
+02:49 - And so you do that, and then you sample
+02:55 - x2 by shifting and scaling this unit random variable z2, right?
+03:02 - Do remember that if zi is a Gaussian with mean 0
+03:07 - and standard deviation 1, if you shift it by mu 2
+03:10 - and you rescale it by this constant,
+03:13 - you get a Gaussian with the right mean
+03:16 - and the right standard deviation.
+03:19 - And again, this feels a lot like a normalizing flow model
+03:25 - that we saw before.
+03:27 - Given x1 and x2, we can compute the parameters
+03:31 - of the next conditional, so a mean and a standard deviation,
+03:35 - and we can compute--
+03:36 - we can sample the third, let's say,
+03:39 - pixel by shifting and scaling these basic random variable z's
+03:44 - that we that we had access to.
+03:47 - And so all in all, we can think of what
+03:53 - you get by sampling from this autoregressive model as a flow
+03:56 - in the sense that you start with this random vector
+04:00 - of simple normals, and then you shift them and scale them
+04:07 - in some interesting way using these conditionals,
+04:11 - using these neural networks mu and alpha
+04:14 - that define the conditionals in the autoregressive model.
+04:19 - Like these two, sampling the autoregressive model
+04:23 - just by going through the conditionals one at a time
+04:26 - is equivalent to doing this, which you can think
+04:30 - of as taking a bunch of simple random variables zi's, all just
+04:35 - Gaussian independent of each other.
+04:37 - Then you just feed them through this interesting kind
+04:39 - of transformation to get your final output x1 through xn.
+04:45 - Yeah.
+04:46 - AUDIENCE: How?
+04:46 - SPEAKER: Let's see.
+04:47 - How do we invert it?
+04:48 - Yeah, great question.
+04:49 - I think that's going to come next.
+04:52 - The forward mapping, again, you can kind
+04:54 - think of it as a flow that basically does this.
+04:58 - You use the z's to compute the first x.
+05:03 - And then what you do is you compute the new parameters,
+05:07 - and then you get the new x blah, blah.
+05:10 - And you can kind of see that sampling in this model is slow,
+05:18 - like in autoregressive models, because in order
+05:21 - to compute the parameters that you need to transform sort
+05:23 - of the i-th simple prior or random variable zi,
+05:30 - you need to have all the previous x's to figure out
+05:34 - what's the right shift and scale that you need to apply.
+05:38 - What is the inverse mapping?
+05:41 - How do you go from x to z?
+05:44 - Well, the good news is that you can compute all these mus
+05:48 - and alphas in parallel because once you have the image,
+05:53 - you have all the x's, so you can compute all the mu's and alphas
+05:57 - or the shifts and scales in parallel.
+06:00 - And then you compute the corresponding z's
+06:05 - by just inverting that shift and scale transformation.
+06:08 - So if you recall, if you want to compute z1
+06:14 - from x1, what you do is you take x1, you subtract mu 1,
+06:18 - and you divide by this exponential, by this scaling.
+06:22 - Just like in real MDP, that's how you do the transformation.
+06:27 - And so sampling, you can see, you go from z to x
+06:31 - and you kind of need to do one at a time.
+06:33 - But because these alphas and mus depend
+06:35 - on the x's at kind of inference time or during learning,
+06:40 - you can compute all the mus and alpha in parallel.
+06:46 - And then you can compute the z's, again, all in parallel,
+06:51 - just by shifting and scaling.
+06:52 - And then the Jacobian is still lower diagonal,
+06:59 - and so you have an efficient kind of determinant computation.
+07:02 - And so you can evaluate likelihoods
+07:06 - efficiently in parallel, just like in an autoregressive model,
+07:09 - right?
+07:09 - If you remember, the nice thing about an autoregressive model
+07:12 - is that, in principle, you can evaluate all the conditionals
+07:16 - in parallel because you have all you need.
+07:18 - You know how to compute--
+07:20 - once you have all the whole x vector,
+07:22 - you can compute all the conditionals
+07:23 - and you can evaluate the loss on each individual component
+07:28 - of your random variable, and the same is true here.
+07:33 - So you can basically define a model to kind of like be
+07:39 - inspired by autoregressive models,
+07:43 - which is called a Masked Autoregressive Flow, MAF,
+07:49 - that basically transforms simple random variables z into x
+07:53 - or equivalently x to z's.
+07:56 - And if you parameterize it this way,
+07:58 - then you can get efficient learning, basically,
+08:04 - because you can go from x to z very efficiently in parallel.
+08:08 - But as expected, kind of sampling
+08:10 - is slow because it's just an autoregressive model
+08:12 - at the end of the day.
+08:14 - So if you want to sample, you kind of
+08:17 - have to go through this process of basically transforming
+08:21 - each individual zi variable one at a time.
+08:27 - So this is basically just interpreting
+08:30 - an autoregressive model as a flow model,
+08:33 - and it inherits the properties of autoregressive models, which
+08:36 - is the same model, so sampling when sequential is low.
+08:40 - But as expected, you can evaluate likelihoods
+08:43 - because it's just basically a change of variable formula,
+08:45 - and so it's possible to actually compute
+08:49 - all the likelihoods exactly like in an autoregressive model.
+08:55 - And so this is another way of building a flow model, which
+08:59 - is basically you start with an autoregressive model,
+09:01 - a continuous one, and then you can essentially
+09:05 - think of it, at least if it's a Gaussian autoregressive model,
+09:10 - you can kind of interpret it as a continuous--
+09:14 - as a normalizing flow model.
+09:17 - The other thing you can do is, if you need a model that you
+09:21 - can sample from efficiently, we know
+09:26 - that one of the issues with autoregressive models
+09:28 - is that sampling is kind of slow because you have to generate
+09:31 - one variable at a time.
+09:32 -
+09:35 - Once you start thinking of an autoregressive model as a flow
+09:37 - model, you can just kind of turn this picture around and call
+09:45 - the x a z and the z an x.
+09:47 - And at that point, it's just another invertible
+09:52 - transformation, so which one is the input, which
+09:54 - one is the output doesn't actually matter.
+09:56 - It's just an invertible neural network,
+09:58 - and you can use it one way or you can use it the other way,
+10:00 - and it's still an invertible neural network.
+10:03 - And if you do that, you get something
+10:06 - called an inverse autoregressive flow, which is basically
+10:08 - just the same neural network used
+10:11 - in the other direction, where if you do it
+10:15 - in the other direction, now you're
+10:17 - allowed to do the forward mapping from z to x in parallel.
+10:22 - So you can actually generate in a single shot, essentially.
+10:26 - You can generate each component of the output in parallel
+10:29 - without waiting for the previous entries.
+10:34 - Because we know that the computation in that direction
+10:37 - is parallel, you basically can sample all the z's independently
+10:42 - from the prior.
+10:43 - And if the mus and alphas depend on the z's, then
+10:47 - you already have them and you can compute all of them,
+10:51 - again, in parallel.
+10:52 - And then and then you just shift and scale all the outputs
+10:57 - by the right amount, and then you produce a sample.
+11:02 - And so if you basically flip things around,
+11:05 - you get a model where you can do very efficient sampling.
+11:08 - It's no longer sequential, like an autoregressive model,
+11:11 - but everything can be done in parallel.
+11:14 - Of course, the downside of this is that now inverting the model
+11:19 - is sequential.
+11:21 - So it's still an invertible mapping,
+11:22 - but now, if we want to go from x to z,
+11:26 - let's say because we want to train this model,
+11:28 - so we want to do maximum likelihood training,
+11:31 - then we need to be able to go from images,
+11:33 - let's say from x to latent variables.
+11:36 - And that, you have to be able to do it for every single data
+11:40 - point.
+11:41 - And if you try to figure out what does the computation
+11:43 - graph look like, you can see that it becomes sequential
+11:47 - because what you have to do is you have to shift--
+11:51 - you have to compute z1 by inverting this relationship.
+11:55 - So you take the first pixel, you shift it and scale it,
+11:57 - and you get the new latent variable.
+11:59 - Now you can use that latent variable
+12:01 - to compute the new shift and scale for the second dimension.
+12:06 - These mus, they still depend on the alphas,
+12:09 - and the mus depend on the previous variables.
+12:11 - So now that you have z1, you can compute mu 2 and alpha 2,
+12:17 - and now you can shift and scale x2 to get z2.
+12:21 - And now you can use z1 and z2 to compute the new shift and scale
+12:27 - and so forth.
+12:29 - So that's basically the same thing
+12:30 - you would have to do when you would-- that you
+12:34 - that you normally do when you sample
+12:35 - from an autoregressive model.
+12:37 - So you have to kind of generate one variable at a time.
+12:41 - Here, you have to invert one variable at a time
+12:43 - before you can invert the next.
+12:46 - And so this is a great model that
+12:49 - allows you to sample very efficiently,
+12:51 - but it's very expensive to actually compute
+12:53 - likelihoods of data points.
+12:55 - So this would be a tricky model to use during training
+13:00 - because you would have to kind of go
+13:02 - through each individual variable to be able to invert
+13:04 - and to be able to compute likelihoods.
+13:09 - The good thing is that it's actually
+13:11 - fast to evaluate likelihoods of a generated point.
+13:14 - So if you generate the data yourself,
+13:17 - then it's easy to evaluate likelihoods because you kind
+13:21 - of already have all the z's.
+13:22 - Then you map them to x, which you
+13:24 - can do efficiently if you store the latent
+13:29 - vector that you use to generate a particular data point.
+13:32 - Then you don't have to recompute it.
+13:34 - You already have it, and so you can actually
+13:36 - evaluate likelihoods of data points you generate yourself
+13:39 - very efficiently because all you need
+13:45 - is you need to be able to evaluate
+13:46 - the likelihood of this z1 through zn, and the prior,
+13:51 - you need to be able to evaluate the determinant of the Jacobian,
+13:53 - which depends on these alphas and which
+13:57 - you can compute because you have all the z's
+13:58 - to begin with if you generate a data point yourself.
+14:04 - And we'll see that this is going to be somewhat useful when
+14:08 - we talk about how to distill models
+14:12 - so that if you have a model that is maybe autoregressive
+14:16 - and it's slow to sample from, we're going to see that it's
+14:21 - possible to distill it into a model of this type, so
+14:25 - different kind of flow that after you train a model, kind
+14:29 - of a student model that is much faster than the teacher model
+14:34 - that you train sort of autoregressively
+14:36 - and can generate sort of in one shot, in parallel, kind of this.
+14:42 - And this property at the end here,
+14:44 - the fact that you can evaluate likelihoods
+14:46 - of points you generate yourself, is
+14:47 - going to be useful when we talk about that.
+14:51 - And again, these two normalizing flows, MAF, IAF,
+14:58 - are actually the same model, essentially, right?
+15:00 - It's just if you swap the role of x and z,
+15:04 - they are essentially the same kind of thing.
+15:08 - If you think of it from the perspective of MAF,
+15:10 - then you compute the x, the alphas, and the mus
+15:14 - as a function of the x's, and that's
+15:16 - the way you would do it in an autoregressive model,
+15:19 - if you just flip things around, you
+15:21 - can get an inverse autoregressive flow
+15:25 - by just having the mus and the alphas
+15:29 - depend on the z's, which is basically
+15:32 - what you get if you relabel z and x in that in that figure.
+15:37 - And so that's another way to get a flow model is
+15:40 - to basically start with a Gaussian autoregressive model,
+15:44 - and then you can get a flow model that way.
+15:49 - And yeah, so they're essentially dual.
+15:53 - They're essentially the same thing.
+15:54 -
+15:57 - And so the trade-offs, sort of our MAF,
+16:01 - it's basically an autoregressive model.
+16:03 - So you have fast likelihood evaluation, slow sampling,
+16:06 - one variable at a time.
+16:09 - IAF is the opposite because it's the reverse,
+16:11 - so you can get fast sampling, but then you
+16:13 - have slow likelihood evaluation.
+16:16 - MAF is good for training because what we need
+16:20 - is we need to be able to evaluate likelihoods efficiently
+16:23 - for every data point, if you want to do maximum likelihood
+16:26 - training, and so MAF is much better for that.
+16:30 - On the other hand, if you need something
+16:32 - where you need to be able to generate very,
+16:33 - very quickly, IAF would be a better kind of solution.
+16:37 -
+16:40 - And natural question, can we get the best of both worlds?
+16:44 - And that's sort of what they did with this parallel wavenet,
+16:49 - which used to be a state of the art model for speech generation.
+16:55 - And the basic idea was to start with a really good
+16:58 - autoregressive model and then distill
+17:02 - it, which is just a MAF, basically,
+17:05 - and then distill it into an IAF student model that
+17:11 - is going to be hopefully close to the teacher
+17:14 - and is going to be much faster to generate samples from.
+17:19 - And so that's basically the strategy they used.
+17:22 - They used an MAF, which is just an autoregressive model,
+17:26 - to train a teacher model.
+17:30 - You can compute likelihoods efficiently.
+17:32 - It's just an autoregressive model,
+17:33 - so it's easy to train the usual way.
+17:37 - And once you train this teacher, you
+17:40 - can train a student model to be close to the teacher.
+17:45 - But because it's an IAF model by design,
+17:48 - it would allow you to sample much more efficiently.
+17:54 - And the key observation that we mentioned before
+17:58 - is that you can actually evaluate likelihoods
+18:00 - on your own samples.
+18:03 - So if you generate the samples yourself,
+18:05 - you can actually evaluate likelihoods efficiently.
+18:09 - And then basically one way to do it is to--
+18:15 - this objective function, which is basically based
+18:18 - on KL divergence, where what you would do is you
+18:22 - would first train the teacher model on maximum likelihood.
+18:25 - This is your autoregressive model that
+18:27 - is expensive to sample from.
+18:29 - And then you define some kind of KL divergence
+18:32 - between the student distribution, which
+18:34 - is an IAF model, efficient to sample from, and the teacher
+18:37 - model.
+18:39 - And this is just the KL divergence between student
+18:42 - and teacher, and this is important
+18:44 - that we're doing it in this direction.
+18:46 - You could also do KL divergence teacher-student,
+18:48 - but here we're doing KL divergence student-teacher.
+18:52 - And the KL divergence, if you expand it,
+18:56 - it basically has this form.
+18:58 - And you can see that this objective
+19:00 - is good for training because what we need to do in order
+19:05 - to evaluate that objective and optimize
+19:06 - it is we need to be able to generate samples
+19:09 - from the student model efficiently.
+19:11 - The student model is an IAF model,
+19:14 - so it's very easy to sample from.
+19:16 - We need to be able to evaluate the log probability of a sample
+19:21 - according to the teacher model.
+19:24 - That's, again, easy to do because it's just
+19:26 - an autoregressive model, so evaluating likelihoods is easy.
+19:29 -
+19:32 - To evaluate the likelihood of the data point
+19:35 - that you generate yourself using the student model,
+19:38 - which is what you need for this term,
+19:40 - again, that's efficient to do if you have an IAF
+19:43 - model because you've generated the samples yourself,
+19:45 - so you know the z, so you know how to evaluate likelihoods.
+19:50 - And so this kind of objective is very, very suitable
+19:53 - for this kind of setting, where the student model
+19:56 - is something you can sample from efficiently from.
+19:58 - You can evaluate likelihoods on your own samples efficiently.
+20:01 - And then you have a teacher model for which
+20:04 - you can evaluate likelihoods.
+20:06 - Maybe it's expensive to sample from,
+20:07 - but we don't care because we never
+20:09 - sample from the teacher model.
+20:11 - You just need to be able to do good MLE training, which
+20:14 - we know we can do with autoregressive models.
+20:16 - And to the extent that this KL divergence is small,
+20:19 - then the student distribution is going
+20:21 - to be close to the teacher distribution.
+20:23 - So if you sample from the student model,
+20:25 - you're going to get something similar to what you would have
+20:28 - gotten if you were to sample from the teacher model,
+20:30 - but it's much, much faster.
+20:31 -
+20:34 - And all the operations that you see
+20:37 - there, they can be implemented efficiently,
+20:39 - and that's kind of what they did for this parallel wavenet.
+20:44 - You train a teacher model by maximum likelihood,
+20:46 - and then you train a student IAF model
+20:49 - to minimize this KL divergence.
+20:51 - And at test time, then you throw away your teacher.
+20:54 - And at test time, what you put on mobile phones
+20:59 - to generate samples very efficiently
+21:01 - is to use the student model.
+21:03 - Yes.
+21:03 - So you do optimize this function,
+21:06 - so you do need to optimize both these, the sampling n,
+21:10 - but you don't need to optimize t. t is fixed.
+21:14 - And because everything can be parameterized,
+21:15 - so you can still back propagate through
+21:17 - that because, essentially, it's just
+21:20 - kind of a big reparameterization trick
+21:22 - that you're doing on the student model,
+21:25 - is just starting with simple noise and then transforming it.
+21:28 - And so it's easy to figure out how,
+21:30 - if you were to update the parameter of the student model,
+21:32 - how would the sample change.
+21:35 - You can do it in this case because it's
+21:38 - the same as reparameterization.
+21:39 -
+21:43 - And yeah, that's what they did, and they
+21:46 - were able to get very, very impressive speed-ups.
+21:50 - This was a paper from Google a few years ago,
+21:53 - and that's how they were able to actually deploy
+21:55 - the models in production.
+21:56 - They trained a really good teacher model by training it
+22:00 - autoregressively.
+22:00 - That was too slow to generate samples.
+22:02 - But then by thinking it as a kind of from this flow model
+22:07 - perspective, then there was a pretty natural way of distilling
+22:10 - down into something similar, but that has kind of the opposite
+22:15 - property of being able to sample efficiently,
+22:18 - even though you cannot get likelihoods.
+22:20 - If you just care about inference,
+22:21 - you just care about generation, that's
+22:23 - a more convenient way of parameterizing
+22:27 - the family of distributions.
+22:29 - The question is, can we do this for language models?
+22:31 - The problem is that if you have a language model that's
+22:33 - discrete, and so there is no-- you can't necessarily
+22:37 - think of it as a flow model.
+22:39 - And so there is not--
+22:41 - you can't really think of sampling from a language model
+22:45 - as transforming a simple distribution, at least not
+22:48 - in a differentiable, invertible way because the x is discrete,
+22:54 - and so there is not really a way to transform
+22:56 - a continuous distribution into a discrete one.
+22:59 - And so you can't do it this way, basically, unfortunately.
+23:03 - Flow models are only applicable to probability density
+23:06 - functions, so you cannot apply them to probability mass
+23:10 - functions where you would have discrete random variables.
+23:14 - So it's only applicable to continuous random variables
+23:16 - because otherwise the change of variable format does not apply,
+23:19 - so you cannot use it anymore.
+23:21 - Cool.
+23:22 - So that's another family.
+23:23 - And now, for the remaining few minutes,
+23:26 - we can just go through a few other options
+23:29 - that you have if you want to build invertible mappings.
+23:32 - One natural thing you might want to do,
+23:35 - if you start thinking of autoregressive models
+23:38 - are basically flow models, we know
+23:41 - that you can use convolutional networks
+23:45 - in autoregressive models as long as you mask them
+23:48 - in the right way.
+23:49 - And so the natural thing you can ask
+23:52 - is if it's possible to define invertible layers that
+23:55 - are convolutional in some way because we
+23:57 - know convolutions are great.
+23:59 - And by itself, a convolution would not be invertible.
+24:04 - But if you mask it in the right way,
+24:06 - you can kind get the structure or the computation structure
+24:10 - of an autoregressive model, and you
+24:11 - can build up a layer that is actually invertible.
+24:17 - And if you do things in the right way,
+24:20 - you can actually make it such that it's not only invertible,
+24:23 - but you can actually evaluate the determinant of the Jacobian
+24:26 - efficiently.
+24:27 - And kind of like in autoregressive models,
+24:31 - like in PixelCNN, really all you have to do
+24:34 - is you have to mask the convolutions so that there
+24:36 - is some kind of ordering, so then that would give you the--
+24:40 - it would not only allow you to invert things more efficiently,
+24:43 - but it would also allow you to compute
+24:44 - the determinant of the Jacobian efficiently because it basically
+24:47 - makes the Jacobian lower triangular,
+24:50 - and so then we can compute Jacobians determinant
+24:53 - efficiently, which is what I just said.
+24:58 - And basically what you can do is you
+25:02 - can try to enforce certain conditions on the parameters
+25:04 - of the neural network so that the transformation
+25:07 - is guaranteed to be invertible.
+25:09 - And you can read the paper for more details,
+25:11 - but essentially what it boils down
+25:13 - is something like this, where if you have a three-channel input
+25:16 - image, like the one you have on the left, and you have,
+25:20 - let's say, a 3 by 3 kernel, convolutional kernel, which
+25:24 - looks at, let's say, R, G, and B, what you can do
+25:28 - is you can mask the parameters of that kernel, which
+25:32 - in this case is just this cube.
+25:33 - There is a cube for the three channels,
+25:37 - and you can mask them so that you only look at the--
+25:41 - because that you only look at the pixels
+25:43 - that come before you, basically, in the ordering.
+25:46 - So you can see the receptive fields of these kernels
+25:49 - here on the right.
+25:51 - And when you produce the three values on the three channels,
+25:56 - they are produced by a computation that is basically
+25:59 - consistent with this ordering.
+26:01 - And you can see that, just like in the PixelCNN,
+26:04 - you have to decide on which colors you start from,
+26:08 - and then you have to be kind of causal also with respect
+26:12 - to the channels that you have in the image.
+26:15 -
+26:19 - And yeah, so basically there are ways
+26:23 - to define convolutional kernels that would give you
+26:27 - invertible mappings.
+26:29 - And you're losing out something because the receptive fields,
+26:35 - you're no longer able to look at everything in the image.
+26:39 - You're kind of restricted in what you can look at,
+26:41 - but what you gain is that you get attractable Jacobian,
+26:45 - basically.
+26:46 - And you can build a flow model by stacking
+26:49 - these kind of layers, and this works reasonably well.
+26:53 - Here's some examples on MNIST samples, CIFAR-10,
+26:57 - ImageNet samples that you get by training, basically, a flow
+27:01 - model where you have all these convolutional layers that
+27:04 - are crafted in a certain way so that the filters are basically
+27:09 - invertible.
+27:12 - The other quick thing I wanted to mention
+27:14 - is kind of a different perspective on what
+27:20 - happens when you train a flow model, this idea that you can
+27:24 - either think about training a model such that the distribution
+27:29 - of the samples that you get is close to the data distribution,
+27:33 - or you can think of training the model as basically saying,
+27:37 - if I were to transform my data according
+27:39 - to the inverse mapping, I should be
+27:41 - getting something that is close to the prior of the flow model,
+27:44 - as close, for example, a Gaussian distribution.
+27:47 - So you can use this dual perspective
+27:49 - to construct other kinds of layers that can get you--
+27:53 - that basically where every layer is
+27:56 - kind of trying to make the data look more Gaussian, essentially.
+28:02 - And the basic intuition is something like this.
+28:05 - If you have a flow model where you transform
+28:08 - a Gaussian random variable into data x and then
+28:11 - you have some true data distribution,
+28:14 - so a true random variable x tilde,
+28:16 - which is the one that is distributed really according
+28:19 - to the data, if you do maximum likelihood training, what you do
+28:23 - is you minimize the KL divergence between the data
+28:25 - distribution and the distribution
+28:27 - that you get by sampling from this model,
+28:30 - by transforming Gaussian noise through this invertible mapping
+28:33 - f theta.
+28:35 - Or equivalently, you're minimizing the KL divergence
+28:37 - between the distribution of the true x tilde, which
+28:41 - is distributed according to the data,
+28:43 - and this new random variable x that you
+28:45 - get by transforming Gaussian random noise, which is basically
+28:53 - this is saying that if you take Gaussian samples
+28:55 - and you transform them through this mapping,
+28:57 - you should get something close to the data.
+29:00 - Equivalently, you can also, because of properties of the KL
+29:04 - divergence, which is invariant to invertible transformations,
+29:07 - you can also think of this as trying to minimize the KL
+29:10 - divergence of what you get by transforming
+29:13 - the true data according to the inverse mapping
+29:16 - and transforming the samples through the inverse mapping.
+29:20 - And we know what we get if we transform samples
+29:22 - through the inverse mapping.
+29:24 - We get the prior.
+29:27 - And so equivalently, you can kind
+29:28 - think of training a flow model as transforming
+29:35 - this data through this random vector x tilde, which
+29:39 - is distributed according to the data,
+29:41 - into one that is distributed as a Gaussian.
+29:45 - And so you can think of the flow model
+29:46 - as basically Gaussianizing the data.
+29:49 - You start out with a complicated distribution.
+29:51 - If you go through the flow in the backward direction,
+29:55 - you're mapping it into something that
+29:57 - has to look like a Gaussian.
+30:00 - And how to achieve this?
+30:03 - One natural way of doing it is to basically, at least if you
+30:06 - have one-dimensional data, is through the inverse CDF.
+30:10 - And so going through quickly because I don't have time,
+30:14 - but if you have a random variable that
+30:17 - has some kind of data distribution,
+30:20 - if you apply the inverse or, again, I guess
+30:25 - the CDF of the data-- there is going
+30:28 - to be a CDF for the data distribution.
+30:31 - And if you apply the CDF of the data distribution
+30:35 - to this random vector or random variable,
+30:37 - you're going to get a uniform random variable.
+30:40 - That's basically the way you sample from--
+30:42 - it's one of the ways to sample from a random variable
+30:45 - with known CDF.
+30:46 - You sample uniformly.
+30:49 - You inverse the CDF, and you get a sample from x tilde.
+30:53 - And so basically, this kind of transformation
+30:58 - where you are transforming a data
+31:01 - sample through the CDF, which is kind of a way to kind of whiten
+31:05 - the data, it's kind of the thing you
+31:07 - would do by subtracting the mean divided
+31:10 - by the standard deviation.
+31:11 - Something similar, if you apply this kind of transformation,
+31:14 - you get something that is uniform.
+31:16 - So this is guaranteed to be between 0 and 1.
+31:19 - And once you have a uniform random variable, what you can do
+31:22 - is you can apply the inverse CDF of a Gaussian,
+31:24 - and you can transform it into something
+31:26 - that is exactly Gaussian.
+31:28 -
+31:30 - And this, basically the composition
+31:34 - of the true CDF of the data and the inverse CDF of a Gaussian
+31:38 - will transform any random vector into a Gaussian one.
+31:44 - And that's basically the idea of Gaussianizing
+31:47 - flows is that you stack a bunch of transformations, trying
+31:50 - to make the data more and more Gaussian.
+31:53 - And I guess I'm going to skip this,
+31:56 - but if you know about copula models,
+31:59 - these are a famous kind of statistical model
+32:01 - that's often used on Wall Street.
+32:03 - You can think of it as a very shallow kind
+32:06 - of normalizing flow, where you only
+32:08 - apply one layer of Gaussianization
+32:10 - on each individual dimension.
+32:13 - So you start with data that is not Gaussian distributed,
+32:15 - then you apply this Gaussian CDF trick
+32:18 - to basically make each individual dimension Gaussian.
+32:22 - And even though jointly it's not Gaussian,
+32:24 - that's your model of the data.
+32:26 - And then you can stack them together, and then you get--
+32:30 - you keep doing this thing and you apply some rotations.
+32:32 - Then you can transform anything into a Gaussian.
+32:34 - And this is another way of basically building
+32:38 - invertible transformations.
+
+00:00 -
+00:05 - SPEAKER: OK, so today we're going
+00:08 - to be talking about generative adversarial networks.
+00:11 - So we're going to start introducing yet another class
+00:16 - of generative models.
+00:19 - Just as a recap, this is like the high level story, high level
+00:25 - roadmap for the things we're going to be
+00:28 - talking about in this course.
+00:30 - The high level idea when you build a generative model
+00:32 - is that you start with some data,
+00:35 - and you assume that the data is basically
+00:38 - a set of IID samples from some unknown probability distribution
+00:43 - that we denote P data.
+00:45 - Then you have a model family, which
+00:47 - is a set of probability distributions
+00:48 - that are parameterized usually by neural networks.
+00:52 - And then what you do is you define some kind of notion
+00:55 - of similarity between the data distribution and the model
+00:59 - distribution, and then you try to optimize over
+01:01 - the set of probability distribution
+01:04 - in your model family, and you try
+01:05 - to find one that is close to the data distribution
+01:09 - according to some notion of similarity.
+01:12 - And we've seen different ways of basically constructing
+01:17 - probability distributions in this set.
+01:20 - And we've seen autoregressive models
+01:22 - where you have chain rule, and you break down
+01:24 - basically the generative modeling
+01:26 - problem as a sequence of simple prediction problems.
+01:30 - We've seen variational autoencoders
+01:32 - where we are essentially, again, modeling
+01:35 - the density over the data using essentially a big mixture model.
+01:41 - And then the last class of models we've seen
+01:44 - is this idea of a normalizing flow
+01:46 - model which is kind of like a variational autoencoder
+01:50 - with a special type of decoder, which is just
+01:52 - a deterministic invertible transformation where, again, we
+01:56 - kind of get these densities through the change
+01:58 - of variable rule.
+02:00 - But the key thing is that we essentially always try
+02:04 - to model the probability assigned by the model
+02:08 - to any particular data point.
+02:10 - And the reason we do that is that if we can do that,
+02:13 - then we can do maximum likelihood training.
+02:15 - So if you know how to evaluate probabilities
+02:18 - according to the model, then there
+02:20 - is a very natural way of training the models, which
+02:23 - is basically this idea of minimizing the KL
+02:25 - divergence between the data distribution
+02:27 - and the model distribution, which as we know
+02:30 - is equivalent to maximizing likelihoods.
+02:33 - So there's a very natural and very principled
+02:36 - way of comparing probability distributions that
+02:40 - works very well when you have access to likelihoods.
+02:44 - And a lot of this machinery involves
+02:48 - way of setting up models such that you can evaluate
+02:52 - likelihoods efficiently.
+02:54 - And that's one way of doing things.
+02:56 - What we're going to see today is basically a different way
+03:01 - of comparing similarity or of measuring
+03:04 - similarity between probability distributions.
+03:06 - So we're going to change this piece of the story,
+03:09 - and we're going to try to compare probability
+03:11 - distributions in a different way.
+03:13 - And by doing that, we will get a lot of flexibility
+03:16 - in terms of defining the model family because we will not
+03:19 - have to essentially--
+03:22 - the training objective is not going
+03:24 - to be based on maximum likelihood anymore.
+03:26 - And so we're going to get more flexibility essentially
+03:29 - in terms of defining the generative model itself.
+03:34 - So remember that, again, sort of what we've been doing so far
+03:39 - is training models by maximum likelihood.
+03:41 - So the idea is that we have access
+03:43 - to the density or the probability mass
+03:46 - function over each data point.
+03:47 - So we can ask the model, how likely
+03:50 - are you to generate this particular data point
+03:55 - Xi in this case?
+03:58 - And if we can do that, then we can also
+04:01 - try to choose parameters such that we maximize the probability
+04:06 - that the model generated the training data set that we have
+04:09 - access to, or equivalently we can
+04:11 - choose parameters to try to maximize the average log
+04:15 - probability assigned by the model to our training set.
+04:19 - And there is good reasons for choosing this kind
+04:22 - of learning objective.
+04:24 - In particular, it can be shown that this
+04:26 - is optimal in a certain sense.
+04:29 - And what I mean is that basically
+04:33 - under some assumptions, which are not necessarily true
+04:36 - in practice, but under some ideal assumptions
+04:40 - and an ideal setting where you have a sufficiently
+04:43 - powerful model and there is some identifiability condition,
+04:49 - not super important, but under some technical conditions,
+04:56 - you can prove that basically trying
+04:58 - to estimate the parameters of the models
+05:00 - by maximizing likelihood by basically solving
+05:03 - this particular optimization problem
+05:05 - is the most efficient way of using the data.
+05:07 - So basically there is going to be other learning objectives
+05:10 - that you can set up that would potentially
+05:14 - give you estimates of the true parameters of the model.
+05:20 - But among all these various techniques,
+05:22 - the maximum likelihood one is the one
+05:24 - that converges the fastest, which basically means
+05:27 - that given a certain amount of data,
+05:30 - this is the best thing you can do.
+05:33 - It's the one that will give you the right answer basically using
+05:37 - the least amount of data.
+05:40 - And so that's why using maximum likelihood
+05:43 - is a good idea because in some sense,
+05:46 - you're making the best possible use
+05:49 - of the data you have access to under some technical conditions.
+05:55 - And the other reason that maximum likelihood
+05:59 - is a good training objective is that we've
+06:02 - seen that it corresponds to a compression problem.
+06:05 - So if you can achieve high likelihood on a data set,
+06:10 - then it means that you would do reasonably
+06:13 - well at compressing the data.
+06:15 - And we know that compression is a reasonable learning
+06:18 - objective, is one of the--
+06:21 - in some sense that if you're able to compress the data,
+06:23 - then it means that you can predict the things that
+06:26 - could happen pretty well.
+06:28 - And it's a good way of forcing you to understand
+06:32 - what the patterns in the data.
+06:35 - And so compression is a typically a pretty good learning
+06:41 - objective.
+06:43 - However, it might not be necessarily what we want.
+06:47 - And so what we'll see first is that there
+06:50 - are cases in which achieving high likelihood
+06:54 - might not necessarily be correlated with, let's say,
+06:58 - achieving good sample quality.
+06:59 - So if you're thinking about training a generative model
+07:02 - over images, for example, it's possible to construct models
+07:05 - that would give you high likelihood and terrible samples
+07:09 - in terms of quality.
+07:11 - And vice versa, it's going to be possible to train models that
+07:15 - have very good sample quality, meaning they produce images that
+07:19 - are very realistic, but they have terrible likelihoods
+07:22 - at the same time.
+07:24 - And so although training on maximum likelihood
+07:30 - has good properties, it might not be necessarily
+07:32 - what we want if what you care about is, let's say,
+07:36 - generating pretty samples or pretty images.
+07:40 - And so that's going to be some motivation for choosing
+07:43 - different training objectives that are not necessarily
+07:46 - going to be based on a maximum likelihood.
+07:50 - So let's see what does this mean a little bit more rigorously.
+07:59 - First, what we know is that if somehow you're able to find
+08:05 - the true global optimum of this optimization problem,
+08:11 - so if you're really able to find a model distribution that
+08:15 - perfectly matches the data distribution--
+08:18 - so somehow if you go back to this picture,
+08:21 - if you are able to make this distance exactly zero--
+08:25 - so the KL divergence between the data and the model
+08:28 - is truly zero, so you're able to reach the global optimum
+08:31 - of this optimization problem--
+08:33 - then you are in good shape because, well, you
+08:36 - get the best possible likelihood,
+08:38 - and the samples that you produce are perfect essentially
+08:42 - by definition because your model is exactly equal to the data
+08:46 - distribution.
+08:47 - And so if you sample from the model,
+08:49 - it's like sampling from the data.
+08:51 - And so that's as good as it gets.
+08:54 - But what we're going to see is that as long as the match is not
+08:58 - perfect, as long as there is a little bit of a gap, which
+09:01 - in practice is always going to be the case, then being
+09:06 - close in KL divergence or equivalently
+09:11 - doing well with respect to likelihood,
+09:12 - it doesn't necessarily mean that you are achieving good sample
+09:16 - quality, right?
+09:18 - But somehow if you're really able to get
+09:21 - the true global optimum, then you're good.
+09:25 - But for imperfect models, achieving high likelihoods
+09:28 - does not necessarily mean that you achieve good sample quality
+09:33 - and vice versa.
+09:34 - There is an example where you can get very good likelihoods
+09:39 - but very bad samples.
+09:41 - And so to do that, you can basically imagine a situation
+09:44 - like this where you come up with this model, which is
+09:50 - a mixture of two distribution.
+09:53 - It's a mixture of the true data distribution
+09:56 - and some garbage, pure noise distribution.
+09:59 - And so the sampling process is something like this here.
+10:02 - You flip a coin.
+10:04 - And then with 99% probability, you generate noise.
+10:08 - You generate garbage.
+10:09 - And with 1% probability, you generate a true sample
+10:13 - from the data distribution.
+10:15 - Of course, in practice, you cannot really do this.
+10:17 - But this is just to show that there exist models
+10:20 - that achieve very good likelihoods
+10:23 - as we'll see but very good sample quality.
+10:26 - And what I mean, the sample quality
+10:28 - is bad because 99% of the time, you are generating pure garbage,
+10:34 - and only 1% of the time you're generating good samples.
+10:40 - And what we'll see is that even though this model is generating
+10:44 - very bad samples, it actually achieves very good likelihoods.
+10:48 - And to see that, it's actually a relatively simple derivation.
+10:52 - When you evaluate the probability of a data point X,
+10:55 - according to this model, you get a sum of two terms.
+10:58 - It's the true probability under the data distribution
+11:01 - and is the probability under the noise distribution.
+11:05 - And even though the noise distribution
+11:07 - could be really bad, the probability
+11:09 - is at least as good as the 1% probability
+11:14 - of sampling from the data.
+11:16 - And so the probability assigned to this data point
+11:18 - is at least as large as--
+11:19 - this is a sum of two non-negative quantities.
+11:21 - And so this log is at least as large
+11:24 - as the log of that little contribution that comes
+11:27 - from the data distribution.
+11:30 - And because we're taking logs, the log of 1% times P data
+11:35 - is equal to the log of P data minus this log of 100.
+11:41 - So somehow basically what we're seeing
+11:44 - here is that the log probability assigned by this model
+11:48 - to a data point is the best log probability you can get,
+11:53 - the one that you get according to the true data distribution
+11:57 - shifted down by some constant.
+11:58 -
+12:01 - And in particular what this means
+12:05 - is that if you take an expectation of this with respect
+12:07 - to the data distribution, so you want
+12:09 - to see what is the average log likelihood
+12:11 - that this model achieves.
+12:12 - If you take an expectation of the left hand side,
+12:15 - you take an expectation of the right hand side,
+12:17 - you get that on average, these models performs reasonably well
+12:25 - in the sense that it performs as well as
+12:27 - what you would get if you were to use the true data
+12:30 - distribution as a model shifted by some constant.
+12:37 - And we know because KL divergence is non-negative,
+12:41 - that somehow this is the best you can do.
+12:44 - The average log likelihood for any model cannot be possibly
+12:48 - better than the log likelihood that you would get if you were
+12:52 - to use the true data distribution to evaluate
+12:54 - likelihoods of samples produced by the data distribution.
+12:59 - The KL divergence is non-negative,
+13:01 - which just if you just move the log on the other side,
+13:05 - is just saying that the data distribution-- if the data is
+13:08 - coming from the data distribution, the best
+13:10 - model of the world you can possibly have
+13:12 - is the one that produced the data is the data distribution.
+13:15 - And no matter how clever you are in choosing theta,
+13:18 - you cannot possibly do better than using the true model that
+13:22 - produced the data.
+13:24 - So you can see that this performance that we get
+13:33 - is bounded above by this basically entropy
+13:37 - of the data distribution and below by the same thing
+13:41 - shifted by a little bit.
+13:43 - And what I argue is that, that constant doesn't matter
+13:46 - too much because if you think about it, as we increase
+13:52 - the number of dimensions, so as we
+13:54 - go in higher and higher dimensions, the likelihood--
+13:58 - so this piece will basically scale linearly
+14:02 - in the number of dimensions while the constant is fixed.
+14:06 - It doesn't depend on how many variables you're modeling.
+14:09 - If you factorize the true data distribution
+14:13 - according to the chain rule, you can kind of
+14:16 - see that this term here, the log P data scales linearly
+14:20 - in the number of variables that you have
+14:22 - while the second piece does not depend
+14:25 - on the number of variables.
+14:27 - And so you can see that in high dimensions,
+14:31 - this model is basically doing as well as you could hope to do.
+14:35 - The likelihood of this model which
+14:37 - is producing garbage, 99% of the time
+14:40 - is pretty close to the best you can possibly achieve.
+14:45 - And so I think back to your question,
+14:47 - it means that there is a model that
+14:49 - is very close to the optimal one and is still
+14:53 - producing very, very bad results, especially
+14:56 - in high dimensions.
+14:57 - To what extent could you use, let's say, bad data
+15:01 - and somehow train the models that way?
+15:04 - It's not obvious how you would do it with maximum likelihood.
+15:07 - But using GANs, which is what we're going to talk about today,
+15:10 - it's actually pretty straightforward
+15:11 - to incorporate negative data.
+15:15 - So if you know that there are certain things that are clearly
+15:18 - not possible or things you don't like,
+15:21 - then it's pretty straightforward to incorporate
+15:24 - that negative data augmentation into your training objective.
+15:28 - For example, if you take your training on images,
+15:31 - and you apply some kind of jigsaw operator
+15:34 - where you produce a puzzle, and then you move the pieces around,
+15:38 - you get an image that kind of has the right local texture,
+15:41 - but it's not something you want.
+15:43 - And you can incorporate that data augmentation
+15:47 - essentially or negative data augmentation
+15:48 - to improve the training.
+15:50 - So that applies generally.
+15:51 - It's a little bit trickier to do with likelihood-based models.
+15:58 - But yeah, that's a good idea.
+16:01 - I think in general we're not in the setting where
+16:04 - we are assuming that there is even noise in the training data.
+16:09 - Or I think what we were talking about
+16:10 - is a setting where you know what you don't want,
+16:12 - and you take advantage of that, but you
+16:15 - don't have to figure out what is noise
+16:17 - and what is not because you kind of already know.
+16:19 - And here we're in the setting where we we're assuming the data
+16:22 - is clean.
+16:23 - The data is really just a bunch of samples
+16:25 - from the data distribution.
+16:26 - So you do want to use everything you have access to.
+16:29 - And there is no need to filter the noise.
+16:31 - This is just a model of the world that is made up,
+16:36 - but it's illustrating the point that optimizing likelihoods
+16:40 - might not give you good sample quality because at least
+16:43 - conceptually it's possible that by optimizing likelihood,
+16:46 - you end up with a model like this, which would produce
+16:49 - garbage 99% of the time but gives you high likelihoods.
+16:55 - And so there is that potential issue.
+16:58 -
+17:00 - And conversely, it's possible to get
+17:03 - models that produce great samples and very bad log
+17:09 - likelihoods.
+17:10 - Anybody have a guess on how you could do that?
+17:13 - Overfitting.
+17:14 - Yeah, that's the probably the simplest way to do it.
+17:16 - Just memorize the training set.
+17:18 - So you build a model that puts all the probability mass
+17:21 - uniform, let's say, distribution over the training set.
+17:24 - And then if you sample from this model,
+17:27 - the samples would look great.
+17:28 - I mean, they are by definition just training samples.
+17:31 - So basically you cannot do better than that.
+17:35 - But the test likelihood would be as bad
+17:36 - as it gets because it's going to assign basically zero
+17:39 - probability to anything that the model hasn't
+17:41 - seen during training, and so again, terrible log likelihood.
+17:48 - So again, this is suggesting that it
+17:53 - might be useful to kind of disentangle a little bit sample
+17:57 - quality and likelihood.
+18:01 - Even though we had some success training models
+18:04 - by maximum likelihood, it's not guaranteed
+18:07 - that that's always the case.
+18:08 - And there might be other training objectives
+18:11 - that will give us good results in practice.
+18:14 -
+18:16 - And so that's sort of the main motivation
+18:19 - behind the key idea behind generative adversarial networks.
+18:25 - It's a different training objective
+18:28 - that will not depend on the likelihood function.
+18:31 - And so back to our high level picture,
+18:34 - basically what we're going to do is
+18:36 - we're going to change this performance measure here.
+18:40 - We're going to change the way we're
+18:42 - comparing how good our model is by throwing away
+18:45 - KL divergence, which is what we've been doing so far.
+18:49 - And we're going to try some alternative way of comparing
+18:53 - two probability distributions that
+18:54 - will not rely on likelihood.
+18:57 - Yeah, it's a good question.
+18:58 - What is a great sample?
+19:00 - Maybe you want the samples to have diversity, in which case
+19:02 - maybe this wouldn't be.
+19:03 - But if you think about images, like,
+19:05 - if you were to look at them, they would look perfect.
+19:08 - They would have the right structure.
+19:09 - They would be good, except that there is not maybe
+19:14 - enough variety because you're not really
+19:16 - generating anything new.
+19:18 - But presumably, it would be--
+19:21 - in terms of just quality of the individual samples,
+19:25 - this should be good.

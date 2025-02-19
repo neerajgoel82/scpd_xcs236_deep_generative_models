@@ -1,1 +1,584 @@
 
+00:00 -
+00:05 - SPEAKER: The plan is to essentially introduce
+00:09 - ways of training energy-based models that
+00:11 - do not require sampling during training at least.
+00:15 - And so think of them as alternatives
+00:19 - to contrastive divergence, which was
+00:21 - an approximation to the KL divergence between data
+00:25 - and model.
+00:26 - So an approximation to maximum likelihood training,
+00:29 - that's how we introduced contrastive divergence.
+00:32 - But we'll see is the usual trick that
+00:35 - is going to be some other divergence, some other way
+00:37 - of comparing model to data where the loss function basically
+00:43 - does not involve the partition function.
+00:46 - And if we train by that instead of by training
+00:49 - by approximating the KL divergence then
+00:51 - we get much faster training procedures.
+00:54 - And so we'll see a few of them.
+00:56 - We'll see score matching, which is kind of the key building
+00:59 - block also behind diffusion models, noise contrastive
+01:03 - estimation and adversarial training.
+01:07 - So recall that we have an energy-based model, which
+01:11 - is defined like that.
+01:13 - And if you take the log of that expression back,
+01:17 - we get this sort of difference between the energy, which
+01:22 - is the whatever, the neural network you're
+01:23 - using to model the distribution and then you have the log
+01:26 - partition function.
+01:27 - And the key thing is that the score function
+01:31 - or the gradient of the log likelihood with respect to x--
+01:35 - so note, this is not the gradient
+01:37 - of the log likelihood with respect
+01:38 - to theta, which are the parameters of the model.
+01:41 - This is the gradient with respect to x.
+01:43 - So this is basically, how does the probability
+01:46 - change if I were to make small changes to the sample itself?
+01:52 - Not how the likelihood would change
+01:54 - if I were to make changes to the parameters
+01:57 - of the neural network.
+01:58 - So this is gradient with respect to x, not with respect to theta.
+02:02 - This is also a function of x in the sense that at every axis
+02:07 - there is going to be different gradients and a function
+02:09 - of theta because the log likelihood
+02:11 - itself is parameterized by a neural network with weights
+02:14 - theta
+02:15 - And just what we just saw before,
+02:19 - the gradient of the log likelihood
+02:23 - does not depend on the partition function.
+02:25 - So here I guess it's showing a little bit better
+02:28 - than what I was trying to show before,
+02:30 - but if you have the log likelihood
+02:33 - is the difference of these two terms,
+02:34 - the log partition function is the same for every x
+02:38 - or it depends on theta, but it does not depend on x.
+02:41 - And so when you take the gradient with respect to x,
+02:44 - the log partition function doesn't change.
+02:47 - And so the gradient is 0.
+02:51 - And so that's why we were able to use the score
+02:56 - function or the gradient of the log likelihood
+02:58 - in the previous sampling procedure.
+03:00 - It's easy to compute if you have access to the energy function f
+03:05 - theta.
+03:07 - And you can see it here, this kind of idea in play.
+03:14 - If you have a Gaussian distribution where as usual
+03:17 - the parameters would be the mean and the standard deviation,
+03:21 - remember, the partition function is this normalization constant
+03:25 - that you have in front, the guarantees that the integral
+03:29 - of this function is actually 1.
+03:31 - If you take the log, you're going
+03:32 - to get the log of the normalization constant
+03:36 - and then you get the log of this exponential.
+03:38 - And then when you take the derivative with respect to x,
+03:41 - you get, again, a function of x and the parameters of the model,
+03:45 - which is relatively simple.
+03:47 - It's just like x minus the mean scaled by the variance.
+03:54 - And if you have a gamma distribution,
+03:57 - again, as a potentially nasty normalization constant in front.
+04:02 - And the moment you take the score, that normalization
+04:07 - constant disappears and you get a much simpler function
+04:10 - to work with.
+04:13 - And so the intuition is that as theta, which is the score,
+04:19 - provides you an alternative view of the original function
+04:25 - where you are looking at things from the perspective
+04:28 - of the gradient instead of looking
+04:29 - at things from the perspective of the likelihood itself.
+04:33 - So if you imagine you have a P theta, which
+04:35 - is just a mixture of two Gaussians let's say in 2D,
+04:39 - so there is a Gaussian here and a Gaussian up
+04:41 - here, so it's a mixture of two, so you
+04:43 - have this fairly complicated level curves,
+04:47 - the likelihood is just a scalar function for every x.
+04:50 - It gives you a scalar, which is the height of this
+04:53 - of this curve where you can imagine you have two bell
+04:56 - curves, one center here and one here.
+05:00 - The score is basically the gradient at every point.
+05:04 - It's a function that every x gives you the gradient
+05:07 - of the log likelihood.
+05:09 - And so it's a vector field.
+05:10 - You can imagine at every point there is an arrow
+05:13 - and the arrow tells you, what is the direction that you should
+05:16 - follow if you wanted to increase the log likelihood most rapidly?
+05:20 - So as expected, you can see that these arrows are pointing
+05:23 - towards the means of the Gaussian,
+05:25 - which is what you see here in the sense
+05:28 - that if you are at a data point and you want to increase
+05:31 - the likelihood, you should push it towards the mean
+05:35 - if the model is a Gaussian.
+05:37 - Well, they are not necessarily fixed,
+05:38 - so we're still going to learn them.
+05:40 - But when we take gradients with respect to x--
+05:44 - and so theta does not depend on x and so
+05:47 - when you take the gradient with respect
+05:48 - to x, the log partition function disappears.
+05:54 - But we're still going to be learning theta.
+05:56 - So here, of course, I'm just showing a snapshot
+05:59 - where theta is fixed.
+06:00 - And theta would represent the means and the variances
+06:03 - of these two Gaussians.
+06:04 - And if you change those, the score
+06:07 - function itself would change.
+06:09 - And you can see it here it's still a function of theta,
+06:12 - but it's a simple function of theta that does not depend
+06:15 - on the normalization constant.
+06:16 - So you can compute it without knowing the relative--
+06:22 - you don't need to know relative--
+06:24 - remember that the gradient is telling you
+06:27 - how the likelihood changes if you were
+06:28 - to make small changes to x.
+06:30 - And we know how to compare the probabilities of two data points
+06:33 - in an energy-based models.
+06:34 - So it makes sense that it does not depend on the partition
+06:38 - function.
+06:39 - So the score function as defined is always
+06:41 - a vector field in the sense representing the gradient
+06:44 - because by definition it's just the gradient
+06:46 - of f theta with respect to x.
+06:48 - And so in general, f theta would be much more complicated
+06:52 - than a mixture of two Gaussians.
+06:54 - And so you can imagine that these arrows would be much more
+06:57 - complicated and they might-- if you have probability mass spread
+07:00 - out in a complicated way, the gradient could be--
+07:04 - I mean, it's still going to be a vector field.
+07:06 - It might not have that simple structure where it's just
+07:08 - pointing you towards these two points,
+07:11 - but it's still always going to be a vector field of gradient.
+07:15 - So it's a vector field of gradients
+07:17 - if it's defined like this because it's actually
+07:19 - a conservative vector field because there
+07:20 - is an actual underlying energy function.
+07:23 - When we talk about score-based models,
+07:25 - we'll see that we'll just use an arbitrary neural network
+07:27 - to model this.
+07:28 - But for now we are assuming that there is an underlying
+07:31 - f theta and an energy function and this is just
+07:34 - the vector field.
+07:35 - So if you like analogies with physics,
+07:37 - you can of f theta as being an electric potential
+07:42 - and S theta as being the gradient of that, which is
+07:48 - like a field basically.
+07:50 - An electric field, they describe the same object,
+07:54 - but in slightly different ways.
+07:56 - And there is no loss of information,
+07:58 - we're just thinking of things in a slightly different,
+08:01 - taking a slightly different view.
+08:03 - There's going to be beneficial from a computational reason
+08:05 - because we don't have to worry about the partition function.
+08:08 -
+08:11 - OK, so how do we do--
+08:15 - the key observation is the score function.
+08:18 - Gradient of the log likelihood with respect to the inputs
+08:21 - is independent of the partition function.
+08:23 - And so the idea is that we're going to define a training
+08:28 - objective where we're going to compare two probability
+08:32 - distributions or two probability densities,
+08:35 - p and q, by comparing their respective vector
+08:39 - field of gradients.
+08:41 - So the idea is that if p and q are similar, then
+08:46 - they should also have similar vector field of gradients.
+08:50 - If p and q are similar different axis
+08:54 - would have similar gradients.
+08:57 - So one reasonable way of comparing
+08:59 - how similar p and q are is to say,
+09:03 - what is the average L2 difference between the score
+09:09 - of p and the score of q?
+09:13 - So at every point, we look at, what
+09:14 - is the direction that you should follow if you wanted to increase
+09:17 - the likelihood of p"?
+09:18 - Most rapidly, what is the direction
+09:20 - that you should follow if you wanted
+09:21 - to increase the likelihood of q most rapidly?
+09:23 - And we check how different they are.
+09:25 - So it's a vector.
+09:26 - So to turn it into a scalar we take the norm of this vector
+09:30 - and then we're averaging with respect to p in this case.
+09:37 - And what I claim is that you can imagine
+09:42 - that this is a reasonable loss function because if p
+09:46 - is actually equal to q, then the gradients are
+09:49 - going to be the same.
+09:50 - So gradient of log p is going to be the same as gradient
+09:53 - of log q.
+09:54 - This vector is going to be 0 everywhere.
+09:56 - And the norm is going to be 0.
+09:58 - The average is going to be 0.
+10:00 - And so the what's called the Fisher divergence between p
+10:02 - and q is also going to be 0.
+10:05 - So it's kind of a reasonable way of checking how p and q are
+10:10 - different from each other.
+10:13 - And crucially, the reason we're doing it
+10:15 - is that at the end of the day we're
+10:18 - interested in training an energy-based model.
+10:20 - So let's say p is going to be the data,
+10:23 - q is going to be the model.
+10:25 - But crucially, this loss function only involves
+10:29 - the scores, it only involves this gradient,
+10:31 - which we do not depend on the partition function.
+10:33 - So this might give us a loss function
+10:36 - that is actually very suitable for energy-based models
+10:38 - because it does not require you to know the log partition
+10:41 - function of the model, that's why we're looking at this.
+10:45 - AUDIENCE: [INAUDIBLE]
+10:49 -
+10:50 - SPEAKER: So it's a different loss function,
+10:52 - it's a different way of comparing probability density
+10:56 - functions.
+10:56 - They are actually related to each other.
+10:58 - So in a certain sense the Fisher divergence
+11:01 - is kind of the derivative of the KL divergence in a certain way.
+11:06 - So if you take two densities and you convolve them
+11:08 - with Gaussian noise and you take the derivative of that
+11:12 - with respect to the size of the noise,
+11:14 - it turns out that that's the Fisher divergence.
+11:16 - But it just think of it as a different divergence.
+11:20 - It's not going to be as easy, but that's
+11:21 - sort of the idea is that let's define a loss in terms
+11:25 - of the score because we know how to compute the score
+11:27 - and we don't know how to compute the log likelihood.
+11:30 -
+11:34 - So that's sort of the score matching idea.
+11:37 - p is going to be Pdata, q is going
+11:39 - to be the energy-based model, which is parameterized
+11:42 - by this energy function.
+11:45 - And then if you evaluate that fisher divergence
+11:49 - between the data density and the model density,
+11:52 - you get this kind of thing or equivalently this thing
+11:57 - where you take an expectation with respect
+11:59 - to the data distribution of the difference between the gradient
+12:02 - of the true data generating process
+12:06 - and what's given by the model.
+12:09 - And so that's basically we're comparing the gradients
+12:12 - of the true data distribution with the gradients
+12:16 - of the model, which are things we can compute.
+12:19 - And even though p theta is an energy-based model,
+12:22 - this loss function only depends on the score,
+12:26 - which we know we can compute efficiently
+12:28 - without having to worry about the normalization constant.
+12:31 -
+12:35 - So that's the idea.
+12:36 - Now, as was pointed out, it feels
+12:39 - like it's not very useful because it's still
+12:42 - involves the gradient of the log data density, which
+12:47 - we don't know, right?
+12:48 - It seems like a reasonable loss function, but not
+12:50 - exactly one we can't evaluate or optimize
+12:53 - because although we have access to samples from Pdata,
+12:56 - so presumably you can approximate
+12:57 - this expectation with respect to Pdata with samples,
+13:01 - it looks like we need to know the gradient of the log data
+13:04 - density which is unknown.
+13:07 - If we knew what log Pdata is for every x,
+13:10 - then we wouldn't have to build a generative model.
+13:14 - Yeah, so that's the expression and the problem
+13:17 - is that we only have samples from Pdata.
+13:19 - And so it looks like that first term the gradient,
+13:22 - the score of the data distribution is unknown.
+13:26 - So we don't know how to optimize that objective function and try
+13:31 - to make it as small as possible as a function of theta
+13:33 - because we cannot compute this first term here.
+13:36 -
+13:39 - We only have access to samples from Pdata,
+13:41 - that's the usual setting in a generative modeling problem.
+13:45 - But it turns out that you can rewrite this loss function
+13:48 - into an equivalent one that does not,
+13:51 - no longer depends on the unknown score
+13:55 - function of the data distribution
+13:57 - by using integration by parts.
+14:00 - So just to see how this works, let's start
+14:03 - with the univariate case.
+14:05 - So x is just a one dimensional scalar random variable.
+14:11 - So the gradients are actually just derivatives.
+14:16 - And so just because integration by parts
+14:18 - is a little bit easier to see that way
+14:20 - I'm still using the gradient notation,
+14:22 - but these are actually derivatives.
+14:23 - And then the we don't have to worry
+14:28 - about the norm of the vector because, again, the derivatives
+14:31 - are just scalars.
+14:32 - And so the squared norm is just like the difference of these two
+14:35 - scalars squared.
+14:37 - So that's what the loss function looks
+14:39 - like when x is just a single scalar random variable.
+14:44 - This basically is the same exact expression
+14:46 - except that it's no longer a vector.
+14:48 - It's just the difference of two scalars
+14:50 - and that's what's happening there.
+14:54 - And then we can expand this or by just explicitly writing
+15:00 - this out as an expectation with respect to the data
+15:03 - distribution.
+15:04 - So you go through every x that can possibly
+15:07 - happen you weight it with the data density
+15:09 - and then you look at the difference
+15:10 - between the derivatives of the log data distribution
+15:14 - and the log model distribution at every point.
+15:18 - So you have these two curves.
+15:20 - You look at the slopes at every point and you compare.
+15:23 -
+15:25 - And you can expand the square.
+15:29 - It's a square of a difference.
+15:31 - So if you expand it you're going to get three terms.
+15:33 - You're going to get a blue term, which is just
+15:35 - the square of this first gradient of the log data
+15:39 - density squared.
+15:40 - Then you have the gradient of the log model density squared.
+15:44 - And then you have this red term where you have basically the dot
+15:49 - product between the cross product between model and data.
+15:54 - And you can see that the first term does not depend on theta,
+15:59 - so we can ignore it for the purposes of optimization
+16:02 - with respect to theta.
+16:03 - We can ignore the blue term.
+16:05 - The green term is easy it just depends on the model.
+16:09 - So again, we're good.
+16:10 - The problem is the red term because that one still
+16:15 - involves this gradient of the log data density
+16:20 - in some non-trivial way.
+16:23 - And what we're going to do is we're going to use integration
+16:26 - by parts, which is usually, you remember from basic calculus,
+16:30 - it's a way to write the integral of the f prime g
+16:33 - in terms of the integral of g prime f
+16:36 - basically, which function you're taking derivative with respect
+16:41 - to.
+16:43 - And we apply that to that red term,
+16:46 - which is the annoying term.
+16:49 - Recall that this is an expectation with respect
+16:51 - to the data of the gradient log data density gradient of the log
+16:54 - model density.
+16:55 - Now, what is the gradient of the log of p data?
+17:00 - Gradient of log is the argument of the log,
+17:04 - 1 over the argument times the derivative
+17:06 - of the argument of the log.
+17:08 - So it should look like this.
+17:12 - Just by expanding out this gradient of log
+17:15 - p data is 1 over p data times the derivative of p data
+17:19 - And the reason we're doing it is that now this p data here
+17:23 - and this p data here will cancel.
+17:27 - And now it looks kind of where we have something where we
+17:29 - can apply integration by parts.
+17:31 - So this is the derivative of p data times the derivative
+17:36 - of the log p model.
+17:39 - And we can apply integration by parts
+17:42 - and rewrite it in terms of p data.
+17:47 - So here we had a derivative of p data.
+17:50 - So we rewrite it in terms of the--
+17:52 - just the instead of f prime.
+17:54 - We go to f.
+17:55 - So p data prime it becomes p data.
+17:59 - And then we take an extra derivative
+18:02 - of the log on the score of the model.
+18:05 -
+18:08 - And so we've basically rewritten it
+18:12 - in terms of an expectation with respect
+18:14 - to the data distribution of a second derivative of the model
+18:19 - score, essentially.
+18:22 - Now, we still have to deal with this the term here fg, which
+18:27 - is the integrand evaluated at the two extremes.
+18:32 - And under some reasonable assumptions,
+18:34 - you can assume that in the limit as x
+18:39 - goes to plus and minus infinity, this p data goes to 0,
+18:44 - it's a density.
+18:45 - So there cannot be too much probability mass
+18:47 - at the boundaries.
+18:49 - And if you are willing to make that assumption,
+18:52 - this simplifies into something that now basically
+18:56 - no longer depends on the score of the data density.
+18:59 - It only depends on things we can manage.
+19:03 - It's still an expectation with respect to the data density,
+19:06 - but it only involves the--
+19:08 - it no longer involves the score.
+19:09 -
+19:13 - And so that's basically the trick.
+19:16 - If you are willing to assume that this term here is 0,
+19:21 - basically the data distribution decays sufficiently fast then
+19:26 - you can use integration by parts and you
+19:28 - can rewrite this thing, the original score matching loss,
+19:33 - recall it had three pieces.
+19:35 - If we apply that trick to rewrite the red term
+19:42 - into this brown term that we just derived using integration
+19:45 - by parts, now we get a loss function that we can actually
+19:50 - evaluate and we can optimize as a function of theta.
+19:53 - We have the first term, which is constant with respect to theta.
+19:56 - So we can ignore it.
+19:57 - We have an expectation with respect
+19:59 - to Pdata of the derivative squared.
+20:02 - And then we have an expectation with respect
+20:04 - to Pdata of the second derivative of the log
+20:07 - likelihood.
+20:10 - And so this is basically what you
+20:13 - can write the two expectations as a single expectation.
+20:16 - And now we basically derive the loss function
+20:19 - that is equivalent up to a constant
+20:21 - to where we started from, but now
+20:23 - it only involves things we have access to.
+20:26 - It only involves the model score and the further derivative
+20:31 - of the model score.
+20:33 - It's the second derivative of the log likelihood.
+20:36 - But again, derivatives are always with respect to x.
+20:39 -
+20:43 - And so that's kind of where the magic happens.
+20:45 - This is how you get rid of that dependence
+20:48 - on the score of the data density.
+20:49 - and write it down using elementary calculus
+20:53 - into an expression, that is now something
+20:55 - we can actually optimize.
+20:57 - It can evaluate and optimize as a function of theta.
+21:00 - So that's at least in the 1D case.
+21:05 -
+21:09 - And it turns out that there is something you might have seen it
+21:14 - in multivariate calculus.
+21:16 - There is an equivalent of integration by parts.
+21:19 - There's actually Gauss's theorem where you can basically
+21:22 - do the same trick.
+21:23 - When you have a vector--
+21:26 - so when x is a vector and you really have gradients,
+21:29 - you can basically use the same kind of trick
+21:32 - and you derive something very similar
+21:34 - where instead of looking at the square of the derivative,
+21:37 - you have the L2 norm of the gradient.
+21:42 - And instead of having just the second derivative of the log
+21:45 - likelihood, you have the trace of the Hessian of the log
+21:50 - probability.
+21:51 - So again, you have to look at second order derivatives,
+21:53 - but things become a little bit more complicated
+21:56 - when you have the vector-valued kind of function.
+22:01 - So the Hessian is basically this matrix n by n
+22:05 - if you have n variables where you
+22:07 - have all the mixed second partial derivatives of the log p
+22:14 - theta x with respect to xi, xj for all pairs of variables
+22:20 - that you have access to.
+22:21 - So again, a theta expansion up to second order if you want.
+22:25 - And so that's how you are basically
+22:28 - using the same derivation.
+22:30 - We're using integration by parts.
+22:32 - You, again, write it down in terms
+22:34 - of a quantity that no longer depends on the score of Pdata.
+22:40 - And that's an objective function that we can now optimize.
+22:45 - If you're willing to approximate this expectation with a sample
+22:49 - average, we always have access to samples from Pdata.
+22:53 - So we can approximate that expectation using samples.
+22:57 - Then you get algorithm or a loss that looks like this.
+23:01 - You have a samples of data points
+23:05 - that you sample from Pdata training data.
+23:08 - And then you can estimate the score matching loss
+23:11 - with the sample mean, which would look like this.
+23:16 - So you go through individual data points.
+23:20 - You evaluate the gradient of the energy at each data point.
+23:24 - You look at the square of the norm of that of that vector.
+23:27 - And then you need to look at the trace of the Hessian of the log
+23:32 - likelihood, which is this, again, Hessian
+23:36 - of f theta in this case, which is the model.
+23:41 - And then this is now a function of theta
+23:45 - that you can try to optimize and minimize with respect to theta.
+23:49 - You recall we're trying to minimize.
+23:51 - This is equivalent up to a shift independent from theta.
+23:55 - It's equivalent to the fisher divergence.
+23:57 - So if you're able to make this as small as possible
+24:00 - with respect to theta, you're trying
+24:02 - to match the scores of the data distribution and the model
+24:05 - distribution.
+24:07 - This still has issues with respect
+24:09 - to very high dimensional settings
+24:11 - like the trace of the Hessian.
+24:13 - I know it requires higher order differentiation
+24:16 - and it's somewhat expensive, but there's
+24:19 - going to be ways to approximate it.
+24:21 - The key takeaway is that it does not require you to sample
+24:24 - from the energy-based model.
+24:26 - This is the loss where you just need to training data,
+24:29 - you evaluate your neural network,
+24:31 - and you need to sample from the energy-based model
+24:34 - during a training loop, which is key
+24:37 - if you want to get something efficient.
+24:39 -
+24:41 - And the last function actually have--
+24:44 - this is you just brought up then indeed the Hessian is tricky.
+24:48 - But it has a reasonable flavor.
+24:52 - If you think about it, what is this loss saying?
+24:55 - You're try to minimize this quantity as a function of theta.
+24:58 - So what you're saying is that you should look at your data
+25:01 - points and you should look at the gradient of the log
+25:03 - likelihood evaluated at every data point
+25:06 - and you're trying to make that small, which basically means
+25:09 - that you're trying to make the data points
+25:11 - kind of stationary points for the log likelihood.
+25:14 - So the data points should either be local maxima or local minima
+25:18 - for the log likelihood because the gradients at the data points
+25:22 - should be small.
+25:23 - So you should not be able to somehow perturb the data points
+25:27 - by a little bit and increase the likelihood by a lot
+25:30 - because the gradients should be very small
+25:33 - evaluated at the data.
+25:34 - That's kind of what this piece is doing.
+25:37 - And this piece is say trying to loosely trying
+25:41 - to make sure that the data points are local maxima instead
+25:44 - of local minima of the log likelihood.
+25:47 - And to do that you need to look at the second order derivative
+25:50 - and that's what that term is doing, which
+25:53 - is kind of very reasonable.
+25:54 - It's saying if you want to fit the model,
+25:56 - try to choose parameters so that the data points are local maxima
+25:59 - somehow of the log likelihood.
+26:03 - And that can be evaluated just by looking
+26:05 - at first order gradients and second order gradients.
+26:09 - Yeah, so that's essentially what we're
+26:11 - going to do is we're going to--
+26:13 - there's two ways of doing it.
+26:14 - One is to I guess something called slice score matching
+26:18 - where you're kind of taking random directions
+26:21 - and you're checking whether the likelihood goes
+26:23 - up or down along those directions, which
+26:25 - is the same as if you know about the Hutchinson trick
+26:28 - for estimating the Hessian, it's basically the same thing where
+26:32 - it's an estimator for the trace of a matrix that
+26:35 - looks at a random projection around the random direction
+26:39 - around it.
+26:40 - And the other thing is denoising score matching,
+26:42 - which also has this flavor of adding a little bit of noise
+26:46 - and checking whether the likelihood goes
+26:47 - up or down in the neighborhood of a data point.
+26:50 - And so it has that flavor basically
+26:54 - and those things are going to be scalable with respect
+26:57 - to the dimension.
+26:59 - So the question is, has the Hessian an analytical form?
+27:01 - If theta is a neural network you can't, there is no close min.
+27:06 - You have to use autodiff to basically compute it.
+27:10 - The problem is that it needs many
+27:11 - backward passes because you're not
+27:15 - computing just a single partial derivative,
+27:17 - you're computing n partial derivatives with respect
+27:20 - to every input because you have to compute
+27:24 - all the diagonal elements of the Hessian
+27:26 - and we don't of an efficient way of doing
+27:28 - it other than doing backprop basically
+27:31 - n times, which is also expensive when n is large.
+27:35 -
+27:39 - But the good thing is this avoids sampling
+27:43 - and this is going to be the key building block also for training
+27:47 - diffusion models.
+27:49 - I just proved you that this is equivalent to the fisher
+27:53 - divergence.
+27:53 - And the fisher divergence is 0 if and only
+27:55 - if the distributions match.
+27:58 - So even though, yeah, you might think that this
+28:01 - is not quite doing the right--
+28:02 - it's not quite the right objective,
+28:05 - in the limit of infinite data this would be giving you
+28:08 - exactly the-- if you were to optimize it globally,
+28:11 - this would give you exactly the data distribution because it's
+28:15 - really just the equivalent up to a shift to the true Fisher
+28:18 - divergence that we started with, which is this thing here,
+28:24 - which is 0 only basically if the densities match.
+28:26 -
+28:30 - Cool.
+28:31 - Now, the other cool technique that you
+28:33 - can use for training-- yeah, so that's the takeaway so far,
+28:38 - is that approximations to KL divergence around the lead
+28:43 - require sampling, too expensive.
+28:45 - But you can-- if you are willing to instead measure similarity up
+28:49 - here using this Fisher divergence, then again,
+28:52 - you get a loss function that is much more,
+28:55 - that is very suitable for training energy-based models
+28:57 - because it does not require you to--
+29:00 - even though it looks tricky to compute and optimize,
+29:03 - it actually can be rewritten in terms of something that
+29:06 - only depends on the model and you can optimize
+29:08 - as a function of theta.

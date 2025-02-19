@@ -1,0 +1,3320 @@
+00:00 -
+00:04 - PROFESSOR: The plan for today is to talk
+00:07 - about latent variable models.
+00:09 - So just as a recap, what we've seen so far
+00:12 - is the first kind of family of generative models--
+00:16 - the autoregressive ones where the key idea
+00:20 - is that we use chain rule to describe a joint probability
+00:24 - distribution as a product of conditionals.
+00:28 - And then we essentially try to approximate the conditionals
+00:32 - using some kind of neural network.
+00:35 - And we've seen several options for doing that, including
+00:40 - RNNs, CNNs, transformers.
+00:43 - At the end of the day, the core underlying idea
+00:47 - is really this autoregressive factorization of the joint.
+00:52 - And we've seen that the reason that the autoregressive models
+00:55 - are good because they give you access to the likelihood.
+00:59 - It's relatively easy to evaluate the probability of any data
+01:02 - point.
+01:03 - You just multiply together the conditionals.
+01:06 - And what this means is that you can train them
+01:08 - by maximum likelihood.
+01:10 - You have a training data set, you
+01:12 - can evaluate the probability assigned by your model
+01:14 - to the data, and you can optimize the parameters
+01:17 - of your probability distribution to maximize the probability
+01:21 - of the data set you are given.
+01:24 - And you can use the likelihood to do other things--
+01:27 - for example, anomaly detection.
+01:31 - The cons of autoregressive models is that--
+01:33 - well first of all, you have to pick an ordering.
+01:35 - And sometimes it's straightforward to do it.
+01:38 - Sometimes it can be it can be tricky to figure out
+01:41 - what is the right ordering that you're
+01:42 - going to use to kind of construct the chain rule
+01:45 - factorization.
+01:46 - Generation is slow.
+01:49 - So even if you use an architecture that
+01:51 - allows you to compute all the conditionals, basically,
+01:55 - in parallel with, like, a transformer,
+01:59 - the challenge is that at generation, you
+02:01 - have to generate basically one variable at a time.
+02:04 - And so that can be slow.
+02:07 - And another thing is that it's not obvious
+02:09 - how you can get features from the data in an unsupervised way.
+02:14 - And that, we'll see, is one of the things
+02:15 - that we're going to be able to do using latent variable models.
+02:20 - And so the plan for today is to start talking
+02:23 - about latent variable models.
+02:24 - We'll start from simple ones like mixture models,
+02:27 - and then we'll start the discussion
+02:31 - of the variational autoencoder, or the VAE.
+02:33 - And we'll see how to do inference
+02:34 - and learning when you have latent variables.
+02:38 - So the kind of high-level motivation for building or using
+02:43 - a latent variable model is that when
+02:46 - you're trying to model a complicated data set--
+02:51 - for example, a data set of images of people like this one,
+02:56 - the problem is typically hard because there
+02:58 - is a lot of variability that you have to capture.
+03:02 - For example, in this case, there might be a lot of variability
+03:08 - because people have different age,
+03:10 - people have different poses, people have different hair
+03:13 - colors, eye colors.
+03:15 - And so all these things lead to very different values
+03:19 - for the pixels that you have in the data set.
+03:23 - And so the problem is that-- and if you somehow had access
+03:28 - to these sort of annotations, perhaps it
+03:32 - would be easier to model the distribution
+03:34 - because you could sort of build separate models where you're
+03:38 - conditioning on hair color or the eye color or the age
+03:42 - or whatever attribute you have access to.
+03:44 - But unless you have sort of annotations,
+03:50 - all you have access to is a bunch of images.
+03:51 - And although you believe that you can kind of see that there
+03:54 - is this latent structure, it's not annotated
+03:58 - so it's not obvious how you take advantage of it.
+04:01 - And so the idea of latent variable models
+04:05 - is to essentially add a bunch of random variables,
+04:09 - which we're going to denote z, which
+04:13 - are supposed to capture all these latent
+04:16 - factors of variation.
+04:18 - So even though we only care about modeling pixels
+04:20 - in the images, we're going to incorporate
+04:23 - a bunch of other random variables in our model.
+04:26 - And we're going to call these random variables
+04:28 - latent or hidden because they are not
+04:31 - observed in the data set.
+04:34 - We only get to see the pixel values, the x part,
+04:36 - but we don't get to see the corresponding values
+04:40 - for the latent factors of variation.
+04:43 - And by doing this-- so we get several advantages.
+04:47 - We're going to get more flexible kind of model families.
+04:51 - And if you can fit a model reasonably well,
+04:55 - then we might also be able to kind of extract
+04:59 - these latent variables given the pixel values.
+05:03 - And if you're doing a good job at modeling
+05:05 - these common characteristics that the different data
+05:09 - points have, then you might use these features
+05:11 - to do other things.
+05:13 -
+05:17 - If you have a classification task,
+05:18 - it might be easier to train a model that
+05:22 - works at the level of these latent variables as opposed
+05:25 - to the direct pixel values, because often you
+05:30 - might need a small number of latent variables
+05:33 - to describe a much more kind of high-dimensional kind of data
+05:39 - set like images, for example.
+05:42 - So at the high level--
+05:46 - I'm sort of trying to formalize a little bit this intuition--
+05:49 - what we want to do is we want to have a joint probability
+05:52 - distribution between the x, which are basically
+05:54 - all the pixel values that we have in an image,
+05:57 - and these latent variables z.
+05:59 - And so here I'm showing the x shaded,
+06:02 - meaning that it's observed.
+06:03 - And the z variables are white and they're not
+06:07 - shaded because this basically means for every data point,
+06:10 - see we don't get to see-- we don't
+06:12 - have annotations for the corresponding latent variables.
+06:15 - And conceptually you can think of a Bayesian network that
+06:19 - might look something like this, right,
+06:21 - where there is the pixel values that you get to see,
+06:23 - and then there is a bunch of latent factors of variation
+06:25 - that would be helpful in describing
+06:30 - the different types of images that you might have access
+06:34 - to in your data set.
+06:37 - And these latent variables-- again,
+06:41 - they might correspond to these high-level features.
+06:43 - And if z is chosen properly, you get several advantages
+06:50 - because it might be a lot easier to model
+06:53 - p of x given z as opposed to the marginal distribution p of x.
+06:57 - And if you somehow are able to cluster the data points
+07:00 - and divide them into different groups,
+07:03 - then modeling the images that belong to every particular group
+07:07 - separately, which is kind of like what this p of x given z
+07:10 - would do, could be much easier, because at that point
+07:14 - there is a lot less variation that you
+07:15 - have to capture once you condition on these latent
+07:19 - features.
+07:21 - And the other good thing that you
+07:23 - have access to if you do this is that,
+07:27 - if then you try to infer the latent variables for a new data
+07:31 - point x, then you can sort of identify these features.
+07:36 - And so, again, this is sort of going towards the representation
+07:40 - learning angle, or the computer vision as inverse graphics.
+07:46 - Somehow if you have a good generative
+07:47 - model that can produce images based
+07:49 - on a set of latent variables, if you can then infer these latent
+07:53 - variables, then you might be discovering features,
+07:57 - structure that you can use for different sort of problems.
+08:02 - And the problem is that it might be
+08:06 - very hard to specify a graphical model like this
+08:10 - and specify all the conditionals.
+08:12 - And so as usual, instead of taking the graphical model
+08:14 - view or the Bayesian network view that we have here,
+08:18 - we're going to try to use deep neural networks
+08:22 - to do the work for us, right?
+08:24 - And so what we're going to do instead is,
+08:27 - we're still going to keep that kind of structure
+08:29 - where we have a set of observed variables x and latent variables
+08:33 - z, but we're not going to have anything interpretable in terms
+08:36 - of how the random variables are related to each other
+08:39 - or what they mean.
+08:41 - We're just going to assume that there
+08:43 - is a set of random variables z that are somewhat simple.
+08:49 - For example, they might be distributed
+08:51 - according to a simple Gaussian distribution.
+08:54 - And then we model the conditional distribution
+08:58 - of x given z, again using basically some kind
+09:02 - of deep generative model where we have a simple distribution--
+09:08 - let's say a Gaussian, but the parameters of this distribution
+09:12 - depend, on some potentially complicated way,
+09:16 - on the latent variables through, let's say,
+09:19 - a couple of neural networks--
+09:20 - mu theta and sigma theta that are basically giving us
+09:24 - the mean and the standard deviation
+09:27 - that we're expecting for x given that the latent variables take
+09:32 - a particular value.
+09:34 - And so again, because at this point
+09:38 - the latent variables-- they don't
+09:40 - have any pre-specified semantic, then
+09:44 - we're sort of hoping that by fitting this model,
+09:49 - let's say by maximum likelihood, we
+09:52 - end up somehow discovering interesting latent structure.
+09:56 - And as usual, this is an unsupervised learning problem,
+10:01 - so it's kind of ill-defined.
+10:03 - Because what does it mean that the structure is meaningful?
+10:07 - What is it that we're actually after here?
+10:10 - It's not obvious, but the intuition is that hopefully,
+10:15 - by trying to model the data using these latent
+10:18 - variables we might discover some interesting structure.
+10:21 - Some interesting correspondence between x and z that then
+10:28 - would first of all make learning easier
+10:32 - because we are able to model a distribution over images
+10:35 - x using something like a Gaussian.
+10:38 - And then by inferring the latent variables
+10:41 - given the observed one, given the x,
+10:44 - we're hopefully going to discover interesting features
+10:48 - that then we can use to analyze the data
+10:51 - or to do transfer learning or whatever you want.
+10:56 - So the question is, how do we change z
+10:59 - when we fit the neural network?
+11:00 - Yeah, so we'll see how we do learning.
+11:02 - That's the challenge.
+11:03 - So the challenge is that the z variables are not
+11:05 - observed during training, and so it's not obvious
+11:08 - how you should update the parameters
+11:10 - of this neural network that gives you
+11:12 - essentially the x as a function of z
+11:16 - when you don't know what z was.
+11:17 - And so intuitively, you're going to have
+11:19 - to guess what is the value of z for any given x,
+11:23 - and you're going to use some kind of procedure
+11:26 - to try to fit this model.
+11:28 - So if you've seen em, it's going to have the flavor of sort
+11:31 - of an em-like procedure where we're
+11:33 - going to try to guess a value for the latent variables,
+11:36 - and then we're going to try to fit the model.
+11:38 - The question is, is x being represented autoregressively?
+11:42 - In this case, there is no autoregressive structure.
+11:45 - So x given z is just a Gaussian distribution-- so
+11:49 - something very simple.
+11:51 - The parameters of this Gaussian are
+11:53 - determined through this potentially very complicated
+11:56 - non-linear relationship with respect to z.
+11:59 - And as we'll see, even though p of x given z is very simple--
+12:03 - it's just a Gaussian, and you would never
+12:05 - expect that a single Gaussian is sufficiently flexible
+12:08 - to model anything interesting because you have these latent
+12:13 - variables.
+12:14 - As we discussed before, if you somehow
+12:16 - are able to cluster the data points in a reasonable way,
+12:19 - then within the cluster which is kind of what this object is,
+12:23 - you might be able to get away with a very simple kind
+12:26 - of distribution.
+12:26 - And that's kind of the idea behind a latent variable model.
+12:31 - Yeah, so the question is, I guess what sort of mu's and z--
+12:38 - what kind of functions do we use here,
+12:41 - and are they different for every z?
+12:44 - In this case, the functions are the same.
+12:47 - So there's a single function that
+12:49 - is then going to give you different outputs when
+12:51 - you fit in different z values.
+12:54 - So the functions are fixed.
+12:56 - The other question is, well, does it have to be a Gaussian?
+13:00 - Not necessarily.
+13:01 - You can use an autoregressive model there if you wanted to.
+13:06 - The strategy behind the latent variable model
+13:08 - is to usually choose these conditionals to be simple
+13:12 - because, again, you have this clustering kind of behavior
+13:15 - and so you might be able to get away
+13:16 - with a simple p of x given z.
+13:18 - But you can certainly--
+13:20 - this is for the mix-and-match part of this course.
+13:25 - You can get a different kind of generative model
+13:28 - by replacing this p of x given z with a autoregressive model.
+13:32 - And that gives you even more flexibility.
+13:35 - But the story behind the variational autoencoder
+13:38 - is to keep that simple.
+13:40 - So the question is, why do we need p of x given z and p of x?
+13:43 - So the goal is to always just model
+13:45 - p of x so that's the same as in the autoregressive model.
+13:48 - You want to be able to fit a probability distribution
+13:51 - over these x variables, which are the ones you have access to.
+13:53 - The pixels.
+13:54 - Whatever.
+13:55 - The motivation for using the z variable is that--
+13:58 - well one, it might make your life easier in the sense
+14:02 - that if you somehow are able to cluster
+14:04 - the data using the z variables, then learning becomes easier.
+14:10 - The second one is that being able to infer the latent
+14:14 - variables might be useful in itself because really,
+14:17 - maybe what you're after is not generating images
+14:20 - but kind of understanding what sort of latent factors
+14:24 - or variations exist in your data set.
+14:26 - The prior in this case is very simple.
+14:28 - It's just a Gaussian.
+14:29 - But yeah, you could have more complicated priors versus.
+14:33 - You just hope that you discover something meaningful.
+14:36 - You can certainly test.
+14:37 - Once you've trained a model, you can certainly change, let's say,
+14:40 - one of the z variables and see how that affects
+14:44 - the images that you generate.
+14:46 - And so you can certainly test whether you've discovered
+14:48 - something meaningful or not.
+14:49 -
+14:53 - It might not be--
+14:54 - whether you discover something meaningful or not
+14:57 - is not guaranteed by the learning objective.
+15:00 - So the question is, yeah, is the number of latent variables
+15:02 - a hyperparameter?
+15:03 - Yes.
+15:04 - So the question is, if you use this kind of model,
+15:06 - how do we sample?
+15:07 - How do we do density estimation?
+15:09 - So sampling is easy because what you do is you first sample--
+15:13 - you can think of it as an autoregressive model where two
+15:16 - groups of variables, the z's and the x's-- and so what you would
+15:19 - do is you would first choose a latent factor variation.
+15:22 - So you sample z from a Gaussian, which we know how to do.
+15:25 - It's trivial.
+15:26 - Then you feed z through these two neural networks
+15:29 - and you get a mean and a covariance matrix
+15:33 - that defines another Gaussian.
+15:34 - Then you sample from that Gaussian.
+15:36 - So sampling is very easy.
+15:39 - Evaluating the p of x, as we'll see, that's the challenge.
+15:42 - That's kind of the "no free lunch" part.
+15:44 - Everything seems great except that evaluating
+15:47 - p of x which, is kind of doing density estimation,
+15:49 - becomes hard.
+15:50 - And that's what's going to come up next.
+15:53 - So the question is, is this in the end differentiable,
+15:55 - how do we train it?
+15:56 - Yeah, that's going to be the topic of this lecture.
+16:01 - All right, so let's see first as a warm-up, the simplest
+16:06 - kind of latent variable model that you can think of, which
+16:10 - you might have seen before.
+16:11 - That's the mixture of Gaussians, right?
+16:13 - So again, we have this simple Bayes net, z pointing to x.
+16:19 - And you can think of a mixture of Gaussians
+16:23 - as being a shallow latent variable
+16:25 - model where there is no deep neural network involved.
+16:29 - In this case, z is just a categorical random variable
+16:32 - which determines the mixture component.
+16:35 - Let's say there is k mixtures here.
+16:37 - And then p of x given z again is a Gaussian.
+16:41 - And then you have some kind of lookup table here
+16:43 - that would tell you what is the mean
+16:46 - and what is the covariance for mixture component k?
+16:51 - There's k mixtures, so you have k means and k covariances,
+16:55 - and that defines a generative model.
+16:58 - So to sample, again you would sample first
+17:00 - a mixture component, a z.
+17:01 - And then you would sample x from a Gaussian
+17:04 - with the corresponding mean and covariance.
+17:08 - And so it would look something like this.
+17:10 - So if x is two-dimensional-- so there is x1 and x2--
+17:15 - then each of these Gaussians would
+17:18 - be a two-dimensional Gaussian.
+17:20 - And these Gaussians will have different means--
+17:23 - say mu1, mu2, and mu3.
+17:24 - And they will have different covariances,
+17:27 - and so it might look something like this.
+17:29 -
+17:34 - And so the generative process again is, you pick a component
+17:37 - and then you sample a data point from that Gaussian.
+17:39 - So maybe you uniformly pick, or whatever is the prior over z--
+17:43 - maybe you sample k.
+17:46 - You can sample z.
+17:47 - You get 2, and then you have to pick a point distributed
+17:50 - according to a Gaussian with mean here
+17:52 - and covariance shaped like that and so forth.
+17:56 -
+18:01 - This is useful, again--
+18:02 - if you think about the clustering interpretation,
+18:04 - you can think of this kind of model
+18:07 - as giving you one way of performing clustering
+18:13 - which is a basic kind of unsupervised learning task.
+18:18 - This is an example where you have a data set collected
+18:23 - for the Old Faithful geyser in Yellowstone National Park,
+18:28 - and then each data point here corresponds
+18:30 - to an eruption of the geyser.
+18:32 - And then you can see there's two features here--
+18:35 - the duration of the eruption and the time between two eruptions.
+18:39 - And now the data set looks like this.
+18:41 - So you can there is some kind of relationship between these two
+18:43 - things.
+18:44 - And the larger the interval between two eruptions,
+18:47 - the longer then the following eruption is.
+18:51 - And you could try to model this using a single Gaussian.
+18:54 - If you fit the parameters, it's going to look like this.
+18:57 - You're going to put the mean here
+18:59 - and you're going to choose a covariance that kind of captures
+19:01 - that correlation between the features.
+19:03 - And you can see it's not doing a great job.
+19:06 - You're putting a lot of probability mass
+19:08 - here where there is no actual data,
+19:11 - but that's the best you can do if you're forced to pick
+19:14 - a Gaussian as your model.
+19:16 - But if you look at the data, it kind of
+19:18 - looks like there IS two types of eruptions.
+19:20 - There is type 1 that behaves like this and type 2 that
+19:23 - behaves like this, And so you're going
+19:25 - to get a much better fit to the data
+19:27 - if you have a mixture of two Gaussians that kind of look
+19:31 - like that.
+19:34 - And if you can somehow fit this model automatically,
+19:37 - then by inferring the z variable given the x, figuring out
+19:42 - if a point belongs to the blue or the red mixture,
+19:46 - you can identify which type of eruption you're dealing with.
+19:51 - So again, this is really this idea of identifying features
+19:54 - based on the observed data.
+19:58 - And again, you can see that this is kind of ill-posed
+20:00 - because it's unsupervised learning
+20:02 - and we're hoping to discover some meaningful structure,
+20:06 - but it's not clear that this is always possible.
+20:09 - It's not clear what it means to find good structure
+20:12 - or what's a good clustering, right?
+20:16 - You might have different definitions
+20:17 - of what a good clustering is, and this
+20:20 - will give you a clustering.
+20:22 - Whether it is the one that you want or the best one
+20:25 - is not guaranteed.
+20:26 -
+20:30 - And so, yeah, you can imagine that you can use
+20:32 - it to do unsupervised learning.
+20:33 - You can have it show more mixture components.
+20:35 - You have a data set that looks like this,
+20:37 - then you might want to model it, let's say,
+20:40 - using a mixture of three Gaussians.
+20:42 - And again, identifying the mixture component which
+20:46 - is the color here would tell you sort of which component
+20:51 - the data point is coming from, and it tells you
+20:53 - something about how to cluster the data
+20:55 - points in different ways.
+20:57 - So the question is, will this fail very hard on image?
+21:00 - Probably you wouldn't expect unless k is extremely large.
+21:08 - If you have, say, a mixture of two Gaussians, then you would--
+21:11 - let's say if you have a single Gaussian,
+21:12 - then you would kind of choose the mean
+21:15 - to be the mean of all the images.
+21:16 - And then you put some kind of standard deviation,
+21:18 - and you can imagine you're going to get a blob.
+21:20 - It's not going to be very good.
+21:21 - Even if you are able to divide your training set into two
+21:23 - groups and fit two separate Gaussians,
+21:26 - it's still not going to work very well.
+21:28 - If k becomes extremely large, in theory you
+21:31 - can approximate anything, and so eventually it would work.
+21:34 - But yeah, in practice it would require
+21:36 - a k that is extremely large.
+21:38 -
+21:42 - Cool.
+21:44 - And here is actually an example on image data.
+21:48 - Again, this is on MNIST and this is the latent space z.
+21:53 - This is a projection of that, but you
+21:55 - can imagine that one axis is z1, another axis is z2.
+22:01 - And then you take your MNIST data set and then you try
+22:05 - to figure out where it lands--
+22:07 - in each data point where it lands in z space.
+22:11 - And you can kind of see that, again, it's
+22:14 - able to do some reasonable clustering in the sense
+22:16 - that data points that actually belong to the same class, which
+22:21 - was not known to the generative model--
+22:24 - for example, red points here corresponds to digits 2,
+22:28 - and you can see that they are all grouped together.
+22:30 - They all have similar z values after training this model,
+22:35 - and so there's not a single cluster here for the 2s.
+22:40 - There is kind of two of them.
+22:42 - Maybe the points in this cluster have a slightly different style
+22:47 - than the points in this cluster.
+22:48 - I mean, it's hard to say exactly what the clustering is
+22:51 - doing here.
+22:51 - And again, it hints that the fact that unsupervised learning
+22:55 - is hard.
+22:56 - But this is the intuition for what you might hope to get.
+23:00 - If you try to do this on an image data set,
+23:02 - you might hope to be able to discover different classes.
+23:05 - You might be able to do different styles.
+23:07 - And you're hoping to discover that automatically
+23:10 - by fitting a latent variable model
+23:12 - and just looking at the kind of z's that you discover.
+23:15 - The question is, how do you learn them?
+23:16 - And I haven't talked about it.
+23:18 - It's going to be that--
+23:19 - we're going to go through that in this lecture.
+23:22 - So there is no mixture of Gaussians learned here.
+23:25 - So this is more like the results of training
+23:30 - a deep generative models where the z's are actually not
+23:33 - even categorical.
+23:35 - Like, the z variables here are Gaussian or real valued.
+23:40 - And so what I'm plotting here is for each data
+23:44 - point, what is the corresponding inferred value of z?
+23:49 - which is no longer a number.
+23:50 - It's kind of a point in this two-dimensional space.
+23:53 - And it just so happened that it's
+23:55 - finding something reasonable.
+23:59 - But again, it's not guaranteed.
+24:01 - So I think the question is whether, I guess
+24:04 - in the model I had here, the p of z
+24:07 - was a simple distribution like a Gaussian?
+24:11 - And perhaps if you look at this latent space,
+24:13 - for example, which is actually not a VAE
+24:15 - I think-- but that's why it might not look like a Gaussian.
+24:18 - It has a bunch of holes, so you might be better off
+24:20 - having a mixture of Gaussians, for example, for p of z,
+24:24 - and you might actually try to learn the p of z
+24:26 - as part of the model.
+24:27 - And you can certainly do that.
+
+00:00 -
+00:05 - SPEAKER: So an alternative motivation
+00:07 - is that it's a very powerful way of combining simple models
+00:12 - and get a more expressive one out, like using latent variables
+00:16 - allows you to have this kind of mixture model behavior, which
+00:20 - is a very good way of building very flexible generative models.
+00:26 - And you can see in the example of the mixture of Gaussian,
+00:31 - if you have three Gaussians--
+00:33 - a blue, an orange, and a green one, and you
+00:36 - can see they have different means
+00:38 - and different standard deviations.
+00:39 - So they have all these bell curves.
+00:41 - If you think about the corresponding marginal
+00:44 - distribution over x, has this very interesting red shape.
+00:50 - So even though each of the individual components
+00:53 - is pretty simple, it's just a bell curve
+00:55 - and there is not too much you can do about changing
+00:57 - the shape of the function.
+00:58 - The moment you start mixing them together,
+01:00 - you can get much more interesting shapes
+01:03 - for the probability density that you get.
+01:07 - And the reason is that when you want
+01:09 - to evaluate the probability under this mixture model,
+01:13 - the probability of a data point x, what is that object?
+01:17 - Well, it's the marginal.
+01:18 - You basically need to say, what was
+01:20 - the probability of generating that point under the blue curve
+01:23 - plus the probability of generating
+01:25 - that point under the orange curve and plus the probability
+01:28 - under the green curve?
+01:31 - And this is just the definition of the marginal probability.
+01:36 - You marginalize out the z.
+01:38 - In this case, the joint is just something
+01:40 - that looks like this, where p of z
+01:42 - is just a categorical distribution and the p of x
+01:46 - given z is again something very simple, just
+01:48 - a Gaussian with different means and different standard
+01:51 - deviations.
+01:52 - So you can see that even though the components, the p of x given
+01:56 - z is, are super simple just Gaussians,
+01:58 - the marginal that you get is much more interesting in terms
+02:02 - of the shape that you can get.
+02:04 -
+02:07 - And that's the one way to think about why
+02:11 - this variational autoencoders are so powerful, because it's
+02:13 - basically the same thing, except that now you
+02:16 - don't have a finite number of mixture components.
+02:20 - So the z variable is no longer a categorical random variable 1,
+02:24 - 2, 3, 4, 5, k.
+02:26 - Now z can take an infinite number of different values.
+02:30 - There is a Gaussian distribution that you sample z from.
+02:33 - So there is-- essentially you can
+02:35 - think of it as an infinite number of mixture components.
+02:37 - So even though p of x given z is again Gaussian,
+02:43 - now we have a mixture of an infinite number of Gaussians.
+02:48 - And what we're giving up is that in this Gaussian mixture model
+02:56 - case, we were able to choose the mean
+02:58 - and the standard deviations of these Gaussians any way
+03:01 - we wanted because you basically have a lookup table.
+03:04 - And so you have complete flexibility
+03:07 - in choosing the mean and the standard deviation
+03:09 - of the Gaussians.
+03:10 - In the VAE world, the means and the standard deviations
+03:14 - of all these Gaussians are not arbitrary.
+03:19 - They are chosen by fitting z through this neural network,
+03:24 - through two neural networks.
+03:26 - Let's say mu and sigma that will basically give you
+03:30 - the mean and the standard deviation for that Gaussian
+03:33 - component.
+03:35 - There's no longer a lookup table,
+03:36 - now it's whatever you can describe using a neural network.
+03:43 - Basically the z can take an infinite number of values
+03:46 - because this continues.
+03:48 - The question is yeah, can't we just use a uniform distribution?
+03:51 - Yeah, you can.
+03:52 - This is just-- I'm just showing a Gaussian,
+03:54 - but yeah, a uniform distribution would work as well.
+03:57 - Process to sample would be the same as before.
+03:59 - Like in the Gaussian mixture model,
+04:01 - you pick a component, sample a value of z.
+04:05 - Then you do your lookup, you get the mean,
+04:06 - the standard deviation, and then you sample from the Gaussian.
+04:09 - The sampling process here is the same.
+04:11 - You sample a z, now it's a Gaussian.
+04:13 - Then you feed it through the two neural networks
+04:15 - to get the means and the standard deviations
+04:18 - of the corresponding Gaussian.
+04:19 - And then you sample from p of x given z.
+04:21 - So you sample from a Gaussian with that mean
+04:23 - and that standard deviation.
+04:25 - The question is, would you want it to be discrete,
+04:28 - I guess, or continuous?
+04:29 - And if you're trying to model discrete sort of clusters,
+04:33 - is this the right way of doing things?
+04:35 - And yeah, you're right.
+04:37 - That's sort of like, here z is continuous.
+04:39 - So you have some way of transitioning
+04:41 - between the clusters, which might or might not make sense.
+04:45 - And it might need to find strange kind of axes
+04:48 - of variation to make that happen.
+04:50 - You can also have a mixture of discrete and continuous,
+04:53 - like this is the setting that VAE uses.
+04:57 - And it tends to work well in practice.
+05:00 - Intuitively, it just means that z is no longer
+05:03 - a categorical random variable.
+05:04 - So there is not a finite number of choices that you can make.
+05:07 - But it's more like what I had here,
+05:09 - where the z variables can take values in this 2D space.
+05:15 - So there is not really even necessarily
+05:17 - a notion of what you have to pick either here or here.
+05:21 - You can be in between.
+05:23 - Yeah, the question is, does z-- in a mixture of Gaussians,
+05:26 - does z have to be a uniform distribution?
+05:29 - It doesn't have to, no.
+05:31 - Yeah.
+05:31 - So that's kind of to some extent an arbitrary choice,
+05:35 - like you can choose other priors.
+05:37 - The key insight is that it just has
+05:39 - to be something simple that you're going
+05:41 - to sample from efficiently.
+05:43 - The conditional-- the p of x given z also something simple.
+05:47 - Here I'm using a Gaussian.
+05:48 - But you use a logistic-- like a factorized logistic
+05:51 - or it can be anything as long as it's simple.
+05:54 - And all the complexity is really in these neural networks
+05:57 - that would figure out how to map the parameters-- how
+06:00 - to map the latent variable to the parameters
+06:01 - of this simple distribution.
+06:03 - And you're going to get different results depending
+06:05 - on the choices you make.
+06:06 - This is the simplest, Gaussian and Gaussian.
+06:10 - There is no neural network, it's just a lookup.
+06:14 - So it's the most flexible kind of mapping
+06:16 - you can think of because you're allowed
+06:18 - to choose any value you want for the different values
+06:22 - that z can take.
+06:23 - So it's kind of more like a Bayesian network
+06:25 - world, where you're allowed--
+06:27 - it's a lookup table, which is great
+06:29 - because it's super flexible, it's
+06:31 - bad because it doesn't scale at the moment you have many, many.
+06:35 - In this world, I'm assuming that the prior is fixed.
+06:38 - There is no learnable parameter.
+06:40 - As usual, the learnable parameters
+06:42 - are the theta, which in this case
+06:43 - would be the parameters of these two neural networks.
+06:45 - So you might have a very simple, a very shallow linear neural
+06:49 - network where to get the mean, you just
+06:52 - take a linear combination of the z variables
+06:54 - and then you apply some non-linearity.
+06:56 - And then similarly, another simple neural network
+07:00 - that would give you the parameters
+07:02 - of the covariance matrix.
+07:03 - Perhaps you can make a diagonal, something like this.
+07:07 - So the marginal basically becomes an integral.
+07:10 - So instead of being a sum over all possible values of z,
+07:13 - you have an integral over all the possible values
+07:15 - that you can take.
+07:16 - But it's the same machinery.
+07:18 - So what is the dimension of z in practice?
+07:20 - Typically, the dimension of z would be much lower
+07:23 - than the dimensionality of x.
+07:25 - And the hope is that you might discover
+07:27 - a small number of latent factors of variation
+07:30 - that describe your data.
+07:33 - So we'll see another kind of generative model
+07:35 - that will basically be identical to this,
+07:38 - except that z will have exactly the same dimensionality of x.
+07:41 - And that's, for example, what a diffusion model does.
+07:44 - So you might not necessarily always want
+07:48 - to reduce the dimensionality.
+07:49 - Having the same dimensionality will
+07:51 - allow you to have sort of nice computational properties.
+07:55 - Yes.
+07:56 - Yes.
+07:56 - You can certainly find more information.
+07:58 - And I think there are two ways to think about it.
+08:00 - One is if the prior is more complex,
+08:02 - like instead of having a Gaussian,
+08:03 - you can put an autoregressive model over the latent variables,
+08:06 - you're going to get an even more flexible kind of distribution.
+08:10 - The other way to do it would be if you already
+08:13 - have some prior knowledge about the types of--
+08:16 - maybe you know that there is a bunch of classes.
+08:19 - There's 1,000 classes or 10 classes,
+08:20 - then maybe you want to have one categorical random variable.
+08:24 - So if you have some prior over what you--
+08:28 - what kind of latent factors of variation
+08:30 - you expect to exist in the data, you
+08:32 - can try to capture that by choosing suitable priors.
+08:36 - And then so what you would do then
+08:38 - is you would somehow try to fit this model to data.
+08:41 - And in this case, the parameters that you
+08:44 - can choose from for that you can choose
+08:46 - are all this neural network, the parameters of these two neural
+08:49 - networks mu and sigma.
+08:53 - And again, the takeaway is the same as the Gaussian mixture
+08:57 - model.
+08:58 - Even though p of x given z is super simple,
+09:00 - it's just a Gaussian, the marginal
+09:03 - that you get over the x variables is very flexible.
+09:08 - It's kind of a big mixture model.
+09:12 - And so that's the recap, two kind of ways to think about it.
+09:15 - One is to define complicated marginals in terms
+09:19 - of simple conditionals.
+09:21 - And then this idea of using the latent variables to cluster data
+09:25 - points.
+09:26 - And again sort of being able to model them
+09:29 - through relatively simple conditionals
+09:31 - once you've clustered them.
+09:33 - And now we'll see the no free lunch part,
+09:35 - which is going to be much harder to learn these models compared
+09:38 - to autoregressive, fully observed kind of models
+09:42 - that we've seen so far.
+
+
+00:00 -
+00:05 - SPEAKER: The problem is that basically you
+00:07 - have missing values.
+00:09 - And so what happens is something like this.
+00:14 - Imagine that you still want to train a autoregressive model,
+00:19 - but now some of your data is missing.
+00:21 - So you still want to fit an autoregressive model
+00:24 - over the pixel values, but now you
+00:26 - don't know the value of the top half of the images.
+00:31 - So what do you need to do?
+00:32 - Well, there is two sets of variables here.
+00:34 - Again, there is the part that you get to see
+00:36 - and then there is some part that you don't
+00:38 - get to see that is latent.
+00:41 - And then there is a joint distribution.
+00:44 - So your pixel CNN would tell you the relationship between the X
+00:48 - variables and the Z variables.
+00:50 - So you can choose--
+00:52 - you can complete the green part, the missing part any way
+00:56 - you want.
+00:56 - And let's say your autoregressive model
+00:58 - will tell you how likely the full image is because you have
+01:02 - a joint distribution over Z and X.
+01:06 - The challenge is that you only get to see the observed part.
+01:11 - So you only get to see the X part.
+01:13 - And so you need to be able to evaluate,
+01:16 - what is the probability of observing let's say
+01:20 - this bottom half of a digit?
+01:23 - And in order to do that, again, we have to marginalize.
+01:26 - So you have to basically look at all possible ways of completing
+01:29 - that image and you have to sum the probabilities of all
+01:33 - these possible completions.
+01:37 - And even though the joint is easy to evaluate
+01:40 - because maybe it's just a product of conditionals
+01:42 - or in the VIE case, it's just the product of two Gaussians
+01:46 - basically, you have this mixture in behavior.
+01:49 - Just like in the mixture of Gaussian
+01:51 - when you evaluate the probability over just
+01:56 - the X part, you have to sum out all the things
+02:00 - over all possible values of the unobserved variables.
+02:03 - You have to look at all possible completions
+02:06 - and you have to check how likely the different completions are
+02:09 - and you sum them up.
+02:10 - Just like in the mixture of Gaussian case,
+02:12 - you need to sum the probability under each mixture component.
+02:16 - It's the same thing.
+02:18 - And the problem is that there is potentially too
+02:21 - many possible completions.
+02:23 - In the mixture of Gaussian case, maybe you only
+02:25 - have K possible values that the Z variable can take.
+02:28 - And so this thing is easy to evaluate.
+02:31 - You can just brute force it.
+02:32 - But if you have a high dimensional latent variable Z,
+02:39 - this sum can be extremely expensive to evaluate.
+02:44 - You have flexibility because you're
+02:46 - mixing a lot of distributions, but then you
+02:49 - pay a price because it's hard to evaluate that quantity.
+02:53 - Sum over all possible completions.
+02:55 - So you would have to put, you put all white pixels.
+02:58 - And then you check, how likely is that?
+03:00 - Probably very low.
+03:01 - Then you try all black pixels and then
+03:03 - you try all possible combinations
+03:04 - and then you check the probability of each one of them
+03:06 - and you sum them up.
+03:08 - Variational autoencoder, you have the same thing.
+03:12 - The Z's are not observed at training time.
+03:14 - So training time you only get to see the X part.
+03:17 - So when you want to evaluate the probability of observing
+03:19 - a particular X, you kind if have to go
+03:21 - through all possible values that the Z variables can take
+03:24 - and you have to figure out, how likely
+03:28 - was I to generate that particular X?
+03:31 - And the Z variable is not even discrete.
+03:33 - So if you want to evaluate the probability of generating
+03:38 - a particular X, you have to actually integrate
+03:41 - over all possible values that the Z variables can take.
+03:45 - You have to go through all possible choices of the Z
+03:47 - variable, you have to see where it would map to.
+03:50 - It would check the probability under that Gaussian mixture
+03:53 - component and then you integrate them up.
+03:58 - Again, you can imagine that this is super expensive because yeah,
+04:03 - especially if you have a reasonable number of latent
+04:06 - variables.
+04:08 - The curse of dimensionality this is
+04:10 - very expensive to even numerically
+04:13 - approximate this integral.
+04:14 -
+04:18 - But that's where the flexibility comes from.
+04:20 - You're integrating over an infinite number
+04:22 - of mixture components.
+04:24 - Yeah, so for every Z you can evaluate the joint.
+04:27 - Just like here, for every value of Z I can evaluate p of x, z.
+04:35 - I can just check the Z I map it through the neural networks.
+04:38 - I get a Gaussian.
+04:39 - I can evaluate the probabilities.
+04:41 - The Z is not observed, so I have to try all of them.
+04:46 - Just like here, I only got to see the bottom part.
+04:51 - I don't know what was the top part for that particular image.
+04:55 - I have to guess.
+04:56 - I have to try every possible way of completing that data point
+05:00 - and I have to sum them up.
+05:03 - In this case, I'm assuming that the Z variables represent
+05:06 - the top part and the unobserved part together.
+05:10 - Cool, so that's sort of the challenge,
+05:13 - evaluating this marginal probability over X.
+05:16 - You need to integrate over all the possible values of the Z
+05:19 - variables.
+05:20 - The setting that we're going to consider
+05:21 - is one where in the data set the X variables are always observed.
+05:25 - You could also think about a setting
+05:27 - where you have some missing data and some of the x variables
+05:32 - are missing themselves.
+05:33 - So that's kind of the setting where we have a data set.
+05:36 - But for every data point, we only
+05:38 - get to see the X variables and the Z
+05:40 - variables that are missing.
+05:41 - They are unobserved.
+05:42 -
+05:47 - So you can think of the data set as being a collection of images
+05:51 - X1 through XM.
+05:54 - And what we would like to do is we
+05:57 - would like to still do maximum likelihood learning.
+05:59 - So we would still like to try to find a choice of parameters that
+06:03 - maximize the probability basically of generating
+06:06 - that particular data set.
+06:08 - It's the same objective that we had before.
+06:11 - Let's try to find theta that maximizes
+06:12 - the probability of the data maximum likelihood estimation
+06:19 - and/or equivalently the average log likelihood of the data
+06:23 - points if you apply a log.
+06:25 - And the problem is that evaluating the probability
+06:32 - of a data point under this mixture model
+06:34 - is expensive because you have to sum over all possible values
+06:38 - that the Z variable can take for that data point.
+06:41 -
+06:43 - And so evaluating this quantity can be intractable.
+06:48 - And just as an example, let's say
+06:50 - that you have 30 binary latent variables then that sum involves
+06:58 - 2 to the 30 terms.
+06:59 - So it's just way too expensive to compute this.
+07:05 - So if the Z variables can only take K different
+07:07 - values like a Gaussian mixture model.
+07:09 - You can do it.
+07:09 - You can brute force it.
+07:10 - But if you have many latent variables you cannot evaluate
+07:14 - that quantity efficiently.
+07:18 - And for continuous variables, you
+07:20 - have an integral instead, which, again, is tricky to evaluate.
+07:25 - And if you are hoping that maybe we only need gradients
+07:29 - because at the end of the day we just care about optimizing,
+07:33 - gradients are also expensive to compute.
+07:35 - So trying to do gradient ascent on that quantity
+07:39 - is not feasible directly.
+07:42 - So we need some approximations and it
+07:47 - has to be very cheap because think about it,
+07:49 - you need to be able to go over the data set many times
+07:53 - and you need to be able to evaluate
+07:56 - the gradient for every data point possibly many times.
+08:00 - So this approximation here has to be very cheap.
+08:02 -
+08:06 - And the one natural way to try, it
+08:10 - would be to try to do Monte Carlo kind of thing, right?
+08:14 - Basically, this quantity would require
+08:17 - us to sum over all possible values of Z.
+08:20 - And instead, we could try to just sample a few
+08:23 - and get an approximation.
+08:27 - And that's the usual recipe that we've seen in the last lecture.
+08:31 - The idea is that we have a sum that we're trying to compute.
+08:37 - We can try to rewrite that sum as an expectation, essentially.
+08:42 - So if there are capital Z basically possible
+08:48 - values that these Z variables can take,
+08:52 - we can multiply and divide by the total number
+08:54 - of entries in this sum.
+08:56 - And then this object here becomes
+08:58 - an expectation with respect to a uniform distribution
+09:03 - and now we can apply Monte Carlo.
+09:06 - Whenever you have an expectation,
+09:07 - you can approximate it with a sample average.
+09:09 - So you could say let's approximate this sum
+09:13 - with a sample average.
+09:16 - So essentially, you would randomly
+09:19 - sample a bunch of values of Z and then
+09:21 - you would approximate the expectation
+09:24 - with the sample average.
+09:26 - You check how likely these completions are under the joint
+09:29 - and then you rescale appropriately.
+09:32 -
+09:36 - And this would be cheaper because you just
+09:38 - need to check k completions instead
+09:40 - of all the possible completions that you
+09:44 - would have to deal with.
+09:46 - The cheapest way is to choose k1 here, just sample 1.
+09:49 - You look at the joint likelihood of that completion
+09:54 - and then you rescale appropriately.
+09:55 - And that would be a valid estimator
+09:58 - for the quantity of interest.
+10:01 - So if you can see, I'm multiplying and dividing
+10:04 - by the total number of things.
+10:05 - So that then this becomes an expectation with respect
+10:08 - to a uniform distribution, that's the trick basically.
+10:11 - You are getting at why this is not a great solution.
+10:14 - This is a first attempt doing things uniformly.
+10:18 - It's cheap.
+10:20 - It's unbiased.
+10:21 - But it's not going to work in practice because what, I think,
+10:26 - what you're suggesting is that if you think about randomly
+10:28 - guessing the Z's, most likely you're
+10:31 - not going to hit the values of Z's that have enough probability
+10:37 - under the joint.
+10:38 - And so most of the completions that you
+10:40 - get by choosing uniformly at random don't make sense.
+10:43 - So they would have a very low value of p theta.
+10:46 - And so although this technically speaking
+10:48 - is an unbiased estimator, the variance
+10:51 - would be so big that it's not going to work in practice.
+10:56 - So somehow as I think we were you were suggesting,
+10:59 - we need a smarter way of selecting these latent
+11:04 - variables.
+11:07 - We don't want to sample uniformly.
+11:08 - We want to sample them trying to guess the ones that make sense.
+11:13 - Yeah, so the question, I mean, I think it's a great question
+11:16 - and it's what the Z's would even end up representing.
+11:21 - And well, there is a first question
+11:22 - whether you are discrete or continuous,
+11:24 - that depends on just how you model them,
+11:26 - it doesn't matter too much.
+11:28 - Whether they end up representing the things that
+11:30 - matter like the hair color or the eye color,
+11:34 - it's questionable.
+11:36 - Right, right here we're just saying
+11:37 - we just try to do maximum likelihood,
+11:39 - we just try to fit the data as well as we can,
+11:42 - and we're going to try to use these latent variables to fit
+11:45 - the data, that's what the model is going to try to do
+11:48 - if you use this objective.
+11:49 - Whether you end up with something meaningful or not,
+11:53 - is not necessarily guaranteed.
+11:55 - You end up with some latent variables
+11:57 - such that if you sample from them
+11:59 - and you fit them through this model you get,
+12:01 - hopefully, good images or good distribution that
+12:05 - is very similar to the one in the training set, which
+12:07 - means that these latent variables do
+12:09 - capture the important latent factors of variation
+12:12 - in the data.
+12:13 - Whether they correspond to something
+12:15 - semantically meaningful is absolutely not guaranteed.
+12:20 - We are using multiple latent factors of variation.
+12:24 - So every X will basically be mapped.
+12:28 - I guess, well, there is many different Z's
+12:32 - that could generate that particular X. There is some that
+12:35 - are more likely than others given X when you try to infer P
+12:40 - of Z given X, you're kind of guessing
+12:43 - what are the latent features for this particular data point.
+12:46 - And if you look at what you get, indeed you end up with soft--
+12:51 - if the Z variables are continuous,
+12:55 - then you don't end up with a discrete kind of clustering
+12:58 - thing, you end up with two values.
+13:01 - You end up with a 0.5, 0.5.
+13:04 - These yellow points end up being having Z1 right around 0.5, 0.5.
+13:13 - It doesn't have a specific meaning
+13:15 - except that all the points that correspond
+13:17 - to that class, the digit end up having similar values
+13:21 - of the variables.
+13:23 - So there's not a single Z, there is multiple Z's.
+13:26 - Like in this case there's two, Z1 and Z2
+13:29 - and they capture two kind of salient factors of variation.
+13:34 - That's the problem.
+13:35 - If you have what I have here, if you had
+13:38 - the 30 binary features that you--
+13:43 - binary latent features.
+13:45 - They can all be just 01.
+13:47 - Then you have 2 to the 30 basically
+13:49 - different possible cluster assignments and then
+13:52 - you can't sum them up, basically that's the problem.
+13:55 - There is a whole field of disentangled representation
+13:59 - learning where people have been trying
+14:01 - many different ways of trying to come up with models where
+14:05 - the latent variables have a better, are more meaningful.
+14:08 - There are, unfortunately, theorems showing that it's
+14:10 - impossible to do it in general.
+14:12 - Practically, people have been able to get reasonable results,
+14:17 - but there are some fundamental limitations
+14:18 - to what you can do because the problem is essentially
+14:21 - ill-posed.
+14:22 - If the Z's are discrete then it wouldn't be normal.
+14:25 - It would be like each one of them
+14:27 - can come from a simple Bernoulli distribution.
+14:30 - If Z could be a Gaussian random vector in which case
+14:33 - you would have the integral, both cases
+14:36 - are pretty hard basically.
+14:38 - Sometimes you get to see the Z values,
+14:40 - maybe you have an annotator willing to label
+14:42 - these things for.
+14:44 - Basically, you can imagine that you can--
+14:47 - it's not hard to modify this learning objective where
+14:50 - when the value of that variable you don't sum over it,
+14:54 - you just plug-in the true value.
+14:56 - And so you can do some kind of semi-supervised learning
+14:59 - where sometimes this variable is observed and sometimes it's not.
+15:04 - OK, so this was the vanilla kind of setting where you could just
+15:07 - try a bunch of choices for the random variable at random
+15:12 - and hope that you get something, but this is not quite
+15:16 - going to work.
+15:17 - And so we need a better way of guessing the latent variables
+15:22 - for each data point.
+15:24 - And so the way to do it is using something
+15:28 - called importance sampling.
+15:29 - Where instead of sampling uniformly at random,
+15:32 - we're going to try to sample the important completions more
+15:36 - often.
+15:38 - So recall, this is the object we want,
+15:40 - is this marginal probability where
+15:41 - you have to sum over all possible values of the latent
+15:44 - variables.
+15:46 - And now what we can do is we can multiply and divide
+15:50 - by this q of z, where q is an arbitrary distribution that you
+15:55 - can use to choose completions, to choose values for the latent
+15:59 - variables.
+16:01 - And this is one, so you can multiply and divide it
+16:05 - by q is fine.
+16:06 - And now, again, we're back to the setting
+16:09 - where we have an expectation with respect
+16:12 - to q of this ratio of probabilities.
+16:16 - The probability under the true model and the probability
+16:19 - under this proposal distribution or this way
+16:22 - that you're using to guess the completion for the latent
+16:28 - variables.
+16:29 -
+16:31 - And now, what we can do, again, is just Monte Carlo.
+16:35 - Again, this is still an expectation,
+16:37 - it's still intractable in general,
+16:39 - but we can try to do the usual trick of let's sample a bunch
+16:43 - of Z's.
+16:44 - Now, we don't sample them uniformly.
+16:46 - We sample them according to this proposal distribution q,
+16:49 - which can be anything you want.
+16:51 - And then we approximate the expectation
+16:54 - with this sample average just like before.
+16:57 - And now the sample average has this importance weight
+17:05 - that you have to account for in the denominator
+17:07 - because the expression inside the expectation
+17:10 - has this q in the denominator.
+17:12 - So we have to put it here.
+17:14 - I think, what's a good choice for q?
+17:18 - Intuitively, you want to put probability mass on the z's that
+17:22 - are likely under the joint distribution.
+17:26 - You'd like to somehow be able to sample z's that makes sense.
+17:30 - So you have a current joint distribution between x and z.
+17:35 - And you want to choose the z's that
+17:37 - makes sense, that are the completions that
+17:39 - are consistent with what you observe.
+17:43 - So this is for a particular data point.
+17:45 - So I'm doing it for a single x.
+17:47 - You're perfectly right that this choice of q
+17:50 - has to depend on the x, on what you see.
+17:53 - But for now, this is a single data point.
+17:55 - So I can just have a single q that are supposed to work.
+17:58 -
+18:01 - And regardless basically of how you choose q,
+18:05 - this is an unbiased estimator.
+18:07 - Meaning that even if you choose a single sample,
+18:10 - we know this is--
+18:11 - the expected value of the sample average is the object we want.
+18:17 - So equivalently, if you want to think about it,
+18:20 - you could say if you were to repeat this experiment a very
+18:23 - large number of times and average the results,
+18:26 - you would get the true value.
+18:30 - So this is a reasonable kind of estimate.
+18:33 -
+18:36 - Now, the slight issue is that what we care about
+18:45 - is not the probability of a data point,
+18:47 - but we care about the log probability of a data point.
+18:51 - Recall that what we care about is optimize the average log
+18:55 - likelihood of the data points.
+18:56 - So we need to apply a log to this expression.
+19:01 - And so we could try to just apply
+19:04 - a log on both sides of this equation
+19:07 - and get this kind of estimate for the log likelihood.
+19:11 - But there is a problem.
+19:16 - So for example, if you were to choose, a single sample, so if k
+19:20 - here is 1, so you just sample a single possible completion
+19:25 - and then you evaluate that estimator that way.
+19:30 - So it's just the ratio of the two probabilities.
+19:33 - You can kind of see that this is no longer unbiased.
+19:38 - The expectation of the log is not the same
+19:41 - as the log of the expectation.
+19:45 - So if you take an expectation of this object
+19:48 - here even though the expectation of the right-hand side
+19:51 - here is what we want, when you apply a log there is bias.
+20:00 -
+20:03 - And that's sort of--
+20:04 -
+20:07 - we can actually figure out what that bias is.
+20:10 - So recall that what we want is this.
+20:12 - We want the log marginal probability,
+20:15 - which we can write down as this importance sampling
+20:18 - kind of distribution.
+20:21 - And we know that the log is a concave function, which
+20:28 - means that if you have two points x and x prime,
+20:32 - and you take a combination of the two
+20:33 - and you evaluate the log, this is
+20:36 - above the linear combination of the two values of the function.
+20:40 -
+20:43 - And what this means is that if you--
+20:49 - because of this concavity property,
+20:52 - we can basically work out what happens
+20:54 - if we swap the order of logarithm and expectation.
+20:57 - So if we put the expectation outside of the log,
+21:00 - we're going to get a bound on the quantity that we want.
+21:05 - So there is this thing called Jensen's inequality, which
+21:09 - basically says that the logarithm of the expectation
+21:12 - of some function, any function, which
+21:15 - is just this quantity here, is at least as
+21:20 - large as the expectation of the log.
+21:24 -
+21:28 - And kind of the picture is, again, you
+21:30 - have a log, which is a concave function.
+21:32 - And so if you have two points, fz1 and fz2.
+21:36 - And you take the linear combination of that,
+21:38 - you're always below what you would get
+21:41 - if you were to apply the log.
+21:42 -
+21:50 - And so in our world, what this means is
+21:55 - that for this particular choice of f of z,
+21:58 - which is what we have here, this density ratio,
+22:01 - the log of the estimator is at least
+22:05 - as large as the average of the log.
+22:08 -
+22:17 - So what we have here if we do this
+22:21 - is a lower bound on the object that we want.
+22:24 - So on the left, we have the thing we want,
+22:26 - which is the log marginal probability of a data point.
+22:29 - And on the right, we have a quantity, which we can estimate,
+22:34 - we take a bunch of samples from q
+22:35 - and we evaluate this log there's a lower bound,
+22:40 - which is not bad because what this means is
+22:42 - that if we were to optimize the quantity on the right,
+22:46 - the thing we care about would kind of also go up, hopefully.
+22:51 - It has to be at least as large as whatever
+22:54 - we find by optimizing the quantity on the right.
+22:58 - What we want to do is--
+23:00 - we care about doing maximum likelihood.
+23:02 - And so what we care about--
+23:04 - is where do I have it?
+23:06 - What we care about is this.
+23:09 - So we want to go through all the data points.
+23:12 - And for every data point, we want
+23:14 - to evaluate the log probability of that data point.
+23:18 - And so that's the quantity that we'd like to take gradients of
+23:21 - and would like to optimize.
+23:24 - And the good news is that we can get a lower bound on that
+23:31 - quantity through this machinery.
+23:35 - Where is it?
+23:36 - I think here.
+23:37 -
+23:41 - And then the strategy is basically
+23:44 - going to be let's try to optimize this lower bound.
+23:50 - And what we will see soon is that the choice
+23:53 - of q, the way you decide how to sample the latent
+23:57 - variables basically controls how tight this lower bound is.
+24:01 - So if you have a good choice for q, then the lower bound is tight
+24:06 - and this basically becomes a very good approximation
+24:08 - to the quantity we actually care about,
+24:11 - which is the log marginal probability.
+24:14 - This one is easy.
+24:16 - Yeah, that's the right-hand side,
+24:18 - that's what we're going to actually optimize.
+24:23 - The left-hand side what we want is exactly
+24:26 - the log marginal probability.
+24:27 - The right-hand side is the thing we can actually easily evaluate
+24:32 - to sample a bunch of q's and then get this log density ratio.
+24:36 - And this thing that you see on the right
+24:39 - is something you might have seen,
+24:40 - you might have heard before is the evidence lower bound,
+24:44 - the ELBO, which is a lower bound on the probability of evidence,
+24:49 - which is basically the probability of x.
+24:51 - So x is the evidence. x is the thing
+24:53 - you get to see is the observed part.
+24:55 -
+24:58 - The log probability of evidence is
+25:00 - the thing you would like to optimize,
+25:03 - but it's tricky to evaluate that.
+25:06 - And so instead we have this evidence lower
+25:08 - bound, the ELBO, which is the thing we can actually
+25:12 - compute and optimize.
+25:14 - Yeah, so the original thing that you would like to have
+25:18 - is this, which is still tricky.
+25:21 - You could try to--
+25:24 - the expectation itself is not something you can evaluate,
+25:28 - so you would have to do a sample average
+25:31 - and you can do the sample average inside or outside if you
+25:35 - do the simplest case where let's say you choose k equals 1.
+25:40 - Then you see that you basically end up,
+25:44 - which would be the cheapest way of doing things
+25:47 - where you take a single sample.
+25:48 - So what people would do in practice.
+25:51 - Then you see that if you take the expectation of that,
+25:55 - you end up with the expectation of the log instead
+25:59 - of the log of the expectation.
+26:01 - It's an approximation.
+26:02 - It happens to be a decent one because it's a lower bound.
+26:05 - And so it's not going to hurt us too much because optimizing
+26:09 - a lower bound.
+26:10 - If you maximize the lower bound, the true quantity
+26:14 - is always going to be above and so it's also going to go up.
+26:17 - The Jensen's inequality basically just
+26:18 - tells you what happens to if you were
+26:20 - to do this approximation where you
+26:22 - take the expectation and then the log.
+26:25 - It only makes sense to maximize a lower bound
+26:27 - to the function you want because otherwise, yeah,
+26:30 - it's not clear how what the relationship would look like.
+26:33 - There is QUBO, there is a bunch of-- there
+26:35 - is the ELBO and the QUBO and there's a bunch of techniques
+26:40 - that people have come up with come up
+26:41 - with the upper bounds to these quantities,
+26:43 - but there is much trickier to get an upper bound
+26:45 - and a lower bound.
+26:47 - And intuitively, it's because if you just sample a few z's, you
+26:52 - might-- it's very hard to know whether you're
+26:53 - missing some very important ones, which
+26:57 - is what you would need to get an upper bound
+27:00 - while it's relatively easy to say
+27:02 - that if I've seen so many z's that have
+27:04 - a certain amount of probability mass, there must be others.
+27:07 - So it's always easier to get a lower bound and an upper bound
+27:10 - because the upper bound would require you to rule out
+27:15 - that there are many z's that have a very high probability
+27:17 - somewhere and you haven't seen it.
+27:20 - That's the intuition.
+27:21 - So there is a way to quantify how tight the bound is.
+27:24 - So we know that for any choice of q,
+27:26 - you have this nice lower bound on the quantity we care about.
+27:31 - This is the quantity we care about
+27:33 - and we got a lower bound for any choice of q.
+27:35 -
+27:38 - If you expand this thing, you're going
+27:42 - to get a decomposition where you have this,
+27:46 - just the log of the ratio is the difference of the logs.
+27:49 - And you can see that this quantity here
+27:52 - is what we've seen in the last lecture being the entropy of q.
+27:56 - And so you can also rewrite this expression
+27:59 - as the sum of two terms.
+28:01 - The average log joint probability under q
+28:04 - and then you have the entropy under q.
+28:08 - And it turns out that if q is chosen
+28:12 - to be the conditional distribution of z given
+28:16 - x under the model, then this inequality becomes an equality.
+28:22 - So the bond becomes tight and there is no approximation
+28:26 - basically at that point.
+28:30 - And so essentially what this is saying
+28:31 - is that the best way of guessing the z variables
+28:36 - is to actually use the posterior distribution according
+28:40 - to the model.
+28:42 - So you have a joint distribution between x
+28:44 - and z that defines a conditional for the z variables given
+28:48 - the x ones, and that would be the optimal way of guessing
+28:52 - the latent variables.
+28:55 - The problem is that this is not going to be easy to evaluate
+28:58 - and so that's why we'll need other things,
+29:00 - but this would be the optimal way
+29:02 - of choosing the distribution.
+29:04 - And incidentally, if you've seen the EM algorithm,
+29:07 - that's what you need in the E step of EM.
+29:10 -
+29:13 - And there are some very close connections between EM
+29:17 - and what we're doing here.
+29:19 - Some says that's the best way of inferring
+29:23 - the latent variables is to use the true posterior distribution.
+29:26 - Essentially, what this would require
+29:28 - you is to say given an x, if you have a VAE you would have
+29:33 - to figure out, what kind of inputs
+29:35 - should I fit into my neural networks that
+29:37 - would produce this kind of x?
+29:40 - So of have to invert the neural network and you need
+29:43 - to figure out, what were the likely inputs
+29:47 - to the neural networks that would
+29:49 - produce the x that I'm given?
+29:52 - Which is in general pretty hard as we'll see,
+29:54 - but we can try to approximate that.
+
+
+00:00 -
+00:05 - SPEAKER: The plan for today is to finish up
+00:08 - the variational autoencoder model.
+00:10 - And so we'll talk about the ELBO.
+00:15 - Again we'll see how we can actually
+00:18 - solve the corresponding optimization problem.
+00:20 - And then we'll actually explain why this model is called
+00:24 - the variational autoencoder.
+00:25 - And so we'll show some connections
+00:27 - with the autoencoders we've seen in the previous lectures.
+00:31 - And we'll see how it generalizes them.
+00:34 - And you can think of it as a way of turning an autoencoder
+00:37 - into a generative model.
+00:40 - So as a recap, recall that we're talking
+00:44 - about a kind of generative model called
+00:47 - the variational autoencoder, often denoted VAE for short.
+00:52 - In the simplest form, you can think of it
+00:54 - as something like this.
+00:56 - It's a generative model where you first
+00:58 - sample a simple latent variable z, for example, by just drawing
+01:04 - from a multivariate Gaussian distribution
+01:07 - with mean 0 and covariance the identity matrix,
+01:10 - kind of the simplest distribution you can think of.
+01:13 - And then what you do is you pass this sample
+01:19 - that you obtain, this random variable z
+01:23 - through two neural networks, mu theta and sigma theta.
+01:28 - And these two neural networks will give you
+01:30 - the parameters of another Gaussian distribution.
+01:33 - So they will give you a mean vector and a covariance matrix,
+01:36 - which will depend on z.
+01:38 - And then you actually generate a data point
+01:40 - by sampling from this conditional distribution, p
+01:44 - of x given z.
+01:46 - And as we've seen, the nice thing about these kind of models
+01:52 - is that even though the building blocks are very simple,
+01:55 - like you have a simple Gaussian prior p of z
+01:59 - and you have a simple conditional distribution
+02:01 - p of x given z which is again, just a Gaussian,
+02:04 - the marginal distribution over x that you get
+02:08 - is potentially very flexible, very general.
+02:11 - Because you can kind think of it as a mixture of a very large,
+02:17 - an infinite number of Gaussian distributions.
+02:19 - For every z, there is a corresponding Gaussian.
+02:22 - You have an infinite number of zs.
+02:23 - You have an infinite number of Gaussians that you're mixing.
+02:26 - So if you want to figure out, what
+02:28 - was the probability of generating a data point x?
+02:32 - You would have to integrate over all possible values
+02:35 - of the latent variables.
+02:36 - And you would have to see what was the probability
+02:38 - that, that latent variable would give me this data point?
+02:41 - And that gives you a lot of flexibility.
+02:45 - And as we've seen, the nice thing about this
+02:50 - is that it gives you a very flexible marginal distribution
+02:54 - over x.
+02:55 - And it also gives you a way to do
+02:59 - unsupervised learning in the sense
+03:00 - that you can try to infer z given x.
+03:04 - And hopefully, you might discover some structure,
+03:07 - some latent factors of variation that
+03:10 - can describe a lot of the variability
+03:12 - that you see in the data.
+03:14 - So it can be used for unsupervised learning.
+03:17 - You can think of it as an extension of k-means, where
+03:21 - the latent variables are more flexible
+03:23 - and they can discover more complicated factors
+03:26 - of variation.
+03:28 - What we've seen is that there is no free lunch in the sense
+03:32 - that the price you pay is that these models are
+03:35 - more difficult to train.
+03:37 - And at the end of the day, it boils down to the fact
+03:41 - that evaluating likelihoods is expensive,
+03:43 - is difficult. So evaluating p of x is expensive because you have
+03:48 - to essentially check all the possible values of z that
+03:51 - could have generated that data point x.
+03:54 - And what this means is that you cannot evaluate likelihoods
+03:57 - of data points, or you can do it, but it's very expensive.
+04:00 - And therefore, training is also very hard
+04:03 - because there is not an obvious way
+04:06 - to just optimize the parameters to maximize
+04:08 - the probability of a particular data set
+04:11 - that you have access to because computing likelihoods is hard.
+04:15 - And this is different from autoregressive models, where
+04:18 - on the other hand, it was trivial to evaluate likelihoods
+04:21 - because you just multiply together
+04:23 - a bunch of conditionals.
+04:25 - The question is whether we can p of z
+04:27 - could be learned essentially or does
+04:30 - it have to be something fixed?
+04:31 - It can be learned, this is kind of the simplest
+04:35 - setup that is already powerful enough to do interesting things.
+04:38 - z. is fixed.
+04:40 - But as we'll see when you go through the math,
+04:44 - nothing really stops you from using a more complex
+04:48 - prior distribution over z.
+04:50 - And it could be something that you can learn.
+04:52 - For example you could use the simplest
+04:55 - thing would be the parameters of that Gaussian are learned.
+04:58 - So instead of using a mean 0 and a fixed covariance,
+05:01 - the identity matrix you could learn those parameters,
+05:04 - or you could use an autoregressive model for z,
+05:08 - or what you could do is you could stack another autoencoder,
+05:12 - another VAE.
+05:13 - And then you can have kind of a hierarchical VAE, where
+05:16 - the z is generated from another variational autoencoder.
+05:20 - And that's a hierarchical VAE.
+05:22 - And it's essentially, what's going to be a diffusion model.
+05:24 - If you stack these many, many times,
+05:27 - you get a more powerful model.
+05:28 - But this is kind of the simplest interesting model
+05:31 - that highlights the challenges.
+05:33 - And it's already useful in practice.
+05:36 - So the question is whether, what's
+05:37 - the difference between kind of increasing
+05:41 - the dimensionality of z or adding
+05:43 - multiple layers versus increasing
+05:46 - the depth of the neural networks that give you
+05:49 - the mapping from z to x?
+05:51 - And the behavior of those two things, both of them
+05:53 - would give you more flexibility.
+05:55 - But the behavior is kind of very different,
+05:58 - because you can make this network as deep as you want.
+06:03 - But p of x given z is still a Gaussian.
+06:05 - And so that kind of restricts what you can do,
+06:10 - as will become clear later when we talk about the training.
+06:14 - I mean, that increases the flexibility to some extent.
+06:17 - But it's not the same as adding more kind of mixture components,
+06:23 - which is what you would get if you
+06:25 - were to either stacking another VAE or maybe using a more--
+06:30 - Yeah, increasing the dimensionality of z.
+06:33 - So both of them go in the same direction.
+06:35 - But they do it in a different way.
+06:38 -
+06:40 - Cool.
+06:41 - So that's the no free lunch part.
+06:45 - And basically, what we've seen, we
+06:47 - started looking into ways to train these kind of models.
+06:51 - And as we'll see, the way to train these kind of latent
+06:56 - variable models relies on this technique
+06:58 - called variational inference, where we are essentially
+07:02 - going to have an auxiliary model that we're going to use to try
+07:05 - to infer the latent variables.
+07:09 - And in this course, this auxiliary model
+07:13 - is also going to be a neural network.
+07:14 - It's all going to be deep.
+07:17 - And basically we're going to jointly train
+07:21 - the generative model and an auxiliary inference model
+07:24 - that you're going to use to try to reduce the problem to the one
+07:28 - that we've seen before, where both the x and the z part
+07:33 - is observed.
+07:34 - And that's kind of the high level idea.
+07:36 - And it builds on that result that we've
+07:40 - seen in the last lecture of building
+07:43 - an evidence lower bound, right?
+07:45 - So we've seen that we can obtain a lower bound through Jensen's
+07:51 - inequality basically on this quantity
+07:54 - that we would like to optimize by essentially using
+07:59 - this kind of auxiliary proposal distribution
+08:02 - q to try to infer the values of the latent variables.
+08:08 - Remember the challenge is that you only get to see x.
+08:10 - You don't get to see the z part.
+08:12 - So you have to infer the z part somehow.
+08:15 - The ELBO trick essentially uses a distribution q
+08:18 - to try to infer the values of the z variables
+08:24 - when only the x is observed.
+08:26 - And it constructs that kind of lower
+08:29 - bound on the marginal likelihood, the quantity
+08:32 - on the left, the one you would like to optimize
+08:34 - as a function of theta.
+08:36 - And what you can do is you can further decompose that objective
+08:42 - into two pieces.
+08:44 - You have a first piece which is basically just the average log
+08:51 - probability when both the x part and the z part
+08:55 - are observed when you infer the z part using this q model.
+09:01 - So the first piece looks a lot like the setting
+09:03 - we've seen before, where everything is observed,
+09:06 - both the x and the z part are observed.
+09:08 - The only difference is that you are essentially
+09:11 - inferring the latent part using this q model.
+09:15 - And then there is another piece, which does not depend
+09:19 - on your generative model.
+09:20 - It does not depend on p at all.
+09:22 - It's only a function of q.
+09:24 - And it's basically saying it's the expected value under q
+09:29 - of log q, which is what we've called in previous
+09:35 - lectures the entropy of q.
+09:38 - And essentially, it's a quantity that tells you
+09:43 - how random q is, how uncertain you
+09:47 - should be about what is the outcome of drawing
+09:49 - a sample from q?
+09:51 - And we see that basically, this ELBO has these two pieces.
+09:55 - There is a term that depends on the entropy of q
+09:58 - and there is a term that depends on the average log probability
+10:02 - when you guess the missing parts of the data using this q
+10:06 - distribution.
+10:08 - And so the higher the sum of these two values, these two
+10:13 - terms is, the closer you get to the evidence--
+10:16 - to the true value of the marginal likelihood.
+10:21 - And what we've briefly discussed in the last lecture
+10:26 - is that if you were to choose q, this inequality
+10:30 - holds for any choice of q.
+10:33 - If you were to choose q to be the posterior distribution of z
+10:36 - given x under your generative model,
+10:40 - then this inequality becomes an equality.
+10:44 - So there is no longer an approximation involved.
+10:48 - And the evidence lower bound becomes
+10:50 - exactly equal to the marginal likelihood.
+10:54 - And as an aside, this is exactly the quantity
+10:59 - you would compute in the E-step of the EM algorithm,
+11:03 - as you've seen it before.
+11:05 - This kind of procedure has the flavor of an EM algorithm,
+11:09 - where you have a way of filling in the missing values using
+11:13 - this q distribution.
+11:14 - And then you pretend that all the data is fully observed,
+11:18 - which is this piece here.
+11:21 - And then you have this entropy term.
+11:24 - But there is a connection between this kind
+11:27 - of learning methods EM and variational learning
+11:32 - that what we're going to talk about today,
+11:33 - they both try to address the same problem,
+11:36 - learning models when you have missing data.
+11:39 - EM is not scalable, doesn't quite
+11:41 - work in the context of deep generative models.
+11:45 - But these two methods are closely related.
+11:47 - And that's why you can see that the optimal choice of q
+11:50 - would be the conditional distribution of the latent
+11:53 - variables given the z--
+11:55 - the z variables latents given x.
+11:59 - And now how do you see this?
+12:03 - Well, to derive it, you can do-- you
+12:06 - can work out this expression.
+12:09 - If you work out the KL divergence between this q
+12:12 - distribution and this optimal way of inferring the latent
+12:16 - variables, which is the conditional distribution
+12:18 - of z given x, it's not too hard to see
+12:22 - that if you do a little bit of algebra,
+12:24 - this expression is equal to what you see here on the right.
+12:28 - So we see several pieces.
+12:31 - We have the marginal probability of x,
+12:34 - the log probability of x, the marginal likelihood,
+12:36 - the thing we care about.
+12:38 - We have the entropy of q here.
+12:39 - And then we have this average log joint probability
+12:43 - over a fully observed kind of data point.
+12:48 - The same pieces we had before.
+12:50 -
+12:53 - And the key takeaway is that KL divergence we know
+12:57 - is non-negative.
+12:59 - For any choice of q, the left-hand side,
+13:02 - this KL divergence has to be non-negative.
+13:06 - And so now if you rearrange these terms,
+13:09 - we re-derive the ELBO in a slightly different way.
+13:14 - And you see if you move this entropy of q and the first term
+13:20 - here on the right-hand side, you get once again the ELBO.
+13:24 - You get that the log marginal probability of a data point
+13:28 - is lower bounded by the same expression that we had before.
+13:32 - So this is another derivation of the elbow
+13:35 - that just leverages the non-negativity of KL divergence.
+13:40 - This derivation is nicer because it actually shows you how loose
+13:46 - or how tight this lower bound is.
+13:49 - So you can clearly see that if you
+13:52 - choose q to be the conditional distribution of z given x.
+13:56 - So this bound holds for any choice of q.
+13:59 - If you choose this particular distribution,
+14:04 - then this KL divergence has to be 0 because the left
+14:08 - and the right argument of that KL divergence
+14:10 - are the same distribution.
+14:12 - And so this inequality here becomes an equality.
+14:16 - And so we get this result that the ELBO is tied.
+14:22 - So it exactly matches the log marginal probability
+14:26 - when you basically infer the latent variables, the missing
+14:31 - variables using this optimal proposal distribution that
+14:38 - uses the true conditional probability of z given
+14:41 - x to guess the parts of the data that you don't know.
+14:45 - I guess we said that, yeah, we cannot really evaluate this
+14:47 - because it's too expensive.
+14:48 - Now it seems like maybe we can do it
+14:50 - if we were able to choose the optimal q.
+14:53 - This is more aspirational.
+14:55 - We're not going to be able to actually make this choice.
+14:58 - But it's kind of showing us that we should
+15:01 - try to pick a q that is as close as possible to the optimal one.
+15:08 - And although in practice for something
+15:10 - like a variational autoencoder, as we will see soon,
+15:13 - this object here is too expensive to compute.
+15:17 - If you were able to compute the posterior,
+15:19 - then it would also be able to essentially compute
+15:22 - the quantity on the left that we want to optimize.
+15:25 - And that will motivate the whole idea of variational inference,
+15:28 - which is basically saying let's try
+15:31 - to optimize over q to try to find the tightest possible
+15:37 - lower bound.
+15:38 - So we're going to have a separate neural network that
+15:41 - will play the role of q, and we'll jointly
+15:43 - optimize both p and q to try to maximize
+15:47 - this evidence lower bound.
+15:49 - And one of the components will be the decoder
+15:52 - in the VAE, which is p.
+15:54 - The other component will be the encoder of the VAE.
+15:58 - And that's going to be q.
+16:00 - And they will have to work together
+16:01 - to essentially try to maximize the ELBO as much as possible.
+16:07 - And you can see from kind of this expression
+16:09 - that the optimal encoder, the optimal q
+16:13 - would be the true conditional distribution of z given x.
+16:16 - So it's kind of inverting the encoder.
+16:19 - So again, it sort of starts to have
+16:21 - the flavor of an autoencoder, where there is a decoder
+16:25 - model, which is the p of z given x, with the p of x given z.
+16:29 - And then there is an encoder, which
+16:31 - is kind of trying to invert what the decoder does
+16:34 - because it's trying to compute the conditional of z given x.
+16:42 - Hopefully, it will become clearer later.
+16:44 - But essentially, this confirms our intuition
+16:47 - that we're looking for likely completions.
+16:50 - So given the evidence, given x, we're
+16:53 - trying to find possible completions, values
+16:57 - of the z variables that are consistent with what we see,
+17:01 - where the consistency is determined
+17:03 - by this joint probability p of z,
+17:06 - x, which is essentially the generative model.
+17:10 - It's the combination of the simple
+17:11 - prior and then the other neural network that will map it
+17:16 - to parameters of a Gaussian.
+17:17 - And then you sample from it, which
+17:19 - is just the p of x given z.
+17:22 - So now the problem as was already brought up earlier
+17:29 - is that this posterior distribution in general
+17:32 - is going to be tricky to--
+17:34 - we cannot actually compute it.
+17:36 - And in some of the toy models that you
+17:39 - might have done EM with, for example,
+17:42 - sometimes you can compute it.
+17:43 - If you have a mixture of Gaussians,
+17:44 - you can actually compute this analytically.
+17:48 - That's why you can do the E-step in EM.
+17:52 - But in many cases, doing that E-step is intractable, right?
+17:57 - So if you think about the VAE, essentially what you're doing
+18:01 - is you're trying to invert the decoder.
+18:04 - So recall that in a VAE, the conditional distribution
+18:09 - of x given z is given by this--
+18:12 - it's relatively simple.
+18:13 - It's a Gaussian.
+18:15 - But the parameters of the Gaussian
+18:16 - depend on these two neural networks, mu and sigma.
+18:20 - And so what are you doing when you're trying
+18:22 - to compute p of z given x?
+18:24 - You're basically trying to invert these neural networks.
+18:27 - You are given x and you're trying
+18:29 - to find which zs were likely to have produced
+18:33 - this x value that I'm seeing?
+18:35 - Which is potentially pretty tricky
+18:37 - because you have to understand how the neural network maps
+18:40 - z's to outputs and you have to invert a neural network
+18:44 - in a probabilistic sense.
+18:47 - And so the idea of the way we're going to train again
+18:51 - this variational autoencoder is we're
+18:53 - going to try to approximate this intractable posterior.
+18:58 - We know that would be the optimal way
+19:00 - to infer the latent variables given the observed ones.
+19:03 - So we would have to invert these two neural networks.
+19:06 - We would have to invert this conditional, this decoder.
+19:10 - In general that's going to be tricky.
+19:12 - And so instead, we're going to define a family of distributions
+19:17 - over the latent variables, which are also
+19:19 - going to be parameterized by through a set of parameters phi,
+19:25 - the variational parameters.
+19:27 - And then we're going to try to jointly optimize
+19:29 - both the q and the p to maximize the ELBO.
+19:34 - So the reason we would need-- we might want to get this posterior
+19:38 - distribution is that, as we've seen here,
+19:43 - if you were to use q here, this ELBO would be tight.
+19:49 - So there would be no approximation.
+19:51 - And by optimizing the right hand side,
+19:53 - you would actually be optimizing the left hand
+19:55 - side, which is what we want.
+19:58 - This is a little bit of a chicken and egg problem,
+20:00 - though, because if you think about it, if you could--
+20:03 - how is p of z given x defined?
+20:06 - It's the joint p of x comma z divided by p of x.
+20:11 - And p of x is what we want, right?
+20:13 - So that's why it's chicken and egg.
+20:15 - You can't really compute this thing.
+20:17 - And if you could compute this thing,
+20:18 - then you would know how to get the left-hand side.
+20:22 - So you don't need--
+20:23 - you don't even need to do the ELBO computation at all.
+20:27 - But this is giving you a recipe to get a lower bound that
+20:31 - holds for any choice of q.
+20:33 - And the game is going to be let's
+20:35 - try to find something that is as close as possible.
+20:38 - Let's try to find something tractable that
+20:40 - can get us as close as we can to what we know
+20:43 - would be the optimal solution.
+20:45 - And that will end up being tractable.
+20:47 - For example, q could be a family of Gaussian distributions,
+20:53 - where phi denotes the mean and the covariance.
+20:57 - So it could be something like this.
+20:58 - Maybe you have one part of phi denotes
+21:01 - the mean of the Gaussian, the other part
+21:03 - denotes the covariance.
+21:05 - And somehow you are trying to pick a good choice of these two
+21:11 - parameters to get as close as possible to the true posterior
+21:16 - that we know we would like to get for doing this to compute
+21:22 - the ELBO.
+21:24 - And that's basically what variational inference is going
+21:28 - to do, it's going to reduce this to an optimization problem
+21:33 - where we're going to try to optimize
+21:35 - these variational parameters to try to make this distribution
+21:39 - q as close as possible to this intractable optimal choice
+21:44 - that we know exists, but we don't know how to compute.
+21:48 - So in pictures it might be something like this.
+21:51 - There is a true conditional distribution p of z
+21:55 - given x which is for simplicity it's
+21:58 - shown as a kind of a mixture of two Gaussians in blue here.
+22:03 - And let's say that you're trying to approximate that distribution
+22:07 - using a Gaussian.
+22:08 - Then what you can do is you can change the mean
+22:11 - and the variance of these Gaussian distributions
+22:13 - to try to get as close as possible to the blue curve.
+22:17 - So for example you could choose the mean
+22:20 - to be 2 and the variance to be 2, which would be
+22:24 - two choices of phi 1 and phi 2.
+22:26 - And maybe that would give you this orange curve.
+22:30 - And if you could choose, what's the best approximation here?
+22:33 - Would you choose the orange curve?
+22:34 - Would you choose the green curve corresponding
+22:37 - to a mean at minus point--
+22:40 - minus 4 and a standard deviation of 0.75?
+22:44 - I guess what it looks like is that the orange curve is better
+22:50 - because it's roughly has the shape of the distribution we
+22:54 - want.
+22:55 - It's not quite the true posterior distribution,
+22:58 - but it's pretty close.
+23:00 - And so if we somehow are able to come up
+23:03 - with this variational approximation
+23:05 - with this simple distribution that
+23:07 - is roughly close to what we want,
+23:10 - that might be good enough for learning.
+23:12 - And that's the idea behind variational inference.
+23:15 - Let's try to optimize this distribution
+23:17 - q over these variational parameters phi
+23:20 - to try to make this Gaussian distribution as close
+23:23 - as possible to this object that we know
+23:26 - is there, that we know we would like
+23:27 - to approximate as well as we can, but is often intractable.
+23:32 - So the latent variables don't necessarily
+23:34 - have the same dimensions as the data.
+23:36 - And for this, the only thing that matters
+23:41 - are the latent variables.
+23:42 - We're just trying to find a distribution over the latent
+23:44 - variables that is as close as possible to the true posterior
+23:49 - distribution.
+23:50 - So again in practice in a variational autoencoder,
+23:54 - this q will actually be again a Gaussian.
+23:58 - So everything will be relatively simple.
+24:00 - That will come up soon.
+24:02 - But essentially, even in a variational autoencoder,
+24:05 - what you would do is you would try to optimize these parameters
+24:08 - phi to try to match the true posterior distribution,
+24:11 - a true p of z given x as well as you can.
+24:14 - How we evaluate q, the natural thing to do
+24:19 - would be to look at KL divergence. right?
+24:22 - We know KL divergence is telling you how far off you are,
+24:27 - your ELBO is from the true thing.
+24:30 - And so it might make sense to try
+24:32 - to choose a q that is as close to p
+24:36 - of z given x in KL divergence.
+24:39 - And that might be--
+24:42 - that's kind of what's going to happen when we do--
+24:46 - when we optimize the ELBO and when we basically train
+24:50 - a variational autoencoder.
+24:51 -
+24:55 - All right.
+24:56 - So that's sort of the idea.
+24:58 - And in pictures again, it looks something like this.
+25:03 - For a given x and a given choice of theta,
+25:07 - which are the parameters of your variational autoencoder--
+25:12 - your decoder, there is a true value
+25:15 - of the log probability of x, which is kind of this blue line
+25:20 - here.
+25:21 - And then you can imagine that if you
+25:25 - have a family of distributions q, which are parameterized
+25:29 - by phi, as you change phi, you get
+25:32 - lower bounds that could be tighter or looser depending
+25:38 - on how close--
+25:40 - depending on this KL divergence value.
+25:42 - How close your distribution q is to the true posterior.
+25:49 - And so essentially what we're going to do
+25:52 - is we're going to define an evidence lower bound, which
+25:55 - not only depends on q--
+25:57 - that not only depends on theta, which
+25:59 - are the parameters of the generative model,
+26:01 - but also depends on this choice of variational parameters phi.
+26:07 - And what we're going to do is we're
+26:09 - going to try to jointly optimize this right hand side over theta
+26:14 - and phi so that by optimizing theta,
+26:19 - we try to make this lower bound as close as
+26:21 - possible to the thing we care about.
+26:24 - And by optimizing theta, we are pushing up a lower bound
+26:28 - on the marginal likelihood which is, again,
+26:32 - a surrogate to the maximum likelihood objective.
+26:35 - And so it kind of makes sense to jointly optimize this ELBO
+26:39 - as a function of both theta and phi.
+26:42 - So what we had here was one kind of lower bound, which
+26:49 - holds for some choice of q.
+26:51 - And now we're saying we're going to define
+26:53 - a family of lower bounds that are going to be indexed by phi,
+26:56 - these variational parameters.
+26:58 - And we're going to try to find the choice of phi that kind of
+27:03 - makes the lower bound as tight as possible,
+27:05 - because that means that we get the best
+27:07 - approximation to the quantity we care about,
+27:10 - which is the likelihood of a data point.
+27:14 - And that's basically the way you train a variational autoencoder.
+27:17 - You jointly optimize this expression
+27:20 - as a function of theta and phi.
+27:23 - And it will turn out that there's basically
+27:25 - going to be two neural networks-- a decoder
+27:27 - and an encoder.
+27:28 - The decoder is basically theta.
+27:30 - The encoder is going to be the phi.
+27:32 - And these two things work together
+27:34 - to try to maximize the evidence lower bound.
+27:37 -
+27:40 - And we know that again sort of the gap between the ELBO
+27:47 - and the true marginal likelihood is given by this KL divergence.
+27:51 - And so the better we can approximate the true conditional
+27:57 - distribution of z given x, the tighter the bound becomes.
+28:01 - So that's basically going to be the objective back
+28:05 - to your question by pushing up this quantity as a function
+28:09 - of theta and phi, we're implicitly
+28:11 - trying to reduce the KL divergence between the proposal
+28:16 - distribution that we have, which is
+28:17 - this q and the true optimal one that would require
+28:21 - you to invert the neural ks exactly
+28:23 - that we don't know how to do.
+28:24 - But we know that how far off we are with respect to this KL
+28:30 - divergence or how big this KL divergence is determines
+28:33 - how much slack there is between the lower
+28:37 - bound and the blue curve.
+28:40 - And so you can think of the E-step of EM
+28:43 - as giving you the tightest possible lower bound.
+28:46 - And that's why you do it as the first thing in EM
+28:49 - is to compute the true conditional distribution
+28:53 - because that gives you the tightest possible lower bound.
+28:56 - So we can no longer do it here because we cannot compute
+28:59 - the tightest possible lower bound,
+29:00 - but we can try to get as close as we can.
+29:03 - The dream would be to just optimize log
+29:05 - p, this quantity on the left hand side
+29:08 - as a function of theta.
+29:09 - If you could do that, then that's
+29:10 - just like training an autoregressive model.
+29:12 - That's the best thing we can do.
+29:14 - That quantity, we don't know how to evaluate.
+29:16 - But we can get a bound that holds
+29:19 - for any choice of phi, which is the red curve shown here.
+29:24 - So what you could do is you could try to jointly optimize
+29:27 - over phi and theta to get a pretty good surrogate of what
+29:33 - we would like to optimize.
+29:35 - We are going to optimize the lower bound instead.
+29:37 - And at the same time, we're going
+29:38 - to try to make the-- you are optimizing a family of lower
+29:41 - bounds and we're trying to find a tight as possible bound
+29:44 - and increase that bound as a function of the theta
+29:47 - parameters of your generative model to maximize
+29:51 - the likelihood of a data set.
+29:53 - Exactly.
+29:53 - So the question is, at inference time, do you need q?
+29:58 - If you just want to generate, you don't need q.
+30:01 - If you just want to generate, you
+30:03 - have your optimal choice of theta
+30:05 - that perhaps you obtain by optimizing the ELBO.
+30:08 - And all you need is that.
+30:10 - You can sample z.
+30:11 - You feed it through your decoder,
+30:12 - your two neural networks, mu theta and sigma theta,
+30:15 - produce a sample.
+30:17 - Now if you wanted to evaluate the likelihood of a data point
+30:20 - because maybe you want to do anomaly detection
+30:22 - or something like that, then you might still
+30:24 - need the q because that's helps you compute this quantity, like
+30:29 - or at least it gives you a bound and to the extent that the bound
+30:32 - is good, you might need that.
+30:34 - And so q is still useful.
+30:37 - But if you just care about generation, you are right.
+30:39 - You can throw it away after you train the model.
+30:41 - That's a great question.
+30:42 - I mean, is phi related to theta?
+30:44 - And the optimal phi would certainly
+30:46 - be related because the optimal phi would
+30:49 - try to give you the posterior distribution with respect
+30:53 - to theta, right?
+30:54 - So we know that the optimal choice, actually I have it here,
+30:57 - the optimal choice of phi would be this posterior distribution,
+31:02 - which depends on theta.
+31:03 - And so they are certainly coupled together.
+31:07 - By jointly optimizing over one and the other,
+31:10 - you are effectively trying to reach--
+31:12 - trying to get as close as you can to that kind of point.
+31:16 - But it's not guaranteed to be exactly equal.
+31:20 - So these two things are related to each other.
+31:21 - But the final value of phi that you obtain
+31:26 - is not necessarily the one that gives you this--
+31:30 - that matches the true conditional distribution.
+31:32 - It's going to be close hopefully because if you've
+31:35 - done a good job at optimizing, hopefully,
+31:37 - this KL divergence is going to be small.
+31:39 - But there is no guarantee because perhaps
+31:44 - your the true posterior is too complicated
+31:47 - and your q is too simple.
+31:48 - So you might still be far off.
+31:50 - But there is certainly an interplay between the two
+31:53 - in the sense that at optimality, this KL divergence should be 0.
+31:59 - And so they should match each other.
+32:01 -
+32:05 - Cool.
+32:08 - So that's basically how you train a variational autoencoder.
+32:10 - You jointly optimize that expression
+32:13 - here as a function of theta and phi.
+32:15 -
+32:18 - Now and again, this is kind of the picture,
+32:21 - it's a little bit tricky because there
+32:23 - are two optimization problems that happen at the same time.
+32:26 - But what happens is that there is
+32:29 - these theta parameters which are the parameters of the decoder.
+32:33 - The thing that you would really like to optimize.
+32:36 - And for different choices of theta,
+32:39 - there is going to be different likelihoods that
+32:41 - are assigned to the data.
+32:44 - And I'm showing this curve here, this black solid curve as being
+32:47 - the true marginal likelihood.
+32:49 - If you could, you should just optimize that
+32:52 - as a function of theta.
+32:53 - That would be maximum likelihood learning, that would be great.
+32:56 - The problem is that we cannot quite compute that thing.
+32:59 - And so we're going to settle for lower bounds, which
+33:02 - you see here, meaning that these are curves that are always
+33:05 - below the black curve.
+33:08 - And there is a family of lower bounds.
+33:10 - There is going to be many lower bounds.
+33:12 - Any value of phi will give you a valid lower bound.
+33:15 - And what we're going to try to do
+33:17 - is we're going to try to find a good lower bound,
+33:21 - meaning that one that is as high as possible, that is as close as
+33:25 - possible to the black line.
+33:28 - So there's going to be a joint optimization over theta,
+33:31 - which is what tries to maximize the probability of the data set.
+33:34 - And we're going to achieve that by optimizing a bound,
+33:38 - let's say optimizing the red curve
+33:40 - or optimizing the orange curve.
+33:43 - And at the same time, trying to pick a bound,
+33:47 - so pick a choice of phi that gets us as close as
+33:50 - possible to the black line.
+33:52 - So the more flexible q is.
+33:55 - So if instead of using just a Gaussian,
+33:57 - maybe you use a mixture of Gaussians,
+33:59 - maybe you use an autoregressive model, the better this bound
+34:04 - becomes.
+34:05 - So the better you're going to do at
+34:08 - fitting your original decoder.
+34:10 - So there is many papers where people basically
+34:13 - propose better choices for q, which essentially
+34:18 - means more flexible families.
+34:20 - And that can give you a better data fit
+34:22 - by basically making this proposal distribution more
+34:26 - flexible.
+34:27 - So indeed that's a great way to make the model better,
+34:30 - make q more expressive, more flexible.
+34:34 - It seems like as you change--
+34:36 - we go back to the other points that
+34:38 - were raised that phi and theta are coupled together.
+34:41 - So how good a bound is depends on the-- or how good a phi is
+34:48 - depends on the current choice of theta.
+34:50 - And so if you are around here, maybe this--
+34:54 - as you can see here, around this choice of theta,
+34:57 - maybe the red curve would be better than the orange.
+35:00 - But then if you have a different choice
+35:02 - of your variational parameters, then maybe the orange curve
+35:05 - starts to become better.
+35:06 - And so as we jointly optimize, we'll have to keep them in sync.
+35:10 - In practice what we do is we just do gradient ascent
+35:14 - on both theta and phi.
+35:16 - So we try to keep them.
+35:17 - But you could also just keep theta fixed, optimize
+35:20 - as a function of phi as well as you can.
+35:22 - That gives you the tightest bound.
+35:23 - And then optimize theta by a little bit.
+35:25 - That is actually what happens in EM.
+35:28 - You can think of EM as giving you
+35:30 - the tightest possible bound for the current choice of theta.
+35:33 - And then in the M-step, you optimize the lower bound
+35:36 - as well as you can.
+35:37 - Here we're not going to do that.
+35:39 - We're going to do gradient-based updates.
+35:41 - But it's the same kind of philosophy.
+35:43 - Trying to jointly optimize one and the other.
+35:45 -
+35:49 - Cool.
+35:50 - So all right.
+35:52 - So let's see how we do that.
+35:53 - So we know that for any choice of q, we get the lower bound.
+35:59 - That's the ELBO.
+36:00 - Now what we would like to do, recall
+36:03 - is that we have a data set and we
+36:05 - would like to optimize the average log probability assigned
+36:10 - to all the data points in the data set.
+36:13 - So we don't just care about a single x.
+36:15 - We care about all the xs in our data set D.
+36:19 - And what we can do is, well, we know
+36:21 - how to bound the log probability for any x and any theta
+36:25 - through the ELBO.
+36:27 - And so we can get a lower bound to the quantity
+36:31 - on the left, which is the average log likelihood assigned
+36:34 - to the data set by just taking the sum of the ELBOs
+36:36 - on each data point.
+36:39 - All right.
+36:40 - So this is the ELBO for a general x.
+36:42 - We can get the ELBO for each data point.
+36:44 - And we get this expression.
+36:47 - Now the thing to--
+36:48 - the main complication here is that we're
+36:52 - going to need different qs for different data points.
+36:58 - And so if you think about it, the posterior distribution,
+37:05 - even for a same choice of theta, is
+37:07 - going to be different across different data points.
+37:10 - And so you might want to choose different variational parameters
+37:14 - for different data points.
+37:18 - And so you don't have a single set of variational parameters
+37:21 - phi, but you have a single choice of theta
+37:25 - because you have a single generative
+37:26 - model for the whole data set.
+37:28 - But then at least if you do things this way,
+37:33 - you would need to choose variational parameters
+37:36 - differently for different data points.
+37:39 - I mean, we'll see that this is not going to be scalable.
+37:42 - But this would be the-- and so we'll
+37:44 - have to introduce additional approximations to make
+37:47 - things more scalable.
+37:48 - But this would be the most natural thing to do.
+37:52 - For every data point, you try to find the best approximation
+37:54 - to the posterior for that particular choice of xi.
+37:58 - And then you jointly optimize the whole thing.
+38:01 - You try to make the lower bound for each data
+38:03 - point as tight as possible so that the sum of the lower bounds
+38:06 - is going to be as good of an approximation as you can
+38:10 - to the true quantity you'd like to optimize,
+38:12 - which is the true marginal likelihood here.
+38:15 - In this example, let's say that the latent variables
+38:19 - are the pixels in an image.
+38:21 - So then at least they are meaningful.
+38:23 - And you can get a sense of what the posterior should be.
+38:26 - So let's say that we have a distribution over images
+38:31 - and the x variables are the bottom half of the image
+38:34 - and the z variables are the top half of the image.
+38:37 - But let's pretend that maybe you're
+38:40 - fitting an autoregressive model, but we
+38:43 - are in this kind of situation where some of the images--
+38:49 - some parts of the image is missing.
+38:51 - So you never get to see the top half of the image.
+38:56 - So that's our latent variable.
+38:58 - So it's no longer a VAE.
+38:59 - It's a slightly different model.
+39:01 - But it's just to give you the intuition of what
+39:03 - we're trying to do here.
+39:05 - So to fit your autoregressive model, your transformer model
+39:09 - or your RNN or whatever, you need
+39:11 - to somehow guess the top half of the image
+39:14 - if you want to evaluate the disjoint probability
+39:19 - and you can optimize your parameters.
+39:21 - And one way to do it is to basically use
+39:22 - this variational trick of trying to guess
+39:27 - the values of the missing pixels.
+39:30 - And then pretend that you have a fully observed data set.
+39:33 - And then just optimize.
+39:36 - But there is different ways of guessing the missing values,
+39:39 - the missing pixels.
+39:40 - So you can define a family of distributions over the missing
+39:44 - pixels.
+39:45 - And here just for simplicity, I'm
+39:47 - saying that the pixels are just binary 0/1.
+39:50 - And so you have a bunch of variational parameters
+39:52 - that will basically tell you the probability
+39:55 - that you should choose each individual pixel that is not
+39:58 - observed to be on or off.
+40:01 - And so in this case, you have one variational parameter
+40:04 - per missing pixel.
+40:06 - And you can see that what's a good approximation
+40:11 - depends on the bottom half of the image.
+40:13 - Like if you get to see this part,
+40:16 - would you choose phi i 0.5 as your approximation
+40:21 - of the posterior?
+40:22 - Which basically means the way you're
+40:24 - going to guess the missing values is by randomly flipping
+40:27 - a coin on each location.
+40:30 - It's probably not a good approximation
+40:32 - to the true posterior.
+40:33 - You know that this is probably a kind of a nine.
+40:37 - So you want to guess that way.
+40:41 - And so probably not a good one.
+40:44 - Would turning everything on be a good approximation?
+40:47 - Probably not.
+40:48 - Again you want to choose--
+40:51 - turn on the pixels that correspond to the nine.
+40:54 - But you see that it depends on what you see.
+40:59 - It depends on the evidence x.
+41:01 - So if you see this, you might say it's a nine.
+41:05 - But if you see a straight line, then maybe you think,
+41:07 - oh, it's a 1.
+41:08 - And so you want to choose different values
+41:10 - of these variational parameters.
+41:12 - And so even though theta is common across the data points,
+41:18 - the values of the latent variables that you infer
+41:21 - should be different.
+41:23 - Again going back to the variational autoencoder,
+41:26 - if z now captures latent factors of variation,
+41:29 - like the class of the data point or whatever,
+41:33 - again you'd like to make different choices
+41:36 - for how you infer z, depending on what you see,
+41:38 - depending on the x part.
+41:41 - So that motivates this choice of OK,
+41:45 - we want to optimize, we want to choose different files
+41:49 - for the data points, because the latent variables are going
+41:51 - to be potentially very different across the different data
+41:54 - points, or another way to say it is
+41:57 - that if you think about the generative procedure of the VAE,
+42:01 - you're generating this axis by feeding random noise essentially
+42:05 - into a neural network.
+42:06 - And depending on the x you see, you
+42:09 - might want to make very different guesses about what
+42:12 - was the random noise that you've put through your decoder,
+42:15 - through your neural network.
+42:18 - So you want to choose different choices
+42:20 - of phis for the different xs that you have in your data set.
+42:24 - To what extent is optimizing the right-hand-side a good
+42:27 - approximation to optimizing the left-hand-side?
+42:30 - And it's a reasonable approximation in the sense
+42:33 - that you know that whatever value you have here,
+42:38 - the true thing can only be better than what you got.
+42:41 - You could be far off.
+42:43 - And in fact you could be doing weird things
+42:45 - where maybe by maybe let's see whether I have it here.
+42:50 - But it could be that it looks like you're optimizing--
+42:54 - the lower bound goes up, but the true thing actually goes down,
+42:58 - like you could imagine a shape here
+43:00 - where let's see if I have an example here.
+43:04 - But basically, it looks like-- and maybe if you go from here
+43:09 - to here, it looks like the red line goes up
+43:12 - but the black line might actually go down.
+43:15 - So in that sense, there is no guarantee
+43:19 - because the bounds could be very far off from the true thing.
+43:25 - But what you know is that the true objective function
+43:28 - is going to be at least as good as what
+43:30 - you get by optimizing these, which is not a bad guarantee
+43:33 - to have.
+
+
+
+00:00 -
+00:05 - SPEAKER: Now how do we actually do this?
+00:08 - The simplest version would be to just do
+00:10 - gradient ascent on this objective function, right?
+00:14 - The ELBO, if you expand it, would look like this.
+00:18 - So for every data point xi, you would
+00:22 - have this expectation with respect
+00:23 - to this variational distribution q.
+00:26 - This way we're inferring the latent variables
+00:29 - given the observed ones.
+00:31 - And then you would have the log probability basically
+00:35 - in the fully observed case.
+00:36 - And then you have this term which
+00:37 - is kind of the entropy of q.
+00:40 - And so what you could do is you could do--
+00:43 - initialize all the optimization variables somehow.
+00:48 - And then you could randomly sample a data point,
+00:52 - and then you could try to optimize this quantity, as well
+00:58 - as you can as a function of the variational parameters.
+01:02 - So you compute a gradient of the quantity
+01:04 - with respect to the variational parameters.
+01:07 - You try to make that ELBO as tight as possible for the ith
+01:14 - data point.
+01:15 - And then until you can no longer improve,
+01:19 - you find some kind of local optima.
+01:22 - And then you can take a step on the theta parameters.
+01:27 - So your actual decoder, the actual VAE model
+01:31 - that you use for generating data given the best possible
+01:34 - lower bound.
+01:36 - So this inner loop will find the best lower bound.
+01:39 - This step 4 will take a step on that optimal lower bound.
+01:45 - The H is the entropy, which is the expected log
+01:48 - probability under q.
+01:50 -
+01:54 - This is not quite going to be the way we're going to train
+01:59 - a variational autoencoder.
+02:00 - It turns out that it's actually better
+02:02 - to keep theta and phi in sync.
+02:05 - But you can imagine that a strategy like this
+02:08 - could actually work as an optimization objective.
+02:13 - So how efficient it is?
+02:15 - Well, first of all, we'll see that the first challenge is
+02:18 - to figure out even how to take--
+02:19 - how to compute these gradients.
+02:22 - These gradients are going to be not too expensive, luckily
+02:24 - as we'll see.
+02:26 - But there is a question of, should you take more steps
+02:30 - on phi, less steps on theta?
+02:32 - Should you do one step on theta, one on phi?
+02:35 - There is many strategies that you can use.
+02:37 - And it's not even known actually what's the best one.
+02:40 - This is one that is reasonable.
+02:43 - It's more like a coordinate ascent procedure.
+02:45 - You find the best theta and then you optimize--
+02:48 - you find the optimal phi and then
+02:49 - you optimize the theta a little bit.
+02:51 - Yeah.
+02:52 - So that's going to be the way we're
+02:53 - going to make things more scalable,
+02:55 - is called amortized inference.
+02:56 - There's going to be how we move from this vanilla version
+02:59 - to something that is going to be worse
+03:01 - from the perspective of the bound you get.
+03:03 - But it's going to be more scalable because there is not
+03:05 - going to be one optimization parameter per data point.
+03:09 - We're basically going to do exactly what you suggested.
+03:12 - We're going to tie together--
+03:14 - we're going to have a single q that
+03:16 - is supposed to work well across different x's that
+03:19 - is going to be a neural network that will essentially
+03:21 - try to guess this phi i star as a function of x.
+03:26 - And that's sort of like--
+03:30 - I think it's better to understand it
+03:34 - through the lenses of OK, first you optimize and then
+03:36 - you try to approximate it, but that's
+03:38 - going to be the how VAE is actually trained.
+03:40 - It is basically going to be a separate neural network that
+03:43 - will take xi as input and will produce a guess for this phi i
+03:48 - star, the optimal choice of variational parameters
+03:51 - for that data point as an output.
+03:53 - And that's going to be the encoder of the VAE.
+03:56 - So without a neural network, you can do this.
+03:58 - It's just going to be-- this is actually--
+04:00 - and it's actually going to work better than whatever you can get
+04:02 - with the neural network because you're optimizing over--
+04:05 - you have less constraints, right, kind of what
+04:08 - was said before about let's make q as expressive as possible.
+04:12 - This is going to be better.
+04:15 - But it's just going to be slower.
+04:16 - And not going to be scalable.
+04:18 - But if you can afford to do this,
+04:20 - this is going to be better, basically.
+04:22 - That's a problem, yeah, because here we're
+04:24 - sort of jointly optimizing these two
+04:28 - and hoping that we can find something.
+04:29 - But you can imagine also like if the choice of phi is really bad,
+04:33 - initially at least it's probably going to be random or something.
+04:37 - And so they're going to be doing a very bad job at guessing
+04:41 - the latent variables.
+04:42 - And so you might not be able to actually optimize the theta.
+04:46 - And so you might get stuck into a very bad local optimum.
+04:51 - And this is non-convex.
+04:53 - So you have no guarantee in terms
+04:54 - of being able to find a good solution for this optimization
+04:59 - problem.
+05:00 - And so those issues indeed we have them here.
+05:05 - And you have to hope that gradient ascent will find you
+05:08 - a good solution.
+05:10 - But you could certainly get stuck.
+05:12 -
+05:17 - Cool.
+05:18 - So that's the conceptually at least
+05:22 - a good way to think about how you
+05:23 - would train a model like this.
+05:26 - And the kind of part that is still not obvious
+05:30 - is how you compute these gradients.
+05:33 - How do you compute the gradients with respect to theta?
+05:37 - So we need two gradients.
+05:39 - We need at step 3-1 within the gradient with respect
+05:42 - to the variational parameters.
+05:43 - And at step 4, we need the gradients with respect
+05:46 - to the model, the actual decoder,
+05:50 - the actual neural networks that define the VAE.
+05:56 - And these are expectations for which we don't know,
+06:01 - you cannot compute them in closed form.
+06:03 - There is no analytic kind of expression
+06:07 - that you can use to compute the expectation and then
+06:10 - the gradients of.
+06:11 - So we have to basically rely on Monte Carlo sampling.
+06:14 - We're going to approximate these expectations
+06:17 - with sample averages.
+06:20 - And so what would it look like?
+06:25 - If you want to approximate these expectation with respect to q,
+06:30 - we can just do this.
+06:31 - We can just sample a bunch of draws from q.
+06:36 - And then approximate the expectation
+06:38 - with a sample average.
+06:40 - The usual trick, an expectation with respect to q
+06:43 - is approximately equal to the sample average
+06:46 - if you were to sample the latent variables according
+06:49 - to this proposal distribution q.
+06:50 -
+06:54 - And as usual, the larger capital K
+06:57 - is, the more accurate this approximation is going to be.
+07:00 - In practice when you train a VAE,
+07:02 - you probably choose k equals 1.
+07:05 - And you would just use a single sample.
+07:06 - But in general, you could use more
+07:08 - if you wanted more accurate estimates of the expectation.
+07:13 - And the key assumption here is that q has to be simple.
+07:19 - You can't choose something very complicated
+07:22 - because you need to be able to sample from it efficiently.
+07:25 - And you need to be able to evaluate probabilities
+07:28 - under q efficiently.
+07:30 - Yeah.
+07:31 - So it has to be complex, but still it
+07:33 - has to be a model for which you can evaluate probabilities
+07:36 - efficiently.
+07:36 - And you have to sample from efficiently.
+07:38 - So a VAE, for example, would not be a good choice because you can
+07:41 - sample from it efficiently, but you cannot evaluate
+07:43 - probabilities efficiently.
+07:45 - An autoregressive model would be a reasonable maybe choice
+07:49 - because you can sample efficiently.
+07:51 - And you can evaluate probabilities.
+07:53 - But we will see generative adversarial networks will not be
+07:57 - a good choice because it's easy to sample from,
+07:59 - but you cannot evaluate probabilities.
+08:01 - We will see something called a flow model, which
+08:04 - is a class of generative models where you can sample
+08:06 - from efficiently and you can evaluate
+08:08 - probabilities efficiently.
+08:09 - That's a good choice.
+08:10 - That's what people actually use in practice.
+08:12 - So those are the two constraints.
+08:14 - Sample efficiently.
+08:15 - Evaluate probabilities efficiently.
+08:16 -
+08:19 - And then we want to compute gradients of this quantity,
+08:22 - right?
+08:22 - We want to compute gradients with respect
+08:24 - to theta and with respect to phi.
+08:27 - And the gradients with respect to theta
+08:28 - are trivial, because basically you can just--
+08:33 - the gradient of the expectation is just
+08:35 - going to be approximately equal to the gradient of the sample
+08:39 - average, essentially.
+08:41 - So the gradient is just linear.
+08:43 - You can push it inside.
+08:46 - The q part does not depend on theta.
+08:48 - So the gradient with respect to theta of this part is 0.
+08:52 - So you can basically just take your samples, evaluate
+08:57 - the gradients of the log probability
+09:00 - with respect to theta, which is-- and this is fully observed.
+09:02 - So this would be exactly the same gradient
+09:04 - as in an autoregressive model.
+09:06 - You have the z part.
+09:07 - You have the x part.
+09:08 - So you know how to evaluate these probabilities.
+09:11 - And you just take gradients.
+09:12 - And you just update your theta parameters that way.
+09:16 - So this part is very easy.
+09:19 - The tricky part is the gradients with respect to phi.
+09:23 - And the reason is that the samples are--
+09:26 - you are sampling from a distribution
+09:28 - that depends on phi.
+09:29 - And so if you want to figure out,
+09:31 - how should I change my variational parameters
+09:34 - phi to make this expectation as large as possible?
+09:39 - You kind of need to be able to understand
+09:43 - how we're changing phi change where the samples land,
+09:48 - essentially.
+09:50 - You are sampling from this distribution,
+09:52 - which depends on phi.
+09:53 - And so you need to be able to understand
+09:54 - if I were to make a small change to phi,
+09:57 - how would my samples change?
+10:00 - And if you take gradients with respect to theta,
+10:02 - you don't have to worry about it because the samples--
+10:05 - you're not sampling from a distribution
+10:07 - that depends on theta.
+10:08 - So you don't have to worry about how the samples themselves
+10:10 - would change if you were to change phi.
+10:13 - But if you're changing phi, then you
+10:15 - need to understand how your sampling procedure here
+10:19 - depends on phi.
+10:21 - And so the gradient is not going to be as easy as this one.
+10:25 -
+10:28 - And that's essentially the problem.
+10:31 - The problem is that you're taking
+10:33 - an expectation with respect to a distribution that
+10:36 - depends on phi.
+10:37 - So if you want to take gradients,
+10:39 - you need to understand how the sampling process basically
+10:42 - is affected by small changes in the variational parameters.
+10:47 - And that's more tricky.
+10:50 - And because we would still like to do it
+10:52 - through some kind of efficient Monte Carlo thing
+10:55 - where you just sample once and then
+10:57 - you compute some gradient through autodiff
+10:59 - and you're done.
+11:00 - And it's not super obvious how you would do this.
+11:03 - And there is different ways of doing it.
+11:06 - Later on we'll see a technique called REINFORCE from
+11:11 - reinforcement learning, because you can think of this as like
+11:13 - a reinforcement learning problem, where you're--
+11:18 - you could think of z as being an action.
+11:20 - You're trying to figure out your policy.
+11:22 - You're trying to figure out how you should change your policy
+11:25 - to perform well, where the argument of the expectation
+11:29 - is the reward that tells you how well you're doing.
+11:31 - And it's tricky to figure out how changing your policy
+11:35 - affects the value that you're getting.
+11:37 - But there are techniques for reinforcement
+11:39 - learning that you could use.
+11:41 - Today we'll see simpler, actually
+11:43 - better way of doing things that does not work in general.
+11:48 - It only works for certain choices of q.
+11:51 - For example when q is Gaussian, you can use this kind of trick.
+11:55 - And it's more efficient in the sense
+11:58 - that, yeah, it has lower variance.
+12:01 - It's a better estimator.
+12:03 - And this technique, it's called the reparameterization trick.
+12:08 - It only works when these latent variables z are continuous.
+12:12 - So it doesn't work when you have discrete latent variables.
+12:15 - Only works when z is continuous, like when
+12:20 - z is a Gaussian, for example.
+12:22 - And so that this expectation is not a sum,
+12:26 - but it's really an integral.
+12:28 -
+12:30 - So it's an integral with respect to this probability density
+12:35 - function q, which depends on phi of some quantity, which
+12:39 - I'm going to denote r because it's kind of like a reward.
+12:43 - But r of z is just basically the argument of the expectation.
+12:47 - I'm just changing the notation to make it
+12:50 - a little bit more compact.
+12:51 - But essentially, the argument doesn't matter too much.
+12:55 - The tricky part is to figure out how
+12:57 - to change phi so that the expectation becomes as
+13:01 - large as possible, essentially.
+13:03 - And again, you see the connection
+13:06 - with reinforcement learning.
+13:07 - If z are actions, then you're trying to say--
+13:11 - and you're randomly-- you have a stochastic policy for choosing
+13:14 - actions and different actions have different rewards.
+13:17 - You're asking, how should I choose actions
+13:21 - in a stochastic way so that I get the highest possible reward?
+13:24 - And you need to understand how changing
+13:26 - phi changes which kind of actions you pick,
+13:30 - which kind of zs are more likely and less
+13:32 - likely under your policy, which is a little bit tricky.
+13:37 - The good thing is that if again q has certain properties,
+13:44 - for example it's Gaussian, then there
+13:48 - is two ways of sampling from q.
+13:50 - You could sample from q directly or you
+13:55 - could sample from a Gaussian random variable with mean 0
+14:01 - and covariance identity and shift and rescale it.
+14:05 -
+14:08 - So if you want to sample from a Gaussian
+14:10 - with mean mu and covariance sigma square, the identity,
+14:16 - you could always achieve that by sampling
+14:20 - from a standard normal with 0 mean and identity covariance.
+14:24 - So shifting and rescaling.
+14:28 - And what this does is that we're basically
+14:31 - rewriting these complicated random variables
+14:36 - z as a deterministic transformation of something
+14:40 - simple of a standard normal Gaussian random variable.
+14:44 - This is why it's called the reparameterization trick,
+14:47 - because we're just writing z as a transformation,
+14:52 - as a deterministic transformation of a fixed
+14:56 - random variable, which does not depend on the optimization
+14:59 - parameters.
+15:01 - So we have some deterministic transformation,
+15:05 - which depends on the optimization parameters,
+15:07 - the five parameters that we use to transform
+15:10 - this basic random variable epsilon, which
+15:14 - does not depend on phi anymore.
+15:16 -
+15:19 - And then using this equivalence, we
+15:24 - can compute the expectation in two ways.
+15:26 - You can either sample from z, sample from q
+15:29 - and then evaluate r at the zs that you get by sampling from q,
+15:33 - or you can sample from epsilon, transform it through g,
+15:38 - and evaluate r at that point.
+15:41 - And the key thing is that now we have
+15:43 - an expectation that no longer depends on the optimization
+15:47 - parameters phi.
+15:48 - Now it's an expectation with respect to epsilon.
+15:51 - And so we can basically push the gradient inside just
+15:54 - like what we were doing before, or in other words,
+15:57 - basically we understand how changing the parameters
+16:01 - affects the kind of samples that we get,
+16:04 - because we're explicitly writing down the sampling
+16:06 - procedure as a deterministic transformation
+16:09 - of some simple fixed random variable.
+16:12 - So if you want to figure out what would be--
+16:15 - how would my performance change if I
+16:18 - were to change phi by a little bit, which is essentially
+16:21 - the gradient?
+16:22 - Now you know exactly how your samples
+16:26 - would change because you have a deterministic transformation
+16:28 - that gives you the new samples as a function of phi.
+16:30 - And so taking the gradient of that
+16:32 - would tell you how the samples would change by changing phi
+16:36 - by a little bit.
+16:39 - And so once you have this expression
+16:41 - or you have an expectation with respect
+16:43 - to a quantity that no longer depends on phi,
+16:47 - we're basically in a good shape, because we
+16:50 - can compute this gradient with respect to phi.
+16:53 - So here this one would be a little bit tricky
+16:55 - because you have an expectation which depends on phi
+16:57 - and we don't know how to do this.
+16:59 - But the expectation on the right is the kind of thing
+17:01 - we know how to handle because it's
+17:03 - an expectation with respect to epsilon
+17:05 - which no longer depends on phi.
+17:08 - And then we can basically push the gradient inside.
+17:11 - r is an arbitrary function.
+17:12 - Yes.
+17:13 - And this is something we can do by Monte Carlo basically.
+17:18 - All you do is you sample epsilon and then
+17:21 - you-- or a bunch of epsilons, and then you
+17:23 - approximate the expectation of the gradient
+17:26 - with the sample average of the quantity.
+17:31 - And basically by chain rule, you can figure out,
+17:36 - what would be the effect of changing phi b
+17:41 - on this expectation that you care about?
+17:45 - Because you know that basically just
+17:49 - by computing these gradients, you get what you want.
+17:52 - You know how this epsilon would be transformed.
+17:55 - And then you know what is the corresponding reward
+17:58 - R that you would get if you were to transform
+18:00 - the sample in a certain way.
+18:02 - And so you know how you should adjust your parameters
+18:05 - to maximize the reward as much as you can.
+18:08 - Because you know exactly how changing phi
+18:12 - affects the sampling procedure.
+18:14 - Yes, it doesn't work for discrete random variables.
+18:17 - If you have that kind of setting and it doesn't even
+18:21 - work for all continuous distributions,
+18:22 - like it has to be-- you have to be
+18:24 - able to write the sampling procedure
+18:26 - as some kind of deterministic transformation
+18:29 - of some basic distribution that you know how to sample from.
+18:32 - If you can do that, then this machinery
+18:34 - you can see it goes through.
+18:36 - But if you have something like a discrete, like categorical
+18:41 - random variable, then well, it would be discontinuous.
+18:45 - And at that point, you don't know--
+18:46 - and you can always sample it by inverting the CDF essentially.
+18:49 - But you would not be able to get gradients through, essentially.
+18:53 - And so for that, you either need to use REINFORCE,
+18:55 - or we'll talk about other ways to relax the optimization
+18:59 - problem when dealing with these things.
+19:00 - But this is only applicable to special cases like a Gaussian,
+19:05 - which luckily is what people often use in practice.
+19:07 - And so this is actually a good solution when you can use it.
+19:10 - OK.
+19:10 -
+19:17 - So now we're basically almost there.
+19:21 - Recall that what we wanted to was
+19:24 - to compute the gradient of this ELBO, which is just
+19:27 - an expectation with respect to q of some arbitrary function which
+19:32 - happens to depend on phi, which is a little bit
+19:35 - annoying because before we had this r which was not depending
+19:40 - on phi, now the argument of the expectation also depends on phi.
+19:45 - But you can see that basically you can still
+19:49 - use reparameterization.
+19:50 - You still, just like before, as long
+19:53 - as you know how to write down the sampling
+19:55 - procedure in some kind of as a differentiable
+19:58 - in a differentiable way, then you just basically
+20:03 - have the argument of the expectation that
+20:08 - depends on phi in two ways.
+20:10 - And then you just do basically chain rule would basically
+20:13 - take-- autodiff will take care of the gradient for you.
+20:18 - So that's actually not an issue.
+20:20 - Essentially, you use the same machinery for this--
+20:24 - for this reward function which now depends on phi.
+20:27 - But essentially, the same machinery goes through.
+20:32 - And so OK, now we know essentially how to do this.
+20:37 - We know how to compute the gradients.
+20:39 - The only other annoying piece is that we
+20:42 - have one variational parameter per data point.
+20:45 - So it would be expensive to have different variational parameters
+20:51 - per data point, especially if you have a very large data set.
+20:56 - And so the other missing piece is
+20:59 - to have what's called as amortization, which basically
+21:04 - means that we're not going to try to separately optimize
+21:08 - over all these phi's, instead we're
+21:11 - going to have a single set of parameters which is going
+21:14 - to be another neural network.
+21:16 - It's going to be the encoder of the VAE, which we're
+21:19 - going to denote as f lambda.
+21:22 - And this function is going to try
+21:24 - to guess a good choice of variational parameters.
+21:28 - So it's going to try to somehow do regression
+21:30 - on this mapping between xi and the optimal variational
+21:33 - parameters.
+21:34 - It's going to try to guess what's
+21:36 - a good way of approximating the posterior for the ith data
+21:39 - point.
+21:39 -
+21:42 - And this is much more scalable because we
+21:44 - have a fixed number of parameters now
+21:46 - that we're trying to optimize.
+21:47 - We have the theta and we have the encoder.
+21:52 - And so again, so let's say the qs are Gaussians.
+21:56 - Instead of having one different mean vector per data point,
+22:00 - you have a single neural network that
+22:02 - will try to guess what's the mean of the Gaussian
+22:05 - as a function of x, as a function of the data
+22:08 - point, the observed values that you see in each data point?
+22:13 - And now we approximate this posterior distribution
+22:18 - given that the observed value is for the ith data
+22:23 - point using this distribution.
+22:26 - So we take xi, we pass it through this neural network
+22:29 - that will guess the variational parameters.
+22:32 - And then that's going to be the q that we use in the ELBO.
+22:37 - And the same kind of gradient computation
+22:39 - goes through as long as the--
+22:42 - yeah, as long as the reparameterization works,
+22:44 - you can see that the same machinery applies here.
+22:48 - The trade-off in that case, you're going to get a better--
+22:51 - I mean to the extent that you can do the optimization well,
+22:54 - because it's non-convex.
+22:55 - So the weird things could happen.
+22:56 - But to the extent that you can optimize,
+22:58 - you would get a better average log likelihood.
+23:04 - So it's going to be more expensive because you
+23:06 - have more variational parameters to optimize over.
+23:09 - You're also going to give up on the fact
+23:11 - that if I give you a new test data point
+23:13 - and you want to evaluate the likelihood of that test data
+23:16 - point, you would have to solve an optimization problem
+23:19 - and to try to find variational parameters for that data point.
+23:22 - If you have this neural network that
+23:24 - is already trained to give good variational parameters,
+23:28 - you have no cost.
+23:29 - So it's all amortized.
+23:31 - So it's called amortized because essentially there
+23:34 - is a neural network that is amortizing
+23:37 - the cost of solving this optimization problem
+23:39 - over variational parameters.
+23:41 - And the problem of solving the optimization problem
+23:45 - and give you the optimal variational parameters
+23:47 - is kind of amortized by a single feed
+23:49 - forward pass through this neural network.
+23:53 - So if we generalize in the sense that you would have a P
+23:56 - and you could try to evaluate--
+23:59 - you could try to then--
+24:00 - it defines a valid likelihood on any x.
+24:04 - It might-- optimizing through an encoder,
+24:08 - might have a regularization effect in the sense
+24:10 - that it's constraining p because you're jointly optimizing
+24:15 - p and q.
+24:15 - So you could say that, OK, you're optimizing phi
+24:18 - to try to make the approximate posterior
+24:20 - close to the true posterior, but you're also
+24:23 - optimizing the true posterior to be close to one
+24:26 - that you can approximate with your little neural network.
+24:29 - And so it has a regularization effect
+24:33 - over the kind of generative model
+24:34 - that you learn because it has to be a generative model on which
+24:38 - you can do inference relatively well
+24:41 - using this single neural network that we have here.
+24:45 - So as you said, that might help you
+24:47 - in terms of log likelihood on a new data point
+24:50 - because the model is more constrained
+24:52 - and so it might perform well, it prevents
+24:53 - overfitting to some extent.
+24:55 - If you wanted to get the best approximation
+24:57 - to the likelihood on a new test data point,
+25:01 - you would optimize a new file.
+25:02 - And that would give you a valid--
+25:03 - the best lower bound on the ELBO for that data
+25:06 - point, that would be the best.
+25:10 - The marginal likelihood is defined regardless of how you
+25:14 - choose the phi's.
+25:15 - And so the phi is just a computational thing
+25:20 - that you need in order to evaluate the likelihoods.
+25:23 - But if you just care about generation,
+25:25 - you don't even need the phi's.
+25:26 - How many phi's in practice?
+25:28 - What you would do is you would have a single neural network
+25:30 - that would essentially guess the optimal phi's
+25:34 - as a function of the data points.
+25:36 - And these neural networks are typically relatively shallow.
+25:39 - You don't actually ever get the phi's.
+25:41 - So what you do is you just optimize the ELBO
+25:43 - as a function of this let's say lambda parameters here.
+25:49 - And so you never actually compute these five stars.
+25:52 - You just restrict yourself to the phi's
+25:55 - that can be produced by this single neural network.
+25:59 - So the dimension of phi and the family that you choose,
+26:02 - is it a Gaussian?
+26:03 - Is it like whatever variational family?
+26:07 - That's a choice, the modeling choice.
+26:09 - So Yeah, again, this is saying what
+26:12 - we were discussing before that for different data points,
+26:15 - there is going to be different optimal variational parameters.
+26:20 - And then you have this single map
+26:22 - that will take xi as an input and will output
+26:26 - a good choice of variational parameters for that xi
+26:29 - that you're going to use to infer the latent
+26:31 - variables for that data point.
+26:34 - So there is not even going to be any phi anymore.
+26:36 - There's going to be a single neural network f lambda that
+26:39 - does the work for you.
+26:41 - And in the VAE language, that's often denoted q phi of z
+26:48 - given x, meaning that the choice of variational distribution
+26:53 - that you use is a function of x and phi,
+26:57 - and the relationship is determined
+27:00 - by this neural network, which is going
+27:01 - to be the encoder in the VAE that predicts
+27:05 - the parameters of this variational distribution
+27:08 - over the latent variables given what you know,
+27:11 - given the x variables.
+27:14 - So it's the same machinery, except that there
+27:17 - is less trainable parameters because there
+27:19 - is a single neural network that will describe
+27:22 - all this variational distributions that
+27:25 - in general should be different.
+27:27 - But just for computational efficiency reasons,
+27:30 - you restrict yourself to things that can be described that way.
+27:36 - And then basically, that's how you actually do things.
+27:40 - Then you have exactly the ELBO that we had before,
+27:43 - which depends on the parameters of the decoder and the encoder
+27:47 - phi.
+27:48 - So phi here now denotes the parameters
+27:51 - of the separate inference neural network that takes x as an input
+27:56 - and produces the variational posterior q for that x.
+28:01 - And then everything is just optimized
+28:05 - as a function of theta and phi through gradient descent.
+28:09 - So you initialize the decoder and the encoder somehow.
+28:15 - And then what you would do is you would randomly sample a data
+28:18 - point, then there is going to be a corresponding ELBO
+28:22 - for that data point.
+28:23 - And what you can try to do is you can try to figure out,
+28:26 - how should you adjust the theta, the decoder, and the encoder
+28:30 - to maximize the ELBO for that particular data point?
+28:33 - And this expression is just like what we had before,
+28:36 - except that the variational parameters
+28:39 - are produced through this neural network which is the encoder.
+28:43 - And you can just backprop through that additional neural
+28:46 - network to figure out what this gradient should be.
+28:50 - How should you adjust the gradients of the encoder
+28:53 - so that you produce variational parameters for the ith data
+28:57 - point that perform well with respect to the ELBO?
+29:01 - And you can still use the reparameterization trick
+29:04 - as long as q is a Gaussian.
+29:06 - Everything works.
+29:08 - And then you just take steps.
+29:10 - And in this version, which is the version that people
+29:12 - use in practice, you jointly optimize theta and phi
+29:16 - at the same time.
+29:18 - So you try to keep them in sync so
+29:20 - that-- because we know that they are related to each other,
+29:22 - we know that phi should track the true conditional
+29:26 - distribution of z given x given the current choice of theta.
+29:30 - And so as you update theta, you might as well
+29:32 - update phi and vice versa.
+29:34 - So it makes sense to just compute
+29:36 - a single gradient over both and optimize both optimization
+29:40 - variables at the same time.
+29:41 -
+29:45 - And how to compute gradients?
+29:47 - Again, like let's say reparameterization trick
+29:50 - as before.
+29:50 - But you can see now the autoencoder perspective,
+29:54 - q is the encoder, takes an image, let's say an input
+29:59 - and it maps it to a mean and a standard deviation, which
+30:03 - are the parameters of the approximate posterior
+30:07 - for that x.
+30:09 - And then the decoder takes a z variable and it maps it to an x.
+30:17 - And that's the other neural network.
+30:19 - And you can start to see how this has an autoencoder flavor.
+30:23 - And in fact what we'll see is that the ELBO
+30:26 - can be interpreted as an autoencoding objective
+30:30 - with some kind of regularization over the kind of latents
+30:34 - that you produce through an autoencoder.
+30:37 - And so that's why it's called a variational autoencoder
+30:40 - because it's essentially it is an encoder
+30:42 - which is the variational posterior
+30:44 - and there is a decoder.
+30:46 - And they work together by optimizing the ELBO.
+30:49 - And optimizing the ELBO is essentially a regularized type
+30:53 - of autoencoding objective.
+
+
+00:00 -
+00:05 - SPEAKER: So the plan for today is
+00:06 - to finish up the VAE slides that we didn't cover on Monday.
+00:12 - And then we'll start talking about flow models, which
+00:15 - are going to be yet another class of generative models
+00:18 - with a different sort of trade-offs.
+00:20 - So the thing that I really wanted to talk about
+00:25 - is this interpretation of a variational autoencoder
+00:29 - or a VAE as an autoencoder, right?
+00:32 - So we've derived it just from the perspective
+00:36 - of, OK, there is a latent variable model
+00:38 - and then there is this variational inference
+00:40 - technique for training the model, where you have
+00:46 - the decoder which defines the generative process p,
+00:49 - and then you have this encoder network
+00:52 - q that is used to essentially output
+00:57 - the variational parameters that are supposed to give you
+01:01 - a decent approximation of the posterior
+01:03 - under the true generative model.
+01:06 - And we've come up with this kind of training objective, where
+01:13 - for every data point, you kind of have a function that depends
+01:16 - on the parameters of the decoder,
+01:18 - the real generative model theta and the encoder phi.
+01:23 - And we've seen that this objective function
+01:27 - is a lower bound to the true marginal probability of a data
+01:30 - point.
+01:30 - And it kind of makes sense to try
+01:32 - to jointly optimize and jointly maximize this
+01:36 - as a function of both theta and phi.
+01:38 - And you can see intuitively what's going on here.
+01:41 - We're saying that for every data point x,
+01:43 - we're going to use q to try to guess
+01:46 - possible completions, possible values for the latent variables
+01:49 - z.
+01:49 - So that's why there's an expectation with respect
+01:52 - to this distribution.
+01:53 - And then we basically look at the log likelihood of the data
+01:58 - point after we've guessed what we
+02:01 - don't know using this inference distribution, this encoder,
+02:04 - this q distribution.
+02:06 - And if you were to just optimize these first two pieces,
+02:14 - essentially q would be incentivized
+02:17 - to try to find completions that are
+02:19 - most likely under the original generative model.
+02:23 - And instead, there is also kind of this regularizer,
+02:27 - this other term here where we also
+02:29 - look at the probability of the completions under q.
+02:33 - And this is basically corresponds to that entropy
+02:37 - of the variational distribution q
+02:39 - term that is kind of encouraging the distribution
+02:44 - q that the inference distribution to spread out
+02:46 - the probability mass.
+02:48 - So not just try to find the most likely z,
+02:52 - but also try to find all possible z's that
+02:55 - are consistent with the x that you have access to.
+03:00 - And we have seen that to some extent,
+03:03 - if your q is sufficiently flexible,
+03:06 - then you might be able to actually--
+03:08 - and it's actually able to be equal to the true conditional
+03:14 - distribution p of z given x, then this objective function
+03:19 - actually becomes exactly the log marginal probability over x,
+03:23 - which is the traditional maximum likelihood objective.
+03:27 - And so we've motivated it from that perspective.
+03:29 - And everything made sense.
+03:32 - We haven't really discussed why it's
+03:34 - called the variational autoencoder, like what's
+03:36 - the autoencoding flavor here?
+03:39 - And we can see it if you unpack this loss a little bit.
+03:45 - In particular, what you can do is you can add and subtract
+03:50 - the prior distribution over the latent
+03:54 - variables that you used in your generative model, which
+03:57 - recall usually is just a Gaussian distribution over z.
+04:00 - So when you sample--
+04:02 - in your variational autoencoder, you sample a latent variable
+04:05 - according to some prior p of z, then you
+04:08 - feed the z into the decoder, that
+04:11 - produces parameters for p of x given z,
+04:14 - and then you sample from p of x given z.
+04:16 - So if you add and subtract this quantity in here,
+04:20 - then you end up and then you look at the joint
+04:27 - over x and z divided by the marginal over z
+04:29 - is just the conditional distribution of x given z, which
+04:32 - is just the decoder.
+04:34 - And then you can see that you end up with another term
+04:37 - here, which is the KL divergence between the inference
+04:41 - distribution and the prior.
+04:42 -
+04:46 - And so what does this objective look like?
+04:51 - If you were to actually evaluate it and do
+04:54 - some kind of Monte Carlo approximation, what you would do
+04:57 - is you would have some data point, which
+05:00 - gives you the x component.
+05:02 - So it could be an image, like the one you see on the left.
+05:04 - That's the input.
+05:05 - That that's the ith data point.
+05:08 - Then when you want to compute this expectation with respect
+05:12 - to q, what you would do is you can approximate that
+05:16 - by Monte Carlo.
+05:17 - And so what you would do is you would draw
+05:18 - a sample from q of z given x.
+05:22 - And recall that q of z given x is just
+05:26 - some other neural network that basically takes xi as an input,
+05:30 - you feed it in.
+05:31 - And then as an output some variational parameters
+05:35 - over the distribution--
+05:39 - the distribution over the latent variables.
+05:42 - And so if q of z given x describes
+05:46 - Gaussian distributions, the output
+05:48 - of this first neural network, which is the encoder
+05:51 - might be a mu and a sigma, which basically defines
+05:55 - the kind of Gaussian you're going to use
+05:57 - to guess what are likely--
+06:00 - what are reasonable values of the latent variables
+06:03 - given what you know, given xi.
+06:05 - And then what you could do is you could
+06:07 - sample from this distribution.
+06:08 - So you sample with a Gaussian, with mean and variance
+06:13 - defined by what you get by fitting the image
+06:16 - through an encoder.
+06:18 - Then we can look at--
+06:20 - so yeah, this is what I just said.
+06:22 - So there is this encoder, one neural network
+06:24 - that would give you parameters.
+06:26 - And then you sample from that Gaussian distribution.
+06:29 - Then we can essentially look at the first term here
+06:32 - of the loss, which you can think of it as a reconstruction loss.
+06:36 - So essentially, what we're doing is we're evaluating p of xi
+06:43 - given this latent variable z that we've sampled.
+06:48 - And essentially, what we're saying is we are--
+06:53 - if you were to sample from this distribution,
+06:56 - you would sample a data point from a Gaussian
+07:00 - with parameters given by what you get from the decoder.
+07:04 - And that would essentially produce another image out.
+07:09 - And if you actually look at this likelihood term here,
+07:14 - it would essentially tell you how likely was the original data
+07:19 - point according to this scheme.
+07:21 - And so it's kind of if p of x given z is a Gaussian,
+07:24 - it's some kind of reconstruction loss
+07:26 - that tells you how well can you reconstruct the original image,
+07:31 - given this latent variable z?
+07:34 - And so the first term has some kind of autoencoding flavor.
+07:39 - And if you didn't have the second,
+07:41 - term it would essentially correspond
+07:43 - to an autoencoder that is a little bit stochastic.
+07:46 - So in a typical autoencoder, you would take an input,
+07:49 - you would map it to a vector in a deterministic way,
+07:52 - then you would try to go from the vector back to the input.
+07:55 - This is kind of a stochastic autoencoder, where
+07:58 - you take an input, you map it to a distribution over latent
+08:02 - variables, and then these latent variables that you
+08:05 - sample from the distribution should be useful,
+08:09 - should be good at reconstructing the original input.
+08:14 - And so yeah, the first term essentially
+08:18 - encourages that what you get by feeding these latent variables,
+08:25 - this autoencoding objective.
+08:27 - So the output that you get is similar to the input
+08:30 - that you feed in.
+08:32 - So this is just the first term.
+08:33 - So if you were to just do that, that's
+08:35 - a fine way of training a model.
+08:37 - And you would get some kind of autoencoder.
+08:40 - Now there is a second term here that is this KL divergence
+08:43 - term between q and the prior distribution
+08:49 - that we used to define the VAE.
+08:51 - That term, so that's the auto-encoding loss.
+08:55 - The second term is basically encouraging this latent
+08:58 - variables that you generate through the encoder
+09:01 - to be distributed similar as measured by KL divergence
+09:08 - to this Gaussian distribution that we
+09:12 - use in the generative process.
+09:15 - And so this is saying that not only you
+09:19 - should be able to reconstruct well,
+09:21 - but the kind of latent variables that you use to reconstruct
+09:25 - should be distributed as a Gaussian random variable.
+09:29 - And if that's the case, then you see
+09:33 - why we would get a generative model this way,
+09:35 - because if you just have the first piece,
+09:37 - you have an auto encoder, that's great.
+09:40 - But you don't know how to generate new data points.
+09:42 - But if you somehow have a way of generating
+09:46 - z's just by sampling from a Gaussian
+09:49 - or by sampling from a simple distribution,
+09:52 - then you can trick the decoder to generate reasonable samples,
+09:57 - because it has been trained to reconstruct images
+10:00 - when the z's came from the--
+10:03 - were produced by the encoder.
+10:04 - And now if these z's have some simple distribution,
+10:07 - and so you have some way of generating the z's yourself just
+10:10 - by sampling from a Gaussian, then you essentially
+10:13 - have a generative model.
+10:15 - And that's why it's called a variational autoencoder,
+10:17 - because you can think of it as an autoencoder that
+10:21 - is regularized so that the latent variables have
+10:24 - a specific shape, have a particular kind of distribution,
+10:28 - which is just the prior of your VAE.
+10:30 - So that you can also generate- you
+10:33 - can use it as a generative model, essentially.
+10:35 - Well, if you train an autoencoder,
+10:38 - you train it on a training set and then
+10:40 - you hope that it generalizes.
+10:42 - So you would hope that it might still
+10:44 - be able to reconstruct images that
+10:46 - are similar to the ones you've seen during training.
+10:49 - And that would still be achieved by this first term,
+10:53 - right, to the extent that the model generalizes,
+10:55 - which is always a bit tricky to quantify.
+10:58 - But to the extent that the autoencoder generalizes,
+11:00 - it's fine.
+11:01 - But you still don't have a way of generating fresh data
+11:04 - points right, because you don't have a way to start the process.
+11:08 - The process always starts from data and produces data out.
+11:11 - But somehow you have to hijack this process
+11:14 - and fit in latent variables by sampling
+11:17 - from this prior distribution.
+11:19 - And this term here--
+11:22 - this KL divergence term here encourages the fact
+11:26 - that, that is not going to cause a lot of trouble
+11:28 - because the z's that you get by sampling from the prior
+11:31 - are similar to the ones that you've seen
+11:33 - when you train the autoencoder.
+11:36 - So this is a stochastic autoencoder in the sense
+11:38 - that the mapping here q is stochastic.
+11:42 - I guess technically you could make it very almost
+11:45 - deterministic, like you're allowed to choose
+11:47 - any distribution you want.
+11:49 - But that might not be the optimal way
+11:51 - because there could be uncertainty over.
+11:55 - Recall that this q should be close to the true conditional
+11:57 - distribution of z given x under p.
+12:00 - And so to the extent that you believe that, that conditional
+12:04 - is not very concentrated, then you
+12:06 - might want to use a q that is also somehow capturing
+12:09 - that uncertainty.
+12:10 - So the reinforce algorithm is just a way to--
+12:13 - a different optimization algorithm
+12:15 - for this loss that works more generally,
+12:18 - like for an arbitrary q.
+12:20 - And it works for cases when the latent variable z for examples
+12:24 - are discrete.
+12:25 - There is some similarity to the RLHF thing in the sense
+12:28 - that, that one also has this flavor of optimizing a reward
+12:33 - subject to some KL constraint.
+12:36 - So it has that flavor of regularizing something.
+12:41 - And so yeah, if you were to just optimize the first piece,
+12:44 - it would not be useful as a generative model or not
+12:47 - necessarily.
+12:48 - And then you have to add this sort of regularization term
+12:50 - to allow you to do something.
+12:53 - But it's not the RLHF case where both p and q
+12:56 - are generative models.
+12:58 - This is slightly different in the sense
+13:00 - that we're just regularizing the latent space essentially
+13:03 - of an autoencoder.
+13:04 - So the reason we're doing this is to basically
+13:07 - be allowed to then essentially generate fresh latent
+13:12 - variables by sampling from the prior
+13:14 - without actually needing an x and feed it into the q.
+13:18 - So that's what allows us to basically use
+13:21 - this generative model.
+13:22 - I think what you are alluding to is
+13:23 - that it would seem like maybe it would make sense
+13:26 - to compare the marginal distribution of z
+13:29 - under q to the marginal distribution of z under p.
+13:33 - That would be a very reasonable objective to.
+13:35 - It's just not tractable.
+13:37 - And so meaning that again you end up with some kind of very
+13:45 - hard integral that you cannot necessarily evaluate.
+13:50 - But there are other ways to enforce this.
+13:52 - You can use discriminators to kind of-- there
+13:57 - are different flavors.
+13:59 - The VAE uses this particular kind of regularization.
+14:02 - It's not the only way to achieve this kind of behavior.
+14:06 - So for sampling, we don't have the axis.
+14:08 - So you cannot just use both the encoder and the decoder.
+14:12 - So to sample, recall we only have the decoder.
+14:14 - So to generate samples, you don't need the encoder anymore.
+14:17 - And the difference is that the zs--
+14:21 - during training, the zs are produced
+14:23 - by encoding real data points.
+14:25 - During sampling, during inference time,
+14:27 - the zs are produced just by sampling
+14:29 - from this prior distribution p of z.
+14:32 - P of z is something super simple.
+14:34 - In that VAE, it could be just a Gaussian distribution
+14:37 - with the zero mean and identity covariance.
+14:40 - That's kind of that simple prior that we always use.
+14:44 - So the extent that this works depends again-- it's
+14:47 - kind of related to the KL divergence
+14:49 - between the true posterior and the approximate posterior.
+14:51 - Like if you believe that the approximate-- the true posterior
+14:54 - is not Gaussian, it's something complicated,
+14:57 - then you might want to use a more flexible distribution for q
+15:00 - or something with heavy tails.
+15:02 - So there is a lot of degrees of freedom in designing the model.
+15:07 - I think that understanding how the ELBO is derived
+15:09 - tells you what should work or shouldn't work.
+15:13 - But yeah, it doesn't have to be Gaussian.
+15:15 - That's just like the simplest instantiation.
+15:17 - But there's a lot of freedom in terms of choosing
+15:19 - the different pieces.
+15:20 - The first term is basically an autoencoding loss
+15:23 - because it's saying that if you think about it,
+15:26 - you are saying you fit in an x, and then you check-- you produce
+15:30 - a z, and then you check how likely
+15:32 - is the original x given that z?
+15:34 - Which if p of x given z is a Gaussian,
+15:37 - it's basically some kind of L2 loss between the true--
+15:43 - basically between what you feed in
+15:45 - and what you get out essentially.
+15:50 - So in that sense it's an autoencoding loss.
+15:53 - But the true loss that we optimize is not just that.
+15:56 - It's this ELBO l which is the auto encoding
+15:59 - loss plus regularization, because we want to use it
+16:02 - as a generative model.
+16:04 - It's a pretty strong regularization.
+16:06 - And that is forcing it to try to do as well as it
+16:11 - can to generate the same.
+16:13 - Then there is also this other term
+16:15 - that is forcing you to try to find different representation
+16:18 - for different kinds of inputs.
+16:20 - So you can do a good job at reconstructing them.
+16:23 - So these two terms are fighting with each other.
+16:25 - And you try to find the best solution you can.
+16:28 - Yeah.
+16:29 - So if you want to interpret the meaning of this is,
+16:31 - what you could do is you could let's say start with an image
+16:35 - or even start with a random z, and then
+16:37 - see what you get as an output.
+16:38 - And then you can try to change one axis, one of the latent
+16:41 - variables, which recall z is a vector.
+16:43 - So there's multiple ones.
+16:44 - And you could try to see if I change one, do I get maybe
+16:47 - thicker digits or maybe I change the position of the digit,
+16:51 - if that was one of the factors of variation in the data.
+16:54 - And nothing guarantees that, that happens.
+16:56 - But we'll see in the next slide that it kind of has the right--
+17:00 - it's encouraging something similar.
+17:02 - So at generation time, the q can be ignored.
+17:05 - You can throw away the q and what
+17:07 - you do is you instead of generating the zs by sampling
+17:11 - from q, which is what you would do during training,
+17:13 - you generate the zs by sampling from p,
+17:17 - which is the prior for VAE.
+17:19 - So instead of going from kind of left
+17:22 - to right in this computational graph, you start in the middle.
+17:26 - And you generate the zs by sampling from the prior.
+17:30 - That's part of the generative model.
+17:32 - And this term here encourages the fact
+17:36 - that what you-- the zs that you get by going from left to right
+17:40 - versus just injecting them by sampling from the prior
+17:43 - are similar.
+17:44 - So you might expect similar behavior.
+17:47 - So that's like if the posterior here is too close to the prior,
+17:51 - then you're kind of ignoring the x, which might not
+17:56 - be what you want because recall that we're
+17:57 - trying to find good latent representations of the data.
+18:01 - And so if there is zero mutual information
+18:03 - between the z and the x, maybe that's not what you want.
+18:06 - On the other hand, you can only achieve that if somehow you're
+18:10 - not really leveraging the mixture, all
+18:14 - the kind of mixtures that you have access
+18:16 - to when modeling the data.
+18:19 - And so you can encourage-- you can avoid that kind of behavior
+18:22 - by choosing simple p of x given z, because then you're
+18:26 - forced to use the z's to model different data points.
+18:31 - If p of x given z is already a very powerful autoregressive
+18:35 - model, then you don't need a mixture
+18:37 - of complicated autoregressive models.
+18:39 - You can use the same zs to model the entire data set.
+18:42 - And then you're not going to use the latent variables.
+18:46 - And you're going to have exactly that problem where you can just
+18:49 - choose this q to be just the prior, ignore the x completely.
+18:54 - And everything would work because you're ignoring the z,
+18:57 - you're not using it at all.
+18:59 - And there are ways to try to encourage the VAE to have
+19:04 - more or less mutual information with respect between the x
+19:07 - and the z.
+19:08 - Sometimes you want more mutual information.
+19:11 - You want the latent variables to be highly
+19:13 - informative about the inputs.
+19:15 - Sometimes you want to discard information.
+19:17 - Maybe you have sensitive attributes
+19:19 - and you don't want the latent representations
+19:21 - to capture sensitive attributes that you have in the data.
+19:25 - And so maybe you want to reduce the mutual information.
+19:27 - So there are flavors of this training objective
+19:30 - where you can encourage more or less mutual information
+19:34 - between the latent variables and the observers.
+19:38 - Maybe that's the kind of another way
+19:41 - of thinking about what a variational autoencoder is doing
+19:44 - that kind of gets at the compression kind of behavior
+19:48 - and why we're sort of discovering a latent structure
+19:51 - that might be meaningful.
+19:53 - You can imagine this kind of setup
+19:57 - where Alice is an astronaut and she goes on a space mission
+20:02 - and she needs to send images back to earth back to Bob.
+20:06 - And the images are too big.
+20:08 - And so maybe the only thing that she can do
+20:10 - is she can only send one bit of information
+20:12 - or just a single real number, something like that.
+20:16 - And so the way she does it is by using this encoder q.
+20:21 - And given an image, she basically compresses it
+20:26 - by obtaining a compact representation z.
+20:31 - And so if you imagine that z is just a single binary variable,
+20:37 - then you can either map an image to a zero or a one.
+20:40 - So you can only send one bit.
+20:42 - That's the only thing you can do.
+20:43 - If z is a real number, then you can map different images
+20:48 - to different real numbers.
+20:49 - But the only thing you can send to Bob is a single real number.
+20:54 - And then what Bob does is Bob tries to reconstruct
+20:58 - the original image.
+20:59 - And you do that through this decoder, this decompressor,
+21:03 - which tries to infer x given the message that he receives.
+21:10 - And if you think about this kind of scheme
+21:13 - will work well if this autoencoding loss--
+21:20 - well, if the loss is low.
+21:22 - If this term is large, then it means
+21:25 - that Bob is actually pretty--
+21:26 - is doing a pretty good job at assigning high probability
+21:30 - to the image that Alice was sending given
+21:34 - the message that he receives.
+21:36 - So there's not a lot of information
+21:38 - lost by sending the messages through by compressing down
+21:41 - to a single z variable.
+21:45 - And you can imagine that if you can only
+21:50 - send maybe one bit of information,
+21:53 - then there's going to be some loss of information.
+21:57 - But you can-- what you're going to try
+21:59 - to do is you're going to try to cluster together
+22:01 - images that look similar.
+22:02 - And you only have two groups of images.
+22:05 - And you take one group and you say, OK, these are the zero bit.
+22:08 - The other group is going to be the one bit.
+22:10 - And that's the best you can do with that kind of setup.
+22:13 - And so the fact that z is small, it's
+22:18 - kind of forcing you to maybe discover features.
+22:22 - You might say, OK, there is a dog.
+22:24 - It's running with a Frisbee.
+22:26 - There's grass.
+22:27 - That's a more compact representation
+22:30 - of the input that comes in.
+22:31 - And that's the z variable.
+22:34 - And the term-- this KL divergence term
+22:37 - is basically forcing the distribution of messages
+22:40 - to have a specific distribution.
+22:43 - And if this term is small, then it
+22:46 - means that basically Bob can generate messages
+22:50 - by himself without actually receiving them from Alice.
+22:55 - He can just sample from the prior,
+22:57 - generate a message that looks realistic,
+22:59 - because it's very close in distribution to what Alice
+23:02 - could have sent him.
+23:03 - And then by just decoding that, he generates images.
+23:07 - So instead of receiving the messages, the descriptions
+23:10 - from Alice, he just generates the description himself
+23:13 - by sampling from the prior.
+23:14 - And that's how you generate images.
+23:17 - And that's really what the objective is doing.
+23:20 - Yeah, how do you compute the divergence?
+23:22 - So recall that this is just the ELBO.
+23:24 - So I'm just rewriting the ELBO in a slightly different way.
+23:27 - But if you look at the first line, everything is computable.
+23:31 - Everything is tractable.
+23:32 - Everything is the same thing we derived before.
+23:35 - If you have a lot more data points belonging to some class,
+23:38 - you would pay more attention to those
+23:39 - because you're going to incur--
+23:41 - you're going to see them often.
+23:42 - And so you want to be able to encode them well.
+23:45 - So if something is very rare, you never see it.
+23:47 - You don't care about encoding in particularly well because you
+23:50 - just care about the average performance across the data set.
+23:53 - One is if you know what you care about,
+23:55 - you could try to change this reconstruction loss
+23:58 - to pay more attention to things that matters, because right now,
+24:01 - the reconstruction loss is just L2,
+24:04 - which might not be what you want.
+24:06 - Maybe you know there are some features you care more.
+24:08 - So you can change the reconstruction loss
+24:10 - to pay more attention to those things.
+24:12 - And that's the same thing as changing
+24:15 - the shape of this distribution essentially to say,
+24:18 - OK, I care more about certain things versus others.
+24:22 - The other thing you can do is if you have labels
+24:24 - and you know-- because right now, this is kind of made up.
+24:28 - There is no-- it discovered whatever it discovers.
+24:31 - There is no guarantee that it finds anything
+24:33 - semantically meaningful.
+24:35 - So the only way to force that is if you have somehow labeled data
+24:40 - and you know somebody is captioning the images for you
+24:43 - or something, then you can try to change the training objective
+24:46 - and make sure that sometime-- when
+24:49 - what the values of the z variables is,
+24:51 - then your life is easier.
+24:53 - You can just do maximum likelihood on those.
+24:55 - That's going to force the model to use them in a certain way.
+25:00 - So the question is whether we should always
+25:02 - choose the most likely z.
+25:03 - And if you think about the ELBO derivation, the answer is no.
+25:07 - You always want to sample according to the p of z given x.
+25:12 - So you would like to really invert the generative process
+25:16 - and try to find zs that are likely under that posterior,
+25:20 - which is intractable to compute.
+25:21 - But we know that will be the optimal choice.
+25:24 - The objective is you just to sample
+25:25 - from it because there could be many.
+25:28 - And it might be--
+25:29 - there might be many other possible explanations
+25:33 - or possible completions.
+25:35 - And you will really want to cover all of them.
+25:37 - So the question is should you get more than one?
+25:39 - Yes, in the sense that just like it's Monte Carlo.
+25:42 - So the more zs you get, the more samples you get,
+25:45 - recall you really want an expectation here.
+25:49 - We cannot do the expectation.
+25:50 - You can only approximate it with a sample average.
+25:53 - The more samples you have in your average,
+25:55 - the closer it is to the true expected value.
+25:58 - So the better, more accurate of an estimate
+26:01 - you have of the loss and the gradient.
+26:03 - But it's going to be more expensive.
+26:05 - So in practice, you might want to just choose one.
+26:09 - So you would augment the training data
+26:10 - with samples from the model, essentially.
+26:13 - And that's something that people are
+26:14 - starting to explore using synthetic data to train
+26:17 - generative models.
+26:18 - And there is some theoretical studies showing
+26:20 - what happens if you start using synthetic data
+26:26 - and put it in the training set.
+26:27 - And there are some theoretical results
+26:29 - showing that under some assumptions,
+26:32 - this procedure diverges.
+26:34 - And I think is called generative model going mad or something.
+26:38 - And meaning that bad things happens if you
+26:42 - start doing that kind of thing.
+26:43 - But it's under some assumptions that are not really in practice.
+26:47 - So it's unclear.

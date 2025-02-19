@@ -1,1 +1,431 @@
 
+00:00 -
+00:05 - STEFANO ERMON: All right, so we're ready to get started.
+00:07 - Today, we're going to continue talking about diffusion models,
+00:10 - but we're going to see how we're going
+00:14 - to-- how we can use diffusion models to model discrete data,
+00:18 - any particular text.
+00:19 - And we have a guest lecture by Aaron,
+00:21 - who is a PhD student in my lab.
+00:23 - And he did some groundbreaking work
+00:25 - in this space of using diffusion models for discrete data
+00:29 - and language.
+00:30 - And so take it away, Aaron.
+00:32 - AARON LOU: Thanks, Stefano, for the introduction.
+00:35 - And glad to get started.
+00:36 - Let's get started.
+00:39 - To start, I'd like to talk a bit about the general framing
+00:43 - of our generative model problem and how things work generally.
+00:47 - So typically, we're given a data set
+00:50 - x1 to xn, which we assume is sampled iid from some data
+00:54 - distribution p data.
+00:57 - Our goal is to fit a parameterized model p
+01:00 - theta often parameterized by a neural network that
+01:03 - approximates our ground truth data distribution p data.
+01:07 - And assuming we can learn our p theta well enough,
+01:10 - we can generate new samples, maybe new interesting samples
+01:13 - would be the interesting part, using our parameterized p theta.
+01:18 - And now, if we can do everything together
+01:22 - and everything works out, we profit.
+01:24 - But there's kind of a bit of math
+01:26 - that goes in between as you all know.
+01:29 - So in this class, you guys have learned
+01:32 - a lot about different generative modeling paradigms,
+01:35 - such as GANs, VAEs, and diffusion models.
+01:40 - And the thing that you'll notice for all
+01:42 - of these different models or most of these models
+01:44 - that you've learned is that whenever
+01:46 - they draw a schematic diagram about what you should be doing,
+01:49 - they normally have a picture--
+01:51 - they normally use an image as your most common data modality.
+01:56 - So here we have a picture of a dog, a picture of a number,
+01:59 - and a picture of a smaller, cuter dog.
+02:01 - And this type of coincidence actually isn't--
+02:05 - it's not just a coincidence.
+02:06 - There's actually a very fundamental reason
+02:08 - why we do this.
+02:09 - And the reason why is because all of our different data--
+02:13 - all of these different generative models,
+02:15 - they're building in the fact that we're working
+02:18 - over a continuous data space.
+02:20 - So here, our data space x is equal to some R
+02:23 - d, where you can think of R as each pixel value and d
+02:26 - as a total number of pixels, like pixel
+02:29 - and the values of the pixels.
+02:31 - And if we visualize this using some spectrum,
+02:34 - like as follows, then what's nice is
+02:37 - that we can sample points like here, here, or there.
+02:41 - And these three different samples are all valid images,
+02:44 - so to speak.
+02:45 - And this is a fundamental property
+02:47 - of continuous spaces and the fact that we can interpolate.
+02:51 - Now, what I and a lot of other people
+02:52 - are interested in, which is a bit
+02:54 - converse to this type of setup, is a discrete data space,
+02:58 - as follows.
+02:59 - So instead of having x equals R d,
+03:01 - we have x is equal to 1 to N to the power of d, where
+03:04 - N is the total number of--
+03:05 - or is the vocabulary size, so to speak,
+03:07 - and d is the number of dimensions.
+03:11 - We replace our data points with data
+03:14 - points x, where x is just a sequence of tokens x1 to xd.
+03:19 - And then if we have this setup, we
+03:21 - can visualize it with another diagram.
+03:23 - This is a lattice, which is the simplest
+03:25 - version of a discrete space.
+03:29 - And while it's true we can generate samples like here
+03:32 - and here, which are valid discrete data point samples,
+03:36 - we can't really generate samples here or there.
+03:38 - We can't generate samples in between or outside
+03:40 - of the values, because that just doesn't
+03:42 - make any sense for discrete data distribution.
+03:45 - And as such, this makes discrete data fundamentally
+03:48 - a harder problem, as we'll see.
+03:51 - So now, you might be asking yourself the question,
+03:53 - OK, Aaron, we've learned about GANs, diffusion models, VAEs.
+03:57 - These all work pretty nice.
+03:58 - Why do we have to go to a completely different regime?
+04:01 - Why do we have to go to discrete data?
+04:03 - And why does this matter?
+04:04 - And I would be remiss if I didn't mention our good friends
+04:07 - at OpenAI, who have released these big large language
+04:13 - models like ChatGPT, which have really
+04:16 - like transformed the world in the last couple of years.
+04:18 - Also, I would be remiss if I didn't
+04:20 - mention other competitors.
+04:21 - But fundamentally, we have this new novel paradigm
+04:24 - of large language modeling, which is perhaps
+04:28 - arguably the largest advancement in computer science
+04:32 - machine learning in the last couple of years.
+04:34 - And what's interesting about this data domain
+04:37 - is that sentences are fundamentally discrete.
+04:40 - So for sentences, it's a sequence
+04:42 - of discrete tokens or discrete words that we build up.
+04:46 - So as such, it would make the most sense
+04:48 - to have a probabilistic model that can generate discrete data,
+04:52 - like sentences as such.
+04:54 - And in particular, if you are familiar
+04:57 - with the LLM, large language-- like natural language
+05:00 - processing in general, you may have
+05:01 - heard of something called language model pre-training.
+05:03 - This is kind of the core step for many of these models, where
+05:06 - you learn a distribution over all of your input sentences.
+05:11 - And really, what they mean by language
+05:13 - model pre-training is you're just
+05:15 - fitting a discrete probabilistic model to your internet scale
+05:19 - data.
+05:19 - So we can see that this idea is pretty fundamental here.
+05:24 - And other applications include stuff
+05:26 - in natural biology and natural sciences more broadly.
+05:31 - We have data modalities, such as DNA, molecules, and proteins.
+05:37 - And all of these different data modalities
+05:39 - are fundamentally discrete.
+05:40 - And it would make the most sense to try to generate a new novel
+05:45 - DNA sequences, novel molecules, and novel proteins, which
+05:48 - can have a big impact in our day-to-day lives.
+05:51 - And it's all requires a discrete generative model.
+05:53 - And finally, and this is a bit kind of counterintuitive,
+05:58 - we also see a return to discreteness
+06:00 - for stuff like images.
+06:02 - So this is the schematic for a VQVAE backbone,
+06:05 - a VQVAE or VQGAN is one of the many building blocks in systems
+06:11 - like Stable Diffusion.
+06:12 - And in the middle, we have this discretized representation,
+06:15 - these discretized latent space vectors.
+06:18 - And more recent work-- and this is like extremely recent,
+06:21 - like in the last couple of months out of Google and CMU,
+06:25 - it has shown that if you just throw away
+06:28 - any continuous notion of your discrete latent space--
+06:30 - you only have the discrete component,
+06:32 - this actually leads to a broader improvement in results.
+06:35 - And results like these tend to show that maybe in the future
+06:38 - it's possible to reconcile images into this broadly
+06:42 - discrete paradigm as well.
+06:46 - So now, we why discrete data is important.
+06:49 - So let's ask the question, why is it so hard?
+06:51 - And you might say something, like, hey, Aaron, this
+06:54 - is all very interesting.
+06:55 - Why can we just adapt an existing continuous space
+06:58 - model, like a flow or a GAN?
+07:00 - Why can we just take that and just
+07:02 - adapt it to the discrete case?
+07:05 - And, well, we have something like this.
+07:06 - So we have this diagram.
+07:07 - We take some random noise.
+07:08 - We push it through some f theta neural network,
+07:11 - and it generates an image.
+07:12 - And this is a good way to do our sampling and whatnot.
+07:16 - And the intuitive idea here would
+07:18 - be like, why can we just parameterize f theta to output
+07:21 - only discrete values?
+07:23 - And since it only outputs discrete values,
+07:25 - then we can generate something like text.
+07:27 - And we can go through like some examples here.
+07:29 - But let's say for flows, we have this kind of core.
+07:33 - We have this coupling where we take noise
+07:36 - to data, data to noise through our f theta or f theta inverse
+07:40 - that you guys have seen.
+07:42 - And the way that this works is that you can stretch and pull
+07:45 - your space.
+07:47 - And this allows you to take your--
+07:49 - model complex data distribution with a simple base distribution
+07:53 - and a change of variables formula as such.
+07:57 - Now if we replace all of this type of stuff
+07:59 - with discrete data, so let's say we
+08:01 - go from a discrete random sequence to--
+08:04 - we map it bijectively to another real sequence
+08:08 - that we want to model, well, do we have a change of variables?
+08:11 - Well, we don't really have a change of variables.
+08:13 - In fact, the best that we can get
+08:15 - is this type of setup, where our x has the same probability
+08:18 - as this other x.
+08:20 - And because of this, your base distribution
+08:24 - has to be as expressive as your data distribution, which
+08:27 - is why this type of setup struggles really hard.
+08:30 - For this question, we have this flow.
+08:32 - It doesn't really generalize.
+08:34 - Also, we have, let's say, GANs.
+08:36 - OK, we have-- we take a noise.
+08:38 - We map it to an image.
+08:39 - We have a discriminator, and then
+08:41 - the idea here is we can backpropagate
+08:43 - gradients to update our f theta from our discriminator.
+08:47 - And if we replace the components with discrete values
+08:51 - so we have--
+08:53 - we parameterize it to only allow for discrete outputs,
+08:57 - then these gradients don't really back
+08:59 - propagate through a discrete valued input.
+09:01 - And the reason why this doesn't work
+09:03 - is because we don't have calculus.
+09:05 - So from these two examples, we can broadly see that our--
+09:08 - we'll get through this slide quickly.
+09:10 - But our conclusion is that our models are currently
+09:12 - too reliant on calculus and it's hard to extend it.
+09:15 - But for transformers, this is kind of a modeling question,
+09:17 - not like-- it's kind of an architectural problem, not
+09:20 - a modeling problem if that makes sense.
+09:22 - So for transformers, when you map it,
+09:25 - the input sequence to a discrete or a continuous value, really
+09:30 - the reason why this works and the reason why people do it
+09:32 - is because it takes your 50,000 or whatever token space
+09:36 - down to 700, which is much more amenable for computation.
+09:40 - But you don't really have to do it.
+09:41 - So this is kind of an architectural decision
+09:43 - and has nothing to do with the modeling-- fundamental modeling
+09:47 - component or probabilistic modeling part.
+09:49 - Why can't we just embed the tokens into continuous space
+09:52 - and do this type of-- we embed the tokens in continuous space,
+09:55 - and then when we generate we just generate the values
+09:58 - and we discretize kind of?
+10:00 - And actually, this is kind of a--
+10:02 - people actually do this for some things.
+10:04 - In particular, we can take a look at something like images,
+10:06 - right?
+10:07 - For images, in images, we don't actually
+10:10 - store like the whole continuous values of an image,
+10:13 - because that would be impossible in a computer.
+10:15 - We only have finite precision.
+10:17 - Generally speaking, we discretize it up to 0 to 255.
+10:21 - We have this discretized representation.
+10:23 - This is what we store as our, quote unquote,
+10:26 - "ground truth image."
+10:28 - And the idea here is that for our generative modeling,
+10:31 - what people do use for some a system like Stable
+10:33 - Diffusion or any generative model
+10:34 - broadly is a 2-step procedure.
+10:36 - First, you have your continuous generative model.
+10:40 - You generate a continuous image, and then you discretize it
+10:43 - to the nearest value and this becomes your discrete image,
+10:46 - which is kind of what people do generally speaking.
+10:49 - So this is how they kind of get around
+10:51 - the discrete nature of images and use continuous models here.
+10:56 - And the reason why this works for images in particular
+10:59 - is because if we have the images values 0 to 255,
+11:02 - this is a typical range for an image pixel value,
+11:06 - and then we can just embed this into some continuous space
+11:09 - directly.
+11:09 - So we just embed it on the real number line.
+11:12 - And if we generate, like--
+11:13 - I only want one of these three different generations.
+11:16 - Well, what we can do is that we can just easily
+11:19 - discretize because we just round to the nearest number.
+11:21 - This is very simple.
+11:22 - Now if we have something like tokens,
+11:24 - let's say, for a natural language, OK,
+11:28 - there's no way we embed this into a continuous number line
+11:31 - like that.
+11:32 - And generally, the way that people
+11:33 - do this is something very high dimensional.
+11:36 - This is two dimensions.
+11:37 - People generally do much higher dimensions
+11:39 - than this when we try to do our embeddings.
+11:42 - And if we try to generate stuff here and try
+11:44 - to generate and discretize something here,
+11:47 - what you're going to end up with is like, OK, yes,
+11:49 - sometimes, your generations will be good.
+11:51 - So if we have generated tokens in the green x marks there,
+11:55 - it's all good.
+11:56 - But if we are--
+11:58 - most of the space is empty, so we end up
+12:00 - having a lot of empty room between tokens.
+12:04 - Maybe it's possible though to discretize it
+12:06 - into a nearest neighbor token, but it's kind of much more--
+12:09 - it's much more not--
+12:12 - it's much less obvious why this would work.
+12:15 - Sometimes, when we go between tokens,
+12:17 - it doesn't really make sense.
+12:18 - And this is kind of a fundamentally hard problem
+12:20 - in graph theory is actually the reality.
+12:23 - So this would work if your model is perfect.
+12:26 - And it would work if your model is perfect.
+12:29 - But in practice, this is kind of not the inductive bias we
+12:33 - want to build into our model.
+12:34 - It makes it very--
+12:36 - it typically makes it pretty hard to learn for instance.
+12:38 - So for something like, let's say, the diffusion model,
+12:41 - and there's language diffusion models that
+12:43 - do this exact same procedure, you continuously
+12:46 - embed your tokens.
+12:47 - You take a diffusion process there.
+12:49 - The issue that we'll see for those models--
+12:51 - that we've seen for those models is that it's kind
+12:53 - of-- they're not really competitive with your standard
+12:55 - autoregressive model, and also they take way too long
+12:58 - because you have to--
+12:59 - you can't have any error whatsoever.
+13:01 - If you have any error whatsoever,
+13:03 - you're just kind of lost.
+13:04 - It doesn't work.
+13:05 - For autoregressive modeling, we model the probabilities,
+13:08 - which is a different quantity than modeling the actual value.
+13:11 - So we can model the probabilities of, let's say,
+13:14 - the probability of the word "the"
+13:15 - or versus the probability of the word "times."
+13:18 - And this is a very continuous quantity.
+13:20 - But if we were to say like, hey, let's just take a transformer.
+13:24 - We push it through a linear layer, and you select one value.
+13:27 - This will be the setup.
+13:28 - We would select one value from your continuous space.
+13:31 - Not like a-- you don't have probabilities
+13:33 - for all the other tokens.
+13:34 - You just select one value.
+13:35 - This will become more difficult. We
+13:37 - try to generate something that's in distribution, so something
+13:40 - near one of these tokens.
+13:42 - But this is the case.
+13:43 - Basically, we're modeling a probabilistic model.
+13:44 - We try to discretize.
+13:45 - And this is just a lot of empty space.
+13:47 - This is not a good inductive bias to learn over.
+13:50 - And so because of these various issues,
+13:52 - we only have one really good discrete probabilistic model.
+13:57 - You notice that it's autoregressive model,
+14:00 - transformers.
+14:01 - This is very typical.
+14:03 - The idea here is that instead of--
+14:05 - the idea here is you model the probability of each
+14:07 - of your sequences x by decomposing it by token.
+14:11 - So you model the first token here,
+14:13 - and then you take the second token given the first token.
+14:16 - That's the next probability.
+14:17 - And you just multiply it out to get the probability
+14:19 - of the last token given every token beforehand, which
+14:22 - is your typical setup.
+14:26 - And for language in particular, this
+14:28 - decomposes as the idea of context in green.
+14:31 - So you have a context tokens, and you have a next word
+14:34 - prediction in purple basically.
+14:37 - And this is the reason why this works so well.
+14:41 - And there's several good upsides to this autoregressive modeling
+14:45 - paradigm.
+14:45 - So in particular, it's very scalable.
+14:48 - The idea here is that when you compute
+14:51 - each next token probability, you only
+14:54 - need to compute a probability over your D total
+14:57 - tokens or your N total values.
+15:00 - And this is very scalable.
+15:02 - This is-- it's very easy to do this as long.
+15:05 - As you can build your architecture sufficiently good,
+15:08 - this should work out pretty well.
+15:10 - Another thing is that if you have
+15:12 - a very strong neural network, if you have a neural network that
+15:14 - is sufficiently powerful, then you can theoretically
+15:17 - represent any probability over your sequences
+15:19 - by this decomposition, which is counterintuitive,
+15:22 - but it actually works itself out due to this decomposition
+15:26 - nature.
+15:27 - And finally, it's actually a pretty reasonable inductive bias
+15:31 - for stuff like natural language.
+15:32 - So for natural language, we speak.
+15:34 - We write from left to right.
+15:35 - So it's pretty natural that we would do
+15:38 - so here for modeling language--
+15:42 - for modeling languages, this makes sense as well.
+15:45 - There are several downsides, though,
+15:47 - which have been largely unaddressed
+15:48 - by most people because of this over-reliance
+15:52 - on autoregressive modeling.
+15:54 - One famous argument that's been--
+15:56 - that people like Yann LeCun have really
+15:59 - been proponents of is the idea that sampling
+16:02 - in autoregressive modeling tends to drift.
+16:05 - So when you sample from an autoregressive sequence,
+16:07 - you just generate new tokens, but you can accumulate an error.
+16:10 - And as you continuously accumulate the error,
+16:12 - this will cause your generation to veer off course.
+16:16 - This is a very famous argument for why
+16:18 - we're not going to get AGI through autoregressive modeling.
+16:20 - And another issue is that for non-language tasks,
+16:24 - like let's say DNA sequence, well, there's DNA sequencing.
+16:27 - There's no reason why DNA sequences
+16:29 - have to be generated from left to right.
+16:31 - This is not very--
+16:33 - this doesn't make sense as an inductive bias.
+16:36 - Furthermore-- and this is something
+16:38 - that people haven't really been like thinking of.
+16:40 - But actually, when we have an autoregressive transformer,
+16:43 - there's actually a lot of constraints
+16:45 - that we need to place on our autoregressive transformer.
+16:48 - In particular, making sure that the attention mask is causal,
+16:51 - that people haven't really been like a cognizant of,
+16:55 - but there are definitely still-- there
+16:56 - are definitely still problems for like this probabilistic
+16:59 - modeling paradigm.
+17:01 - And finally, because we sample iteratively
+17:04 - in autoregressive models, we generate next tokens,
+17:07 - this is actually a pretty slow technique because of the fact
+17:11 - that it's like rather iterative.
+17:12 - You have to generate tokens one at a time, which is not great.
+17:18 - So we have all these problems and benefits
+17:21 - of autoregressive modeling.
+17:22 - So the question that we need to ask ourselves is that,
+17:25 - is there is there something more to this?
+17:28 - And we can think about it in terms of score matching, which
+17:30 - I'm sure you're all aware of.
+17:32 - And the key idea behind like, why we can't just
+17:35 - model p theta of x directly instead of-- what we have to do
+17:38 - is autoregressive decomposition is because p theta of x, we
+17:42 - have to make sure that as we sum over
+17:44 - all the different sequences, we have to sum up to be 1.
+17:46 - And this is impossible, because there's
+17:48 - an exponential number of sequences
+17:50 - that we need to sum over.
+17:52 - And so this is very similar to this idea of score
+17:56 - matching that we've just been talking
+17:57 - about for the last couple of lectures,
+17:59 - where we model this gradient log probability function.
+18:02 - And when we do that, we don't have to make--
+18:04 - when we do that, we don't have to sum up
+18:06 - over all the possible numbers.
+18:08 - We don't have to integrate out--
+18:09 - we don't have to integrate out the distribution
+18:11 - to be 1, which tends to work pretty well with--
+18:14 - when you combine it with stuff like diffusion models.
+18:16 - So the real question here and the thing
+18:18 - that we'll talk about for the rest of the lecture
+18:20 - is how we can generalize these techniques from auto--
+18:25 - from score matching to our more discrete case.
+18:28 - And that is the real question of this lecture.
+18:30 - Can we do it?
+18:31 - And how well does it work?

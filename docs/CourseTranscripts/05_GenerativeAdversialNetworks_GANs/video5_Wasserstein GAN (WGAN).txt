@@ -1,1 +1,484 @@
 
+00:00 -
+00:05 - SPEAKER: Now, the other thing that you
+00:06 - can do using a very similar machinery
+00:10 - is optimize yet a different notion of divergence,
+00:15 - which is based on this idea called the Wasserstein GAN.
+00:19 - And the motivation for moving beyond f-divergences
+00:24 - is that f-divergences are nice they're very powerful,
+00:27 - but there are issues when the distributions p
+00:31 - and q don't share.
+00:34 - They have let's say disjoint support, which
+00:37 - can happen, especially early on in training.
+00:40 - The samples coming from your generator
+00:42 - could be very, very different from the ones
+00:45 - that are in the training set.
+00:47 - And if that happens, you can have this weird discontinuity
+00:51 - where the divergence is a constant maybe infinity
+00:55 - or something and then suddenly shifts to the some better value
+01:01 - the moment the supports match.
+01:04 - And that's a problem because during training you
+01:06 - don't get good signal to go in the direction of trying
+01:11 - to make the support of your model distribution close
+01:15 - to the support of the data distribution.
+01:17 - And you can see an example here.
+01:20 - Imagine that you have a super simple data distribution where
+01:24 - all the probability mass is at 0 and then you
+01:27 - have a model distribution where you put all the probability
+01:31 - mass at this point theta.
+01:32 - Right?
+01:33 -
+01:36 - So if theta is 0, then the two distributions are the same.
+01:40 - But if theta is different from 0,
+01:42 - then these two distributions don't share any--
+01:46 - the supports are different.
+01:50 - And if you look at let's say the KL divergence
+01:53 - is going to be 0 if the distributions match and it's
+01:58 - going to be infinity for any other choice of theta.
+02:01 - So if we're trying to train this generative adversarial network
+02:05 - by optimizing theta to reduce the KL divergence,
+02:11 - you're not going to get any signal
+02:12 - until you hit the exact right value that you're looking for.
+02:16 - And if you look at the Jensen-Shannon divergence,
+02:18 - you have a similar problem where basically it's
+02:22 - 0 if you have the right value and then it's
+02:25 - a constant for when you have the wrong value.
+02:28 - But again, there is no signal.
+02:30 - There is no notion that theta 0.5 is better than theta 10.
+02:35 - Ideally, that's something you would
+02:37 - want because if you have that then you can do gradient descent
+02:40 - and you can try to get to move your theta closer and closer
+02:43 - to the value you want.
+02:44 - But these sorts of f divergences can have
+02:47 - trouble with these situations.
+02:52 - And so the idea is to try to think
+02:54 - about other notions of distance or divergences
+03:00 - that work even when p and q have disjoint support.
+03:05 - And the support is just the set of points
+03:09 - that have nonzero probability under p or q.
+03:14 - And so the kind of one way to do this is to use this thing
+03:19 - called the Wasserstein or the Earth-Mover distance.
+03:23 - And the intuition is something like this,
+03:25 - right, let's say that you have two distributions p and q
+03:30 - and you can think of-- the and they are just
+03:33 - let's say one dimensional.
+03:34 - So you have the densities that I'm showing there
+03:37 - and they are just mixtures of Gaussians in this case.
+03:40 - And you can ask, how similar are p and q?
+03:46 - And one reasonable way of comparing
+03:48 - how similar p and q are is to say
+03:50 - if you think of the probability mass
+03:53 - as being piles of earth or piles of dirt
+03:57 - that you have laying out on this x-axis,
+04:00 - you can imagine how much effort would it
+04:03 - take you if you were to shovel all
+04:05 - this dirt from this configuration
+04:07 - to this other configuration.
+04:11 - And intuitively, the further away
+04:13 - you have to move this earth, the more cost you pay because you
+04:16 - have to take more time.
+04:18 - And p and q, they are both normalized.
+04:22 - So the amount of earth that you have on the left
+04:25 - is the same as the amount you have on the right.
+04:28 - But kind of the more similar p and q
+04:30 - are the same that you don't have to do any work.
+04:33 - If the probability mass under q is very far
+04:35 - from the one under p, then you have to do a lot of work
+04:38 - because you have to move all this earth from various points
+04:43 - where you have it on the left to the points
+04:45 - where you have it on the right.
+04:49 - And the good thing about this is that we'll
+04:51 - see that it can handle situations where
+04:53 - the supports are different.
+04:54 - This kind of definition doesn't care if the supports of p and q
+04:58 - are disjoint or not.
+04:59 - And it defines a very natural notion of distance
+05:04 - that varies smoothly as you change the shape of p and q.
+05:09 - And the way to mathematically write down
+05:16 - this intuition of looking at the cost of transporting earth
+05:21 - from configuration p to configuration q
+05:24 - is to set up an optimization problem, which looks like this.
+05:30 - So the Wasserstein distance between p and q
+05:33 - is going to be this infimum, which think of it as the minimum
+05:37 - basically.
+05:38 - And this infimum is over all joint probability distributions
+05:43 - over x and y.
+05:47 - You can think of x as being the distribution,
+05:50 - p being defined over x and q being defined over y
+05:53 - let's say as you look at joint distributions over x and y
+05:58 - such that the marginal over x matches p
+06:02 - and the marginal over y matches q.
+06:07 - And what you do is over all these joint probability
+06:12 - distributions that you have here,
+06:15 - that you are optimizing over, you look at the expected cost
+06:18 - that you get when you draw x and y from this joint distribution.
+06:23 - And the cost is the thing that we talked about,
+06:25 - which is basically how much effort it
+06:27 - takes to go from x to y.
+06:30 - And in this case, this is measured with this L1 distance.
+06:33 - You can choose other choices, but for now you
+06:36 - can think of it basically the absolute value in 1D
+06:40 - of x minus y.
+06:43 - And you can think of this gamma x, y,
+06:49 - which is a joint distribution over x and y
+06:53 - as basically telling you how much probability I'm
+06:59 - moving from x to y.
+07:02 - And so what this is saying is that this condition
+07:05 - here that the marginal over x is p
+07:08 - of x this is saying that at the beginning
+07:11 - you can't move more probability mass than what you started
+07:14 - from at x.
+07:16 - And the fact that the marginal over y is qy
+07:18 - means that the final result, the amount of earth
+07:27 - that you find at position y is indeed the one
+07:30 - that you want to get in the final configuration, which is
+07:33 - the one you're trying to get.
+07:35 - And this objective function here is
+07:37 - telling you what is the cost of moving earth basically
+07:41 - from x to y.
+07:42 - So equivalently, you can think of the conditional distribution
+07:46 - of y given x as telling you, which fraction of the earth that
+07:51 - I have at location x am I going to move to the different y's?
+07:54 -
+07:57 - And so you can see that then if you look at this expectation,
+08:01 - this is telling you in expectation,
+08:02 - how much are you going-- how much is this going to cost you.
+08:05 - Well, you look at x, you look at the y
+08:07 - as you're moving the earth to, you
+08:09 - look at the difference between the two
+08:11 - and that tells you how much it costs you for a given x.
+08:16 - If you take the expectation with respect to y gamma y given x,
+08:20 - it's telling you the cost of moving all the probability
+08:22 - mass that you have at x to the places you want it to move it
+08:26 - to, which because of this constraint here
+08:29 - it has to match the final result that you want.
+08:33 -
+08:36 - And so that's basically the optimization problem
+08:41 - that defines this intuition of telling us,
+08:46 - how much work do you have to do if you want to move this--
+08:49 - we want to morph this probability distribution
+08:51 - here into the probability distribution q
+08:54 - that you have as an outcome?
+08:58 - And just to get a sense of what this
+09:02 - looks like in the previous example where we had this data
+09:06 - distribution where all the probability mass is
+09:08 - at 0 and this model distribution where all the probability
+09:11 - mass is at theta, this one, the KL divergence between these two
+09:16 - objects is not very useful.
+09:18 - But if you think about, what is the earth mover distance here?
+09:21 - How much work do you need to do if you
+09:23 - want to move all the probability mass from here to here?
+09:27 - Yeah, so it's the absolute value of theta technically.
+09:32 - And so you can see that now it's starting
+09:35 - to be more reasonable in the sense
+09:36 - that the closer q theta is to the target, p,
+09:43 - the smaller this divergence is, which you might expect
+09:47 - might give you maybe a much better learning objective
+09:51 - because you have much better gradients.
+09:55 - You have a notion of how close you are,
+09:57 - how much progress you're making towards achieving
+10:00 - your goal to the extent that you can really compute this thing
+10:03 - and we'll see how to do that.
+10:05 - This would mean this would be a pretty good sort of learning
+10:08 - objective to use.
+10:10 - Yeah, there is an infinite number of joint distributions
+10:14 - that have given marginals.
+10:16 - If you think about it, this is actually a pretty mild kind
+10:18 - of set of constraints just saying that for every x,
+10:24 - the marginal under gamma has to match the distribution at you
+10:31 - started from.
+10:33 - So this is kind of saying that the-- if you think of gamma x
+10:37 - comma y as the amount of earth that is moved from x to y,
+10:43 - this is sort of saying that the total amount of earth that you--
+10:47 - or actually that is--
+10:48 - yeah, that the total amount of earth that you move
+10:51 - has to be the amount that you had to begin with.
+10:56 - And this is saying that the other constraint is saying
+10:59 - that if you look at the amount of earth that you get at the end
+11:04 - after you moved everything from all the various x's,
+11:07 - it has to match what you want, which
+11:09 - is the final result, the final q of y,
+11:12 - which is the amount of earth that you want after you've done
+11:17 - all this transport, after you've moved all the probability mass.
+11:20 -
+11:26 - So yeah, there you have two random variables.
+11:29 - You can think about many different joint distributions
+11:33 - with the same marginals.
+11:34 - And if you think about two binary random variables,
+11:36 - these two random variables could be independent,
+11:38 - they could be highly dependent, and the joint distribution
+11:42 - is what tells you how they are related to each other.
+11:45 - So there is many joint distributions
+11:47 - with the same marginals.
+11:49 - And in this case the relationship between them.
+11:52 - It's telling you how coupled they are
+11:56 - and where you're going to move probability
+11:59 - mass from one to the other.
+12:01 - Basically what this is saying is it's just the L1 norm, which
+12:07 - in 1D you can think of it as just the absolute value of x
+12:09 - minus y.
+12:10 - And this is just saying that when x and y are far away,
+12:14 - they're going to pay a higher cost because transporting
+12:18 - from here to Palo Alto is cheaper than from here
+12:24 - to San Francisco.
+12:25 - And so you can think of if the x-axis is measured in kilometers
+12:30 - or something and then you would x minus y
+12:32 - is just the distance that you have
+12:34 - to travel to go from one point to the other.
+12:38 - And so ideally, you would want to choose a gamma such
+12:43 - that when you sample from it, x and y are
+12:47 - very close to each other.
+12:50 - So you minimize the amount of work that you have to do.
+12:53 - But that's non-trivial because you also
+12:54 - have to satisfy these constraints
+12:56 - that at the end of the day you've moved all the probability
+12:59 - mass that you have to move and you
+13:02 - get this q configuration as a final result, which
+13:07 - is this constraint that is saying the marginal over y
+13:10 - is q of y.
+13:11 - And this constraint is just saying you cannot create earth
+13:15 - out of nowhere.
+13:16 - You have to move the earth that you started
+13:18 - from, you have to go from the configuration
+13:21 - that you have on the left, which is p to the configuration
+13:23 - that you have on the right, which is q.
+13:25 - And these constraints here on the marginals
+13:27 - are basically just saying that that's
+13:29 - the initial condition, that's the final condition, that's
+13:31 - the cost that you incur whenever you move earth from x to y.
+13:36 - And so again, basically we want to choose a gamma y
+13:39 - given x that puts as much probability mass on y's
+13:43 - that are close to x as possible.
+13:46 - But then you not always can do it because sometimes you
+13:48 - do have to move away.
+13:49 - If you have to move probability mass out here
+13:52 - and you didn't have any, then you have to take it somewhere.
+13:55 - And this optimization problem tells
+13:57 - you what's the optimal way of--
+13:59 - what's the optimal transport plan
+14:01 - that moves the mass from one setting to the other.
+14:04 - And again, we're basically in a situation
+14:07 - where the original objective function is reasonable,
+14:13 - makes sense, it would be good to optimize,
+14:15 - but it looks not something we can actually
+14:18 - compute because as usual, p and q should be a model and a data
+14:23 - distribution.
+14:24 - We don't know how to evaluate probabilities
+14:26 - according to one or the other.
+14:28 - So that doesn't look like something we can optimize.
+14:32 - But it turns out that there is a variational characterization
+14:37 - or there is a way to basically write it
+14:39 - down as the solution of an optimization problem
+14:43 - that we can then approximate using some kind of discriminator
+14:47 - or some kind of neural network.
+14:49 - And it's possible to show that this Wasserstein distance
+14:54 - or earth mover distance is equal to the solution
+14:57 - to this optimization problem where
+15:00 - you have a difference of expectations,
+15:02 - one with respect to p and one with respect to q.
+15:05 - Again, it's very similar to the GAN setting.
+15:08 - And the only difference is that now what we're doing
+15:12 - is we're optimizing over functions that have Lipschitz
+15:18 - constant 1, which basically means you need to optimize over
+15:22 - all functions that basically don't change too rapidly.
+15:24 -
+15:27 - And so the solution to this optimization problem
+15:30 - or this scalar functions f is actually
+15:33 - equal to the Wasserstein distance.
+15:37 - And notice here we don't have f stars anymore.
+15:41 - This is really just the difference in expectations
+15:43 - between p and q.
+15:45 - And so if you didn't have any constraint,
+15:48 - then you could make that thing blow up
+15:51 - very easily because you could just pick a point where
+15:57 - the probabilities are different and then you could just increase
+16:00 - the value of f at that point arbitrarily
+16:03 - and then you could make this objective here extremely large
+16:10 - or extremely small.
+16:12 - But you cannot do it, you cannot choose an arbitrary function f
+16:17 - because you have this constraint that basically the shape of f
+16:21 - cannot change too rapidly, it has to have Lipschitz constant
+16:25 - 1, which basically means that if you go through the graph of f
+16:29 - and you take any two points x and y,
+16:31 - the slope that you see is bounded by 1 essentially.
+16:35 -
+16:38 - And again, this optimization problem by itself
+16:41 - is not quite something we can solve.
+16:43 - But in practice, what you can do is
+16:45 - you can approximate the inner this optimization
+16:49 - problem over all discriminators that
+16:54 - are trying to tell you think about it,
+16:56 - what is this objective doing?
+16:58 - You're looking for points where the probability mass under p
+17:01 - and q is different.
+17:03 - So you can find these points then you
+17:04 - can increase the value of f and you
+17:06 - can get a high value in that difference of expectations.
+17:12 - And so you can approximate that problem
+17:14 - of trying to find x's that are given
+17:17 - different probabilities under model and data
+17:19 - by training a neural network, which is, again,
+17:23 - going to be some discriminator.
+17:26 - And at this point there is, again, no cross-entropy loss.
+17:29 - You're just trying to find a network that
+17:31 - can take high values on the data points and low values
+17:35 - on the fake data.
+17:38 - And to enforce the Lipschitzness,
+17:40 - enforcing Lipschitzness is hard.
+17:43 - But in practice what you can do is as usual
+17:45 - you don't want this network to be arbitrarily changing
+17:48 - too fast too much.
+17:50 - And then in practice what you do is you would either clip
+17:53 - the weights or you would enforce a penalty on the gradient
+17:57 - of the discriminator so that, again,
+18:00 - it cannot change too much, it cannot change too rapidly.
+18:04 - So the earth mover distance is this quantity
+18:07 - you have on the left so to the extent
+18:09 - that you could solve this optimization
+18:10 - problem on the right then you would
+18:13 - be able to compute exactly the earth mover distance.
+18:17 - And intuitively, this function f is
+18:21 - telling where there is a discrepancy in probability
+18:25 - mass between p and q.
+18:27 - So if there are x's that are given different probabilities
+18:30 - under p and q, then f will try to choose a large value ideally.
+18:36 - But then because of this Lipschitzness constraint then
+18:39 - you cannot make it arbitrarily big.
+18:40 - you cannot go to infinity.
+18:42 - And so you have to somehow be smooth
+18:45 - and at the same time try to find differences between p and q.
+18:51 - And if you can't solve this one yet,
+18:53 - this will give you exactly the Wasserstein.
+18:57 - The problem is that in practice you cannot--
+18:59 - like before, in the f-GAN setting
+19:02 - you can't really optimize that.
+19:05 - And so in practice you would use approximations
+19:07 - where you just use some sort of discriminator
+19:11 - and you try to make sure that the discriminator is not
+19:15 - too powerful and you try to restrict basically
+19:17 - how powerful the discriminator is
+19:19 - by either, for example, trying to reduce,
+19:24 - trying to have a penalty term on the gradient with respect
+19:28 - to the inputs of the discriminator.
+19:29 - So that it cannot change too much.
+19:32 - And this doesn't give you bounds.
+19:35 - So unlike the f divergence setting,
+19:38 - this is just an approximation.
+19:39 - It doesn't necessarily give you bounds.
+19:42 - Yeah, so they're all based on the very similar idea where
+19:44 - you're trying to find a witness function, a discriminator,
+19:48 - or some kind of classifier that is trying
+19:50 - to distinguish samples coming from p from samples coming
+19:54 - from q.
+19:55 - You have to restrict what this witness
+19:59 - function or this classifier does in some way
+20:02 - or you change the way you're scoring
+20:04 - what this classifier does.
+20:07 - And depending on how you do that,
+20:09 - you measure similarity basically in different ways.
+20:12 - And if you restrict this discriminator
+20:16 - to have a Lipschitz constant of at most 1,
+20:19 - then you get Wasserstein.
+20:21 - If you use an arbitrary function,
+20:23 - but then you score it with respect to that f star,
+20:25 - then you get an f divergence, and so forth, yeah.
+20:31 - But the main advantage of this is
+20:32 - that it's much easier to train.
+20:35 - So in practice this is very often used.
+20:38 - And you can see an example here where
+20:41 - you can imagine a setting where you
+20:43 - have real data that is just a Gaussian that is kind of here.
+20:47 - So you see all the samples that are
+20:49 - coming that are these blue dots that are lying around here.
+20:53 - And then you have a model.
+20:56 - Let's say you start out with a bad initialization
+20:58 - for your generator and most of your samples
+21:00 - are, again, a Gaussian, but somehow the means are different,
+21:04 - and so all your samples are here, these green dots.
+21:08 - And if you get the discriminator,
+21:10 - the discriminator will have a very good job
+21:12 - at distinguishing between the blue samples
+21:14 - and the green samples.
+21:16 - And it will be a sigmoid, but it's extremely steep.
+21:20 - So basically, everything to the left
+21:23 - here will be classified as real.
+21:25 - And everything to the right will be classified as fake.
+21:28 - But it's almost entirely flat.
+21:31 - And so when you think about trying to figure out
+21:34 - when you update the generator to try
+21:36 - to fool the discriminator, you don't get a whole lot of signal
+21:40 - in terms of, which direction should you
+21:42 - move these data points?
+21:44 - Because the red curve is too flat.
+21:49 - And so it's very tricky to actually get this model
+21:52 - to learn and be able to learn how to push the fake data
+21:56 - points towards the right.
+21:58 - But if you think about the Wasserstein GAN critic, which
+22:02 - is just the discriminator, it's almost like a linear function.
+22:07 - It's this light blue curve.
+22:10 - And if you are from the perspective of the generator
+22:15 - and you're trying to kind of reduce the same objective
+22:24 - function that was being optimized by the critic,
+22:27 - you have a much better kind of learning signal
+22:31 - to push your data points to the left.
+22:34 - And kind of you know that, yeah, this data points out here
+22:37 - are much better than the data points out there.
+22:41 - I guess, you can even do it in closed form.
+22:44 - I don't know if they did it.
+22:49 - You could probably also approximate it somehow,
+22:53 - but if it's just two Gaussians I think
+22:55 - you can do it in closed form.
+22:56 - So is the decision boundary, which is not di--
+23:04 - well, yeah, I guess you would still go.
+23:06 - You would try to, yeah, because it would be the opposite.
+23:09 - So you're trying to make it fake.
+23:12 - So you would still push towards the left.
+23:16 - And from the perspective of the WGAN,
+23:18 - you would still try to minimize.
+23:21 - From the G, the perspective, you will minimize this expression
+23:25 - that you have inside.
+23:26 - And so again, you would push the points to the left
+23:30 - because the light blue curve goes down.
+23:33 - And so I think it's just that it's
+23:36 - plotting probability of fake instead of plotting probability
+23:38 - of real.
+23:39 - So that's why it's going in the wrong direction.
+23:41 - You can actually see it here.
+23:43 - And it's just that you have basically better learning signal
+23:46 - and it's similar to what we were talking
+23:49 - about here that if the distributions are too
+23:51 - different, then with respect to KL divergence
+23:54 - you might not have good enough signal that tells you,
+23:58 - oh, if you put all the-- in this case putting the probability
+24:02 - mass at one half is better than putting the probability
+24:04 - mass at 10.
+24:05 - With respect to the Wasserstein, this would show up
+24:08 - because there would be a difference between those two
+24:10 - settings and one half is closer to the ground truth than 10.
+24:14 - And so you would be able to do gradient descent
+24:18 - on that objective with respect to theta
+24:20 - and you would get closer and closer.
+24:22 - With respect to KL, you don't quite see it.
+24:24 - And in practice you can also see it here
+24:28 - where basically doing optimization from the generator
+24:33 - perspective, doing optimization by minimizing
+24:36 - the light blue curve is much easier than trying
+24:40 - to fool the discriminator in the regular GAN setting
+24:45 - because there is vanishing gradients and it's too flat.
+24:49 - Yeah, I don't know if you can formally
+24:51 - prove that it's more powerful than a regular GAN.
+24:57 - They're measuring distance in a different way and I don't know.
+25:00 - In general, you could say you would probably
+25:02 - have to make some assumptions on p and q
+25:04 - to say which one is better and which one is worse,
+25:07 - I think in general.
+25:09 - I think from this it's more like if you had access
+25:14 - to infinitely powerful discriminators I think
+25:19 - in that world, I think, it--
+25:21 - both would probably work.
+25:23 - I think in practice you always have approximations and you are
+25:26 - optimizing over restricted families of discriminators
+25:30 - and you have this minimax thing where you cannot actually solve
+25:32 - the problems to optimality.
+25:34 - And it turns out that optimizing the Wasserstein
+25:38 - type of objective is much more stable in practice.

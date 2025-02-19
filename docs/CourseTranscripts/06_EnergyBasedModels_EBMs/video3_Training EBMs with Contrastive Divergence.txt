@@ -1,1 +1,306 @@
+00:00 -
+00:05 - SPEAKER: The intuition is that if you
+00:08 - want to do maximum likelihood learning,
+00:10 - you have an expression that looks like this that you
+00:13 - want to maximize.
+00:14 - So you have a training data point,
+00:16 - and you want to evaluate its probability according
+00:19 - to the model.
+00:20 - Then you want to maximize this expression
+00:22 - as a function of theta.
+00:23 - And the probability of a data point as usual
+00:26 - is kind of the unnormalized probability divided
+00:28 - by the partition function, the total probability assigned
+00:32 - by the model to or the total unnormalized probability
+00:36 - assigned by the model to everything else.
+00:39 - And so if you want to make that ratio as big as possible,
+00:44 - you need to be able to do two things.
+00:46 - You need to be able to increase the numerator
+00:48 - and decrease the denominator, which kind of makes sense.
+00:54 - The intuition is that you want to figure out
+00:56 - how to change your parameters, so that you increase
+01:01 - the unnormalized probability of the training data,
+01:05 - while at the same time, you need to make sure
+01:07 - that you're not increasing the probability of everything
+01:10 - else by too much.
+01:12 - So what really matters is the relative probability
+01:15 - of the training point you care about with respect
+01:19 - to all the other things that could happen,
+01:21 - which is what you get in the denominator, which is looking
+01:24 - at the total unnormalized probability of all
+01:26 - the other things that could have happened.
+01:30 - And so essentially when you train,
+01:34 - what you need to do is you cannot just optimize
+01:37 - the numerator because if you just increase the numerator,
+01:40 - kind of like you just increase the size of the slice of the pie
+01:45 - that you assign to the particular data point,
+01:47 - you might be increasing the size of the total pie by even more.
+01:50 - And so the relative probability does not even go up.
+01:53 - And so you kind of need to be able to account
+01:59 - for the effect that changes the parameters theta has
+02:03 - not only on the training data but also on all
+02:05 - the other points that could have been sampled by the model.
+02:10 - And so somehow, you need to increase the probability,
+02:14 - that normalized probability of the training point,
+02:16 - while pushing down kind of the probability of everything else.
+02:22 - And so it's kind of the intuition that you have here.
+02:25 - If this is f theta and you have the correct answer
+02:28 - and some wrong answers, it's not sufficient to just push up
+02:32 - kind of like the unnormalized probability
+02:34 - of the correct answer because everything else might also
+02:37 - go up.
+02:38 - So the relative probability doesn't actually go up.
+02:41 - So you need to be able to push up
+02:43 - the probability of the right answer while at the same time,
+02:46 - pushing down the probability of everything else.
+02:49 - So basically the wrong answers.
+02:53 - And that's basically the idea.
+02:58 - Instead of evaluating the partition function exactly,
+03:02 - we're going to use some kind of Monte Carlo estimate.
+03:05 - And so instead of evaluating the actual total unnormalized
+03:10 - probability of everything else, we're
+03:11 - just going to sample a few other things,
+03:14 - and we're going to try to compare the training point
+03:17 - we care about to these other samples
+03:20 - from the model that are wrong answers, that
+03:22 - are negative samples.
+03:24 - We have a positive sample, which is what we like in the training
+03:28 - set, which are going to be a bunch of negative samples
+03:30 - that we're going to kind of sample,
+03:31 - and we're going to try to contrast them.
+03:33 - We're going to try to increase the probability
+03:34 - of the positive one and decrease the probability of everything
+03:37 - else.
+03:39 - And that's basically the contrastive divergence algorithm
+03:43 - that was used to train that RBM, DBM that we had before.
+03:48 - Essentially what you do is you make this intuition
+03:54 - concrete by a fairly simple algorithm, where what you do
+04:00 - is you sample from the model.
+04:06 - So you generate kind of a negative example
+04:09 - by sampling from the model.
+04:11 - And then you take the gradient of the difference
+04:15 - between the log, f theta basically,
+04:21 - which is just the energy of the model or the negative energy
+04:27 - on the trainings, minus of theta evaluated
+04:32 - on the negative one, which is exactly
+04:34 - doing this thing of pushing up the correct answer while pushing
+04:38 - down the wrong answer, where kind of the wrong answer
+04:41 - is what is defined as a sample from the model.
+04:44 - Yeah.
+04:45 - So the sample is not necessarily wrong.
+04:47 - It's just like something else that
+04:49 - could have come from the model.
+04:51 - And we're considering it, it's kind of a representative sample
+04:56 - of something else that could have happened if you
+05:00 - were to sample from the model.
+05:01 - So we want the probability of the true data point
+05:05 - to go up as compared to some other typical kind of scenario
+05:10 - that you could have sampled from your model.
+05:13 - And that's actually principled, as we'll see.
+05:16 - This actually gives you an unbiased estimate
+05:22 - of the true gradient that you would like to optimize.
+05:26 - Yeah.
+05:26 - We haven't talked about how to sample.
+05:28 - But if you could somehow sample from the model,
+05:31 - then what I claim is that this algorithm would give you
+05:34 - the right answer and kind of this idea of making the training
+05:39 - data more likely than a typical sample from the model
+05:44 - actually is what you want.
+05:47 - So to the extent that you can indeed
+05:48 - generate these samples, which we don't know how to do yet.
+05:51 - But if you can, then this gives you
+05:53 - a way of training a model to make it
+05:55 - better to fit to some data set.
+05:58 - You just draw a sample.
+05:59 - Whether or not it's in the training set, yeah,
+06:01 - it doesn't matter.
+06:02 - Yeah.
+06:03 - And so why does this algorithm work?
+06:07 - Well, if you think about it, what
+06:09 - you want to do is if you look at the log of this expression,
+06:14 - which is just the log likelihood,
+06:16 - you're going to get these two terms.
+06:18 - You're going to get the f theta, which is just
+06:20 - the neural network that you're using
+06:22 - to parameterize your energy.
+06:24 - And then you have this dependence
+06:26 - on the partition function, the dependence that the partition
+06:30 - function has on the parameters that you're
+06:32 - optimizing with respect.
+06:35 - And what we want is the gradient of this quantity
+06:38 - with respect to theta.
+06:40 - So just like before, we want to increase the f theta
+06:43 - on the training set while decreasing
+06:46 - kind of the total amount of unnormalized probability mass
+06:49 - that we get by changing theta by a little bit.
+06:53 - And so really what we want is the gradient
+06:57 - of this difference, which is just
+06:59 - the difference of the gradients.
+07:02 - And the gradient of the f theta is trivial to compute.
+07:07 - That's just your neural network.
+07:08 - We know how to optimize that quantity.
+07:11 - We know how to adjust the parameters,
+07:13 - so that we push up the output of the neural network
+07:16 - on the training data points that we have access to.
+07:18 - What's more tricky is to figure out
+07:20 - how does changing theta affect the total amount
+07:24 - of unnormalized probability mass?
+07:27 - And we know that the derivative of the log of Z theta
+07:31 - is just like the derivative of the argument of the log
+07:35 - divided by Z theta, just the derivative of the log
+07:38 - kind of expression.
+07:40 - And now we can replace Z theta in the numerator
+07:46 - there with the expression that we have.
+07:48 - And because the gradient is linear,
+07:51 - we can push the gradient inside this sum,
+07:54 - and that's basically the same thing.
+07:57 - We know that Z theta is just the integral
+07:59 - of the unnormalized probability, and then
+08:02 - we can push the gradient inside, and we get this quantity here.
+08:07 - And now we know how to compute that gradient of using chain
+08:11 - rule, and that evaluates to that,
+08:16 - is just the gradient of f theta.
+08:17 - Again, this is something we know how to compute.
+08:21 - And then it's kind of rescaled by this exponential
+08:25 - and the partition function.
+08:27 - And if we push the partition function inside you'll
+08:32 - recognize that this is just the probability assigned
+08:35 - by the model to a possible data point x.
+08:40 - And so the true gradient of the log likelihood,
+08:44 - which is what we would like to optimize and do
+08:47 - gradient ascent with respect to, is basically this difference,
+08:52 - is basically the gradient of the energy evaluated
+08:56 - at the data point minus the expected gradient with respect
+09:02 - to the model distribution.
+09:04 -
+09:06 - Which kind of makes sense.
+09:08 - We need to figure out how does changing theta by a little bit
+09:11 - affect the unnormalized probability that you
+09:14 - assign to the true data point we care about.
+09:17 - And then we also need to understand
+09:18 - how changing theta affects the probability of everything
+09:21 - else that could have happened.
+09:23 - And we need to weight all the possible x's
+09:25 - with the probability assigned by the model for the current choice
+09:30 - of theta.
+09:32 - And now you see why the contrastive divergence work.
+09:35 - The contrastive divergence algorithm
+09:37 - is just a Monte Carlo approximation
+09:39 - of that expectation.
+09:40 - So we approximate the expectation with respect
+09:43 - to the model distribution with a single sample,
+09:48 - and that's an unbiased estimator of the true gradient.
+09:53 - And so the true gradient is basically
+09:56 - this difference between the gradient evaluated
+09:58 - at the true data point and the gradient evaluated
+10:01 - at a typical sample, what you get by sampling from the model.
+10:04 - And as long as you can follow this direction
+10:08 - and your gradient ascent algorithm,
+10:10 - you are making the relative probability of the data increase
+10:15 - basically because kind of like the data goes
+10:18 - up more than the denominator, than how much the partition
+10:24 - function grows essentially.
+10:25 -
+10:29 - And that's kind of the key idea behind the contrastive
+10:34 - divergence algorithm.
+10:35 - The main thing that we're still remains to be seen
+10:39 - is how do you get samples, right?
+10:42 - We still don't know how to sample from these models.
+10:44 - And the idea, the problem is that, well, we
+10:49 - don't have a direct way of sampling
+10:51 - like in an autoregressive model, where we can just
+10:53 - go through the variables one at a time
+10:55 - and set them by sampling from the conditionals.
+11:00 - And we cannot evaluate the probability of every data point
+11:03 - because that requires knowing the partition function.
+11:07 - But what we can do is we can compare two data points,
+11:11 - or we can compare two possible samples, x and x prime.
+11:18 - And the basic idea is that we can
+11:22 - do some kind of local search or local optimization
+11:26 - where we can start with a sample that
+11:29 - might not be good just by randomly initializing x0
+11:33 - somehow.
+11:35 - And then trying to locally make some--
+11:39 - perturb this sample to try to make it more likely essentially
+11:43 - according to the model.
+11:46 - And because we can do comparisons,
+11:50 - you know, checking whether the sample or its perturbation
+11:54 - is more likely is going to be tractable.
+11:57 - And so this is a particular type of algorithm called a Markov
+12:02 - Chain Monte Carlo method.
+12:04 - It's actually pretty simple what you do is again,
+12:07 - you initialize the procedure somehow.
+12:10 - And then at every step, you propose basically some change
+12:15 - to your sample, and it could be as simple as adding some noise
+12:19 - to what you have right now.
+12:22 - And then if what you get by perturbing your sample
+12:25 - has higher probability than what you started from,
+12:29 - which we can do.
+12:31 - We can do this comparison because we
+12:32 - don't need the partition function
+12:34 - to compare the probability of x prime with what we have right
+12:38 - now with xt.
+12:39 - Then we update our sample to this new candidate, x prime.
+12:44 -
+12:47 - And then what we need to do is we also
+12:50 - need to add a little bit of noise
+12:54 - to the process where basically, if you think of this
+12:58 - as an optimization problem, we're
+12:59 - always taking uphill moves.
+13:02 - So if the probability goes up, we always take that step.
+13:08 - But if x prime, this proposed transform the sample that we
+13:15 - get by adding noise actually has lower probability than what
+13:18 - we started from, we occasionally take
+13:21 - this downhill moves with probability proportional
+13:25 - to this quantity.
+13:26 - So basically proportional to how much worse this new sample
+13:30 - we're proposing is compared to where we started from.
+13:35 - And then you keep doing this.
+13:40 - And it turns out that in theory at least, if you repeat
+13:45 - this procedure for a sufficiently large number
+13:47 - of steps, you will eventually get a sample
+13:51 - from the true distribution.
+13:53 - Why do we need to occasionally accept kind of like the samples
+13:59 - that are worse than what we started from?
+14:01 - The reason is that we don't just want to do optimization.
+14:04 - Like if you were to just do step 1,
+14:08 - then you would kind of do some kind of local search procedure
+14:12 - where you would keep going around
+14:13 - until you find a local optimum.
+14:15 - Then you would stop there.
+14:18 - Which is not what we want because we want to sample.
+14:21 - So we want to somehow be able to explore the space more.
+14:25 - And so we need to be able to accept
+14:26 - downhill moves occasionally, and they are not too bad.
+14:31 - And that basically allows the algorithm
+14:33 - to explore the whole space of samples we could have generated
+14:37 - because maybe you're stuck in a local optimum that is not
+14:40 - very good.
+14:41 - And if you had moved much further away,
+14:43 - there would have been regions with very high probability.
+14:46 - You could define other--
+14:48 - this is not the only way of doing it.
+14:50 - Like you could define other variants of this
+14:52 - where you don't always accept uphill moves.
+14:55 - There is a certain something called a Metropolis-Hastings
+14:58 - algorithm that you can use to define
+15:01 - different variants of MCMC.
+15:04 - That would also work.
+15:05 - This is kind of the simplest version that
+15:07 - is guaranteed to give samples, but there are other variants
+15:10 - that you can use.
+15:11 - You always take an uphill.
+15:13 - If your probability goes up, you always take that step.
+15:17 - If it's a downhill move, then you
+15:21 - take it with some probability.
+15:23 - And if it's kind of about the same,
+15:25 - then you're likely to take it.
+15:27 - If it's much worse, then this probability
+15:30 - is going to be very small, and you're not going
+15:32 - to take that kind of that move.
+15:34 -
+15:37 - So that's the way you generate samples,
+15:39 - and that's what you do in the contrastive divergence
+15:43 - algorithm.
+
 

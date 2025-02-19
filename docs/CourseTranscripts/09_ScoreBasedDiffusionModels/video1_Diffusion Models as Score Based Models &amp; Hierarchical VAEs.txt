@@ -1,1 +1,1073 @@
-
+00:00 -
+00:05 - SPEAKER: All right, so let's get started.
+00:08 - Today we're back talking about diffusion models.
+00:11 - I think there's still a few things that we
+00:14 - didn't get a chance to cover.
+00:16 - So specifically, we're going to see
+00:18 - how to think about score-based models as a diffusion model.
+00:24 - And so where does that name come from, and what's
+00:27 - the relationship between denoising score matching
+00:31 - and other kinds of training objectives
+00:33 - you might have seen before?
+00:36 - We'll see how we can think of a diffusion model or even
+00:39 - a score-based model to some extent
+00:41 - as a type of variational autoencoder
+00:43 - at the end of the day, a hierarchical one,
+00:45 - but essentially, a variational autoencoder.
+00:47 - And there's going to be some connection between evidence
+00:50 - lower bounds and the denoising score matching losses
+00:53 - that we've been seeing.
+00:55 - Then we'll go back to kind of interpreting diffusion models
+00:59 - as normalizing flows.
+01:00 - This is the idea of converting an SDE to an ODE
+01:04 - that we briefly talked about, but we didn't have time
+01:06 - to go into a lot of detail, which
+01:08 - will allow us to compute likelihoods exactly
+01:12 - because it's a flow model.
+01:14 - And then we'll talk about how to make sampling efficient.
+01:17 - So take advantage of the fact that, once you view generation
+01:21 - as solving some kind of ordinary differential
+01:24 - equation or stochastic differential equation,
+01:25 - then you can use advanced numerical methods
+01:28 - to accelerate sampling.
+01:29 - And then we'll talk about controllable generation.
+01:31 - So if you want to build a text-to-image model
+01:34 - or you want to use some kind of control, some kind of side
+01:37 - information to, let's say, generate an image,
+01:39 - how do you bring that into the equation?
+01:41 - How do you change the models to allow you to do that?
+01:46 - So let's start with a brief recap of score-based models.
+01:50 - Recall that the underlying idea there
+01:52 - was that we're going to model a probability
+01:56 - distribution by working with the score function, which
+02:00 - is this gradient of the log density of the log likelihood,
+02:04 - essentially, with respect to the input dimensions.
+02:08 - So you can think of it as a vector field that basically
+02:11 - tells you in which direction you should move if you want
+02:13 - to increase the likelihood.
+02:15 - And we use a deep neural network to model it
+02:17 - and this score model, which is like a neural network that
+02:21 - takes, let's say, an image as an input and maps it
+02:24 - to the corresponding score or gradient of the log likelihood
+02:28 - evaluated at that point.
+02:30 - And we've seen that the score can be estimated from data using
+02:37 - score matching kind of losses, and it's a relatively simple
+02:42 - regression-like loss, where you try to compare the estimated
+02:46 - gradient to the true gradient.
+02:49 - And you look at the L2 distance between these two
+02:51 - vectors averaged over the data distribution.
+02:54 - And we've seen that there are ways
+02:56 - to rewrite that loss into one that you can,
+02:59 - at least in principle, compute and optimize
+03:01 - as a function of theta.
+03:02 - That's intractable, or at least expensive with respect
+03:07 - to the data dimension.
+03:08 - But we've seen that there is something called
+03:10 - denoising score matching, which basically is much more
+03:15 - efficient.
+03:16 - The basic idea is that, instead of trying
+03:18 - to estimate the score of the data distribution,
+03:21 - you estimate the score of a version of the data distribution
+03:26 - that has been perturbed with, let's say, Gaussian noise.
+03:29 - So you have some kind of kernel or noise kernel, which
+03:34 - is just a Gaussian at the end of the day, that
+03:38 - will take a sample x.
+03:39 - And we'll add the noise to it.
+03:41 - And that defines basically a new distribution, q sigma,
+03:45 - which is basically just what you get
+03:49 - by convolving the original data distribution, which
+03:53 - is unknown with some Gaussian kernel.
+03:56 - So it's a smoothed out version of the data distribution.
+04:00 - And it turns out that estimating the score of this q
+04:04 - sigma instead of P-data is actually efficient.
+04:07 - And there is this kind of--
+04:09 - if you look at the usual regression loss
+04:13 - where you compare your model with the true score
+04:18 - of the noisy data distribution averaged over the noisy data
+04:23 - distribution.
+04:24 - Turns out that objective can be rewritten into a denoising
+04:28 - objective.
+04:29 - So basically, if you can train a model
+04:31 - as theta that can take a noisy image, x plus noise,
+04:37 - and tries to basically estimate the noise vector that was added
+04:42 - to the image, so if you can somehow go from this noisy image
+04:47 - to the clean image, or equivalently,
+04:49 - you can figure out what was the vector of noise that
+04:53 - was added to this image, which if you subtract
+04:56 - it will give you back the clean image.
+04:58 - So if you can denoise, then you can also
+05:00 - estimate the score of the noisy data distribution q sigma.
+05:05 - And this does not involve any kind of trace of the Jacobian.
+05:10 - It doesn't involve any sort of differentiation.
+05:14 - It's just a straightforward loss that is basically just denoised.
+05:18 - The reason we're doing denoising is
+05:20 - because, by solving the denoising objective that you
+05:23 - see here in the third line, you're
+05:25 - actually learning the score of the noise perturbed data
+05:29 - distribution.
+05:30 - And that's a good thing to have access
+05:33 - to because if you have the score, then
+05:35 - you can basically use Langevin dynamics to effectively generate
+05:39 - samples.
+05:40 - So if you know how to denoise, then in which
+05:45 - direction perturbing your image would increase the likelihood
+05:50 - most rapidly.
+05:51 - So you kind of have a Taylor approximation
+05:54 - of the log likelihood around every data point,
+05:57 - and you can use that information to inform the way you produce,
+06:01 - you explore this place and you generate samples.
+06:04 - The trade-off is that you're no longer estimating
+06:07 - the score of the clean data distribution,
+06:08 - but you're estimating the score of the noisy data distribution.
+06:13 - And so yeah, it's much more scalable.
+06:16 - It reduces denoising, but the trade-off
+06:18 - is you're not estimating the score of the data distribution.
+06:20 - You're estimating the score of the noise-perturbed data
+06:23 - distribution.
+06:26 - And then, yeah, once you have the score, back to the question,
+06:30 - if you somehow are able to estimate the scores,
+06:32 - then you can generate samples by basically doing
+06:35 - some kind of noisy stochastic gradient ascent procedure,
+06:42 - where you just initialize your particle somewhere.
+06:45 - And then you follow the arrows, essentially,
+06:48 - adding a little bit of noise at every step trying
+06:50 - to move towards high probability regions.
+06:53 - And we've seen that in order to make this work
+06:56 - it actually makes sense to not only estimate
+06:58 - the score of the data distribution
+07:03 - perturbed with a single noise intensity,
+07:06 - but you actually want to estimate
+07:07 - the score of multiple versions of the data distributions,
+07:12 - basically, where each version has
+07:14 - been perturbed with a different amount of noise.
+07:17 - And so you have these different views of the data distribution
+07:20 - that have been perturbed with increasingly small,
+07:24 - in this case, amounts of noise.
+07:26 - And what you do is you train a single model, a single score
+07:29 - network, which is conditional on the noise level.
+07:32 - So it takes a sigma as an input.
+07:34 - And it will estimate the score for all these different data
+07:39 - distributions perturbed with different amounts of noise.
+07:43 - And if you can train this model, then you
+07:46 - can do basically Langevin dynamics,
+07:49 - where what you would do is you would initialize--
+07:55 - if you have this good model of the score,
+07:58 - then you would initialize which you estimate it
+08:01 - by denoising score matching.
+08:03 - What you would do is you would then
+08:05 - do Langevin dynamics, where you would initialize
+08:07 - your particles somehow.
+08:08 - Then you follow the gradients corresponding to the data
+08:10 - distribution perturbed with large amounts of noise.
+08:15 - You improve the quality of your samples a little bit.
+08:18 - And then you use these samples to initialize a new Langevin
+08:22 - dynamics chain where you're going
+08:25 - to use the scores of the data distribution
+08:28 - perturbed with a smaller amount of noise.
+08:30 - And again, you follow these gradients a little bit.
+08:33 - And then, once again, you take these particles
+08:37 - and you initialize a new chain for an even smaller amount
+08:39 - of noise.
+08:40 - And you keep doing that until you have the sigma small enough
+08:44 - that basically you're sampling from something very close
+08:47 - to the true data distribution.
+08:50 - And this is Langevin dynamics.
+08:52 - And you can see here how it would work.
+08:54 - So you would start with pure noise,
+08:56 - and then you would run this sequence of Langevin dynamics
+08:59 - chains.
+09:00 - And you would eventually generate
+09:02 - something that is pretty close to a clean sample.
+09:05 - So you can see that it has this denoising flavor, where you
+09:09 - would start with pure noise.
+09:10 - And then you slowly remove noise until you reveal
+09:12 - kind of a sample at the end.
+09:16 - And this is just, again, Langevin dynamics at every step.
+09:18 - You're just following the gradient more or less.
+09:21 - And you go towards the clean data sample at the end.
+09:27 - So this was all recap.
+09:29 - Now, what we're going to do is we're
+09:31 - going to start to think about this process
+09:34 - as a variational autoencoder, right.
+09:37 - So if you think about it, what's going on here
+09:41 - is that we are going from right to left.
+09:45 - If you think about multiple versions of the data
+09:48 - distribution that has been perturbed with increasingly
+09:51 - large amounts of noise, what we're doing
+09:53 - is we're starting with pure noise.
+09:56 - And then we are iteratively removing noise
+09:59 - by running this Langevin chains.
+10:01 - So we run a Langevin chain to try
+10:04 - to transform xt into a sample from the data distribution
+10:09 - with a fairly large amount of noise.
+10:11 - And then we use these particles to initialize a new chain
+10:15 - where we follow the gradients corresponding to a data
+10:18 - distribution with a little bit less noise.
+10:20 - And then we run it for a little bit.
+10:23 - And then we keep going until we generate a clean sample
+10:27 - at the end.
+10:28 - So we can think of the procedure that we were seeing before as
+10:31 - basically trying to iteratively generate samples
+10:37 - from these random variables, x0 through xt, where
+10:41 - these random variables are essentially what you would get
+10:45 - if you were to take a real data sample
+10:47 - and you were to add noise to it, right,
+10:50 - because we were estimating the scores of this noise
+10:54 - perturbed data distributions that were indeed obtained just
+10:57 - by taking data and adding noise to it, right?
+11:00 - That was the whole idea of the noise-conditional score network.
+11:07 - So this is essentially at an intuitive level what's going on.
+11:11 - We are iteratively reducing the amount of noise
+11:14 - that we have in the sample.
+11:15 - And so the inverse of this process
+11:21 - is the one that we've used to basically train the network
+11:26 - to generate samples for the denoising score-matching loss.
+11:29 - And we can think about the inverse process, which
+11:31 - is the one that you would use if you wanted
+11:33 - to go from data to pure noise.
+11:37 - And that's a very simple process, where at every step
+11:40 - you just add a little bit of noise.
+11:42 - So if you want to go from x0 to x1, you take a data point
+11:47 - and you add a little bit of noise.
+11:48 - If you want to go from x1 to x2, you take a sample from x1,
+11:52 - you add a little bit more noise.
+11:53 - And as you go from left to right,
+11:56 - you add more and more noise until at the end
+11:58 - there is no structure left.
+12:00 - And you're left with basically pure noise.
+12:04 - And so you can start to see that this
+12:06 - has the flavor a little bit of a VAE
+12:08 - where there is an encoder process.
+12:11 - And then there is a decoder process down here.
+12:15 - And we'll make that more formal, but that's the intuition.
+12:19 - And so more specifically, basically, what's going on here
+12:25 - is that there is a relatively simple procedure
+12:28 - that we're using to generate these random variables, x1, x2,
+12:33 - all the way through xt.
+12:34 - And that procedure is just adding noise.
+12:37 - So at every step, what you do is if you have a sample from xt
+12:42 - and you want to generate a sample from xt
+12:45 - plus 1, what you do is you take xt and you add noise to it,
+12:49 - just Gaussian noise.
+12:51 - So that defines a set of conditional densities
+12:55 - q of xt given xt minus 1, which are just Gaussians, where
+12:59 - these Gaussians have basically a given mean and a given variance.
+13:04 - And the mean is just the current sample xt minus 1 rescaled.
+13:11 - It's not super important that there is a rescaling there,
+13:13 - but the way you would generate a sample xt given
+13:17 - a sample xt minus 1 is you would draw a sample from a Gaussian
+13:21 - with a mean, which is just xt minus 1 rescaled, and some fixed
+13:27 - standard deviation, or fixed covariance.
+13:31 - And so we can think of this process
+13:34 - of going from data to noise as some kind of Markov process,
+13:37 - where at every step we add a little bit of noise.
+13:40 - And perhaps we rescale by some fixed constant beta t.
+13:44 - Not super important that you do the rescaling,
+13:47 - but that's how it's usually done.
+13:49 - And so I'm having it here just to make it
+13:52 - consistent with the literature.
+13:55 - And this basically defines a joint distribution.
+14:01 - So given an initial data point x0,
+14:04 - there is a joint distribution over all these random variables,
+14:07 - x1, x2, all the way through xt, which is just
+14:11 - the product of all these conditionals, which
+14:16 - are just Gaussians.
+14:18 - So that defines a joint-- given an initial data point x0,
+14:25 - there is a joint distribution over all
+14:27 - these other random variables, x1 to xt, where the joint is given
+14:34 - by a product of conditionals.
+14:35 - So it's kind of an autoregressive model
+14:37 - but a little bit more simple because it's Markovian.
+14:39 - So the distribution of xt does not
+14:42 - depend on all the previous ones, but it basically
+14:45 - only depends on xt minus 1 on the previous time step.
+14:50 - And I'm using the notation q because it will turn out
+14:56 - that this is indeed the encoder in a variational autoencoder.
+15:01 - So you can think of this process of taking x0 and mapping it to
+15:06 - through this vector of random variables,
+15:10 - x1 to xt as some kind of encoder.
+15:13 - And the encoder happens to be pretty simple
+15:15 - because all you have to do is you just have to add noise
+15:18 - to the original data point x0.
+15:22 - So in a typical VAE, what you would do is you would take x0,
+15:25 - and then you would maybe map it through some neural network that
+15:28 - would give you a mean and a standard deviation
+15:30 - for the distribution over the latents.
+15:33 - Here, the way we get a distribution over the latents,
+15:36 - which in this case are just x1 to xt,
+15:39 - is through this procedure.
+15:40 - So there is nothing learned.
+15:42 - You just add noise to the original sample x0.
+15:46 -
+15:49 - So this defines some valid procedure
+15:54 - of basically defining multiple views of an original data point
+16:00 - x0, where every view is like a version of the data point
+16:04 - with different amounts of noise.
+16:06 - The output, technically, for this encoder,
+16:10 - is higher dimensional than x0 in the sense
+16:13 - that it's the whole collection of random variables.
+16:16 - Each one of the random variables, xt,
+16:20 - has the same dimension as x0.
+16:22 - It's t times the dimension of the original data point.
+16:26 - And yes, the mapping is not invertible.
+16:28 - We're adding noise at every step.
+16:29 - So that defines some way of basically mapping
+16:33 - a data point to some latent variables
+16:36 - or a vector of latent variables through this very
+16:39 - simple procedure where you just add noise to it.
+16:44 - And it turns out that adding Gaussian noise
+16:47 - is pretty convenient because you can also compute--
+16:52 - because everything is basically Gaussian.
+16:55 - So the marginals of this distribution are also Gaussian.
+16:59 - So if you want to compute what is the probability of observing
+17:05 - a certain noisy view of a data point x0 after t steps,
+17:09 - that's another Gaussian, where the parameters of that Gaussian
+17:13 - basically depend on these beta coefficients that we had before.
+17:18 - Again, not super important how you take the betas
+17:21 - and you combine them to get the alphas.
+17:23 - What's important is that if you add a little bit of Gaussian
+17:25 - noise at every step, the result of applying this kernel
+17:30 - multiple times is also another Gaussian
+17:33 - with just different mean and a different standard deviation.
+17:36 - But you can basically compute them in closed form.
+17:39 - So the probability of transitioning from x0 to xt
+17:44 - is some other Gaussian distribution,
+17:46 - where the parameters of this Gaussian
+17:48 - basically depend on the effects of each
+17:50 - of the individual transitions that you would
+17:52 - do to get through to time xt.
+17:57 - And this is important for a couple of reasons.
+18:01 - First of all, basically it's efficient to simulate
+18:05 - this chain.
+18:05 - So if you want to generate a sample at time step t,
+18:08 - you don't have to generate the whole process
+18:11 - of going through these steps.
+18:12 - You can directly kind of sample from this marginal distribution
+18:17 - without having to simulate the whole chain.
+18:19 - And yeah, if you choose the parameters in the right way
+18:23 - this is essentially the same exact way
+18:27 - we were generating training data for our denoising score-matching
+18:30 - procedure.
+18:31 - Remember, in the denoising score-matching procedure,
+18:33 - what we were doing is we're taking clean data,
+18:35 - and we were adding different amounts of noise corresponding
+18:39 - to different time steps or different noise levels, sigma,
+18:44 - generating all these different views,
+18:47 - like the original data corresponding
+18:49 - to different amounts of noise levels.
+18:51 - So it still achieves the same kind of effect.
+18:55 - But we're thinking of it as a process that
+18:57 - adds noise incrementally at every
+19:00 - at every step of this process, which you can also
+19:04 - think of it as a diffusion process, right?
+19:07 - You can think of what's going on here as a diffusion process,
+19:11 - where there is an initial distribution over data
+19:14 - points, which is the data distribution, which could be,
+19:18 - for example, a mixture of two Gaussians, kind of looks
+19:20 - like this.
+19:21 - Here, the colors basically indicate the intensity
+19:26 - of the how large the PDF is at that point.
+19:30 - So yellow points tend to have higher probability mass
+19:33 - than, let's say, these blue points that
+19:35 - are more closer to the tails of these two Gaussians.
+19:39 - And what's going on is that we're basically
+19:42 - defining this noise-perturbed data distributions
+19:46 - by basically adding noise.
+19:47 - So we randomly draw a sample from the data distribution,
+19:50 - and we add noise to it.
+19:52 - And by doing that, we define all these noise-perturbed
+19:56 - distributions.
+19:57 - As you can see, the shape of this distribution
+20:01 - changes as you add more and more noise.
+20:04 - You see that there is no probability mass here
+20:06 - in the middle, but if you add a little bit of noise
+20:08 - to the original samples, then you're
+20:10 - going to get a little bit of probability mass
+20:12 - here in the middle.
+20:13 - And then if you add a lot of noise,
+20:15 - then basically everything just becomes Gaussian.
+20:19 - And so you can think of it as a diffusion
+20:24 - where basically given an initial condition, which is just
+20:29 - a data point on this line, then you
+20:33 - can imagine simulating this process where you add noise
+20:38 - at every step.
+20:39 - And eventually, the probability mass
+20:40 - is going to be all spread out all over the space.
+20:44 - And this behaves like the process of heat diffusing,
+20:49 - let's say, in a solid or some sort.
+20:52 - And so that's why it's called a diffusion because there
+20:54 - is some kind of process that takes probability mass
+20:58 - and then diffuses it over the whole space.
+21:00 -
+21:03 - And this process essentially is defined
+21:09 - by the transition kernel, which is just basically the Gaussian.
+21:12 - In theory, yeah, all you need, if you think of it as a--
+21:17 - well, maybe we'll come back to this in a few slides.
+21:20 - But yes, to some extent, you need several things.
+21:24 - You need to be able to smooth out, kind of destroy
+21:28 - the structure so that you end up with a distribution
+21:32 - at the end that is easy to sample from because essentially
+21:35 - what we're going to do at inference time
+21:37 - is we're going to try to invert this process.
+21:39 - And we're going to try to go from noise to data.
+21:43 - So first, you have to define a process that destroys structure
+21:46 - and goes from data to noise.
+21:48 - And the noise that you get at the end
+21:49 - has to be something simple.
+21:52 - It has to be efficient.
+21:53 - So you need to be able to simulate any slice here
+21:58 - efficiently because we'll see that the learning objective will
+22:02 - end up being denoising score matching.
+22:04 - And so you need to be able to sample from it
+22:06 - efficiently if you want to use denoising
+22:09 - score-matching like objectives.
+22:11 - Other than that, pretty much, yes, you
+22:15 - get a valid probabilistic model.
+22:16 - If you have those two things, then you can essentially
+22:20 - use this machinery.
+22:21 - And it turns out that the way to invert this process exactly
+22:25 - involves the score.
+22:26 - So if you have the score, then you can invert the process.
+22:30 - Or if you think of it from a VAE perspective, as we'll see,
+22:33 - then you can also just try to basically invert the process
+22:37 - by trying to learn some kind of decoder that
+22:41 - will try to invert--
+22:43 - you can think of this process of going from data to noise
+22:46 - as an encoder.
+22:47 - And then you can try to just using a-- training an ELBO just
+22:50 - by variationally try to learn an operator that
+22:54 - goes in the opposite direction, which may not
+22:58 - involve the score in general.
+22:59 - But if everything is Gaussian, then it
+23:02 - turns out that what you need is the score.
+23:05 - The important thing is that the original data distribution here,
+23:08 - OK, it's a mixture of Gaussians, but it can be anything.
+23:12 - It doesn't have to be remotely close to a Gaussian
+23:15 - distribution.
+23:17 - It has to be continuous for this machinery
+23:20 - to be applicable directly.
+23:22 - Although, we'll see later when we talk about latent diffusion
+23:24 - models, that you can actually also embed discrete data
+23:29 - into a continuous space.
+23:30 - And then it will all fall out pretty naturally
+23:33 - from a VAE perspective.
+23:35 - But the initial distribution doesn't have to be Gaussian.
+23:38 - It could be just a distribution over natural images, which
+23:41 - is far from Gaussian.
+23:43 - What's important is that the transition kernel
+23:45 - that you use to spread out the probability mass is Gaussian.
+23:49 - So you can destroy structure in a controllable way.
+23:53 - And you know that, after adding a sufficiently large amount
+23:56 - of Gaussian noise, you have a Gaussian distribution.
+23:59 - The signal to noise is basically extremely low,
+24:03 - and at that point, sampling from a pure noise
+24:06 - is the same as starting from a data point
+24:09 - and adding a huge amount of noise, essentially.
+24:12 - This is just okay--
+24:13 - This is a diffusion, and that basically
+24:16 - maps from data on the left-hand side
+24:20 - here to pure noise on the right-hand side.
+24:24 - And what this suggests is that there
+24:30 - might be a way of generating samples which basically involves
+24:35 - the process of inverting this procedure.
+24:38 - So we had a simple procedure that goes from data to noise
+24:41 - just by adding Gaussian noise at every step.
+24:43 - So we had a collection of random variables
+24:46 - with some well-defined joint distribution,
+24:49 - which was just like that Gaussian
+24:52 - defined in terms of the q that, given an xt minus 1,
+24:57 - you define the next one by just adding noise to it.
+25:04 - If we could, we could try to generate samples
+25:09 - by inverting this process.
+25:11 - So what we could do is we could try by initially sampling
+25:16 - a value for this random variable x capital T.
+25:19 - And we know that x capital T comes
+25:23 - from some known distribution.
+25:26 - For example, just pure Gaussian noise.
+25:29 - And this notation here, this pi, you
+25:31 - can think of it as a prior, some fixed distribution
+25:34 - that this diffusion process basically converges to.
+25:37 - So that's easy.
+25:39 - And then what we could try to do is
+25:40 - we could try to basically reverse this process by sampling
+25:45 - from these conditionals.
+25:46 - So you would sample xt minus 1 given x capital T, and then we
+25:51 - could go back one step at a time going from pure noise to data.
+25:58 - And this procedure would work perfectly
+26:03 - if somehow we had a way of knowing
+26:07 - what this distribution is.
+26:09 - So we know how to define q of xt given xt minus 1
+26:14 - because that's just a Gaussian.
+26:16 - But the reverse kernel, which goes from xt to xt minus 1,
+26:21 - the one that goes from right to left, is actually unknown.
+26:26 - And that's why this procedure cannot be directly used.
+26:33 - But what we can try to do is we can
+26:35 - try to learn some kind of approximation
+26:39 - of this reverse kernel that goes from right to left, that
+26:48 - basically learns how to-- so that we can learn basically how
+26:53 - to remove noise from a sample.
+26:54 -
+26:57 - And so basically, that's the core underlying idea.
+27:04 - We're going to define--
+27:06 - now you can start to see.
+27:07 - We're going to define a decoder or an iterative decoder,
+27:11 - which has the flavor of a VAE.
+27:13 - You start by sampling a latent variable
+27:17 - from a simple prior, which could be just a Gaussian distribution.
+27:21 - And then we go from right to left
+27:27 - by sampling from these conditionals, p of xt
+27:30 - minus 1 given xt, which are defined variationally
+27:36 - in the sense that these are--
+27:38 - this is our generative model.
+27:39 - This is how we usually--
+27:40 - just like in a VAE, the decoder is
+27:43 - defined through some sort of neural network.
+27:46 - In this case, the probability density over xt minus 1 given xt
+27:50 - is a Gaussian.
+27:52 - And as usual, the parameters of the Gaussian
+27:54 - are computed by some neural network.
+27:57 - So it's the same sort of flavor of VAE where you would sample z
+28:01 - from a simple prior.
+28:02 - And you feed z into some neural network, like the mu theta
+28:07 - here to get a parameter for a Gaussian distribution over x.
+28:12 - And then you would sample from that distribution.
+28:15 - It has the similar flavor here in the sense
+28:17 - that the reverse process is the defined variationally
+28:22 - through these conditionals, which are parameterized
+28:27 - in terms of neural networks.
+28:29 - And so there is a true denoising distribution
+28:32 - that would map you from xt through xt minus 1.
+28:35 - We don't know what this object is.
+28:37 - We're going to approximate it with some Gaussian, where
+28:41 - the parameters of the Gaussian are
+28:42 - learned, as usual, like in a variational approximation.
+28:45 - And we're going to try to choose theta so that these two
+28:48 - distributions are close to each other intuitively
+28:51 - so that what we get by sampling from this variational
+28:55 - approximation of the reverse process
+28:57 - is close to what we would get if you
+28:59 - were to sample from the true denoising distribution.
+29:04 - And so, more specifically, this basically defines
+29:07 - a joint distribution, which is going
+29:09 - to be our generative distribution,
+29:11 - where we basically first, which essentially just corresponds
+29:16 - to that sampling procedure that I just described,
+29:19 - where there is a prior distribution
+29:20 - over the rightmost variable, this xt, which we know
+29:25 - comes from a simple distribution, like a Gaussian.
+29:28 - And then you would sample from all the remaining variables
+29:32 - one at a time going from right to left
+29:34 - by sampling from these conditionals, which
+29:36 - are all Gaussian with parameters defined
+29:39 - through some neural networks.
+29:41 - The key thing here is that we choose the parameters.
+29:44 - So we choose this alpha t such that basically there is
+29:51 - no signal-to-noise at the end.
+29:54 - And so you are basically left with pure noise.
+29:57 - So basically, this alpha bar t goes to 0, essentially,
+30:05 - by choosing basically--
+30:07 - you might imagine that if you had a sufficiently large amount
+30:10 - of noise, it doesn't matter where you started from.
+30:14 - Everything kind of looks the same.
+30:16 - So that's the trick.
+30:18 - You have to define a diffusion process such that--
+30:21 - and you have to run it for a sufficiently long amount
+30:23 - of time, which is the same thing, such that you forget
+30:28 - about the initial condition.
+30:29 - Or you eventually reach a steady state
+30:34 - which is known as some sort of Gaussian distribution
+30:36 - with some known mean and standard deviation
+30:40 - so that you can sample from it at the end.
+30:42 - Yeah.
+30:45 - And so that's what's going on here.
+30:48 - There is a distribution qt, which
+30:50 - is going to be close indeed to some Gaussian, for example,
+30:53 - which you can always set it up you
+30:56 - choose the transition kernels in the right way.
+31:00 - As we'll see, you can actually do
+31:01 - something similar by using Langevin dynamics.
+31:05 - So because it turns out that if you train this thing
+31:10 - variationally, this mu that you learn is basically the score.
+31:14 - And so, as we'll see, there is basically
+31:17 - one way of generating samples, which basically just involves
+31:21 - t steps, where you just do step, step, step, step
+31:24 - t times until you get clean--
+31:26 - you get a good-- somewhat--
+31:28 - whatever-- hopefully a good approximation
+31:31 - of a clean data point.
+31:32 - But you don't really know.
+31:33 - It only depends on how well you've
+31:34 - learned this reverse process.
+31:37 - If you're willing to throw more compute at it,
+31:39 - you can actually do more compute at every step
+31:45 - to try to invert the process better.
+31:49 - One way to do it is to do Langevin dynamics.
+31:51 - So Lengevin dynamics is just a general way
+31:53 - of generating samples.
+31:54 - It's like an MCMC procedure to generate samples
+31:56 - from a distribution.
+31:58 - At the end of the day, we know what kind of distribution
+32:00 - we're trying to sample from here, which is just
+32:03 - the noisy data distribution.
+32:05 - And if you had the score of that distribution
+32:07 - and you can generate samples from it.
+32:10 - And so we'll see that there is a way
+32:11 - to correct the mistakes that you would do if you just
+32:17 - were to use this vanilla procedure by putting
+32:21 - in more compute.
+32:22 - If you wanted to sample from this joint, what you would do
+32:25 - is you would sample xt.
+32:27 - Then you would sample xt minus 1, xt minus 2, all the way
+32:30 - through x0.
+32:31 - There is no Langevin dynamics at this point.
+32:34 - So there it's not deterministic.
+32:35 - It's stochastic because this transition is a Gaussian.
+32:39 - So you would have to sample from a Gaussian, where
+32:42 - the parameters are given by some neural network.
+32:44 - So the neural network part would be deterministic.
+32:47 - But then, just like in a VAE decoder, it's stochastic.
+32:52 - The mapping is stochastic.
+32:55 - OK, so now we've defined the two things.
+32:57 - We basically have an encoder, and we have a decoder,
+32:59 - essentially, here, which is parameterized
+33:01 - by these neural networks, mu theta.
+33:04 - What we can do is, so we can start viewing this
+33:08 - as a hierarchical VAE or just a VAE,
+33:11 - where there is an encoder that takes x0, a data point, and maps
+33:15 - it stochastically to a sequence of latent variables, which
+33:19 - are just like the x1, x2, x3, all the way through xt.
+33:24 - And there is some kind of prior distribution over the latents,
+33:28 - which is just this p of xt.
+33:30 - It's just simple Gaussian.
+33:32 - And then there is a decoder that would basically
+33:35 - invert the process.
+33:36 - And the decoder is, in this case,
+33:39 - as usual, just parameterized using neural networks, which
+33:43 - are going to be learned.
+33:45 - So just like in a VAE, there is this two--
+33:48 - there is an encoder and a decoder.
+33:51 - So it has the flavor of a VAE except that, like the latent
+33:56 - variables, there is a sequence of latent variables
+33:58 - that are indexed by time.
+33:59 - And they have this specific structure where
+34:02 - the encoder is actually fixed.
+34:04 - There is nothing learned about the encoder.
+34:07 - The encoder is just adding noise to the data.
+34:10 - So it's kind of like a VAE where the encoder
+34:13 - is fixed to have a very special kind of structure.
+34:17 - So recall that sort of the vanilla VAE
+34:21 - would look something like this.
+34:22 - You have a latent variable model.
+34:24 - You have a latent variable z, which
+34:26 - has a simple prior distribution, like a Gaussian.
+34:29 - And then there is a decoder, which would take a z,
+34:34 - map it to through a couple of neural networks, mu and sigma.
+34:39 - And then p of x given z is defined as a simple distribution
+34:43 - of Gaussians, where the parameters are given
+34:46 - by these two neural networks.
+34:48 - And then you have the encoder, which does the opposite.
+34:50 - It takes x, and it basically tries to predict z.
+34:55 - And again, that's usually some simple Gaussian distribution,
+34:58 - where the parameters are usually computed
+35:00 - by some other neural network that takes x as an input
+35:04 - and gives you the parameters of the distribution
+35:07 - over the latency.
+35:09 - And we know that you will train this model
+35:11 - by maximizing an ELBO, an evidence lower bound.
+35:15 - That would look something like this.
+35:18 - So you would basically guess the values of the latent variables
+35:22 - using the encoder.
+35:23 - Then you have the joint distribution
+35:25 - over observed variables and latent variables,
+35:28 - as inferred by the encoder.
+35:30 - And then you have this term that is basically
+35:32 - just encouraging high entropy in the encoder.
+35:36 - So this is the vanilla version.
+35:38 - What we have here is kind of a hierarchical version
+35:41 - of the vanilla VAE.
+35:42 - So if you were to replace this single latent variable z
+35:46 - with two latent variables, you would
+35:49 - get something that looks like this, where
+35:52 - the generative process would start by sampling z2
+35:57 - from a simple prior and then passing it
+35:59 - through a first decoder to generate z1
+36:02 - and then another decoder to generate x.
+36:06 - And so you have a joint distribution,
+36:08 - which is just the product of all these--
+36:11 - the prior over z2, the first encoder and the second encoder.
+36:15 - And then-- the second decoder, sorry.
+36:18 - And then you have an encoder, which
+36:20 - is what you would use to infer the latent variables given x.
+36:22 - So it's a distribution over z1 and z2 given x.
+36:26 - And you have would have an evidence lower bound
+36:28 - that would look like this, just like before.
+36:32 - Here we have a simple prior over z.
+36:34 - If you replace this with a VAE, then you get what we have here.
+36:38 -
+36:40 - And so that would be the training objective.
+36:42 - And so that's exactly what we have in the diffusion model.
+36:47 - So in the diffusion model, well, we don't have just two.
+36:49 - We have a sequence of latent variables,
+36:52 - but it's essentially the same thing.
+36:54 - We have a joint decoding distribution,
+36:56 - which is what you get by going from right to left.
+37:00 - And then we have an encoder, which is fixed,
+37:02 - which is just adding Gaussian noise to the images.
+37:05 - The way you would train this model
+37:06 - is by minimizing some ELBO loss or maximizing the ELBO averaged
+37:12 - over the data distribution.
+37:13 - And so, just like before, the objective function
+37:15 - would look something like this.
+37:17 - So here q of x0 is just the data distribution.
+37:20 - And so you would want to maximize the true log likelihood
+37:25 - over the data distribution.
+37:27 - And we don't have access to it.
+37:28 - So instead, you use the evidence lower bound, which
+37:32 - is just like the usual thing.
+37:35 - q of z given x, p of x comma z divided by q of z given x.
+37:41 - That's the usual evidence lower bound.
+37:43 - And there is just a minus sign because I
+37:45 - want to minimize that objective as a function of theta.
+37:50 - And what would you plug in?
+37:52 - So q is fixed.
+37:54 - q is just this product of Gaussians,
+37:56 - which is this process of adding noise at every step.
+37:59 - And p theta is the interesting bit.
+38:02 - It's this distribution that you get
+38:03 - by starting from some simple prior, like pure Gaussian noise,
+38:08 - and then passing it through the sequence of neural networks
+38:12 - that will try to infer the parameters
+38:15 - from some other Gaussian that you sample from
+38:17 - to go through this sampling procedure.
+38:20 - So that's how this joint in the numerator is defined.
+38:23 - It's defined in terms of this p theta xt minus 1 given xt.
+38:32 - And so it's just like you can optimize this loss
+38:39 - as a function of theta.
+38:40 - And so it's actually a little bit simpler than the usual VAE.
+38:43 - In the usual VAE, q itself is learnable.
+38:47 - Remember, you have those five parameters.
+38:50 - Here, q is fixed so you don't have to actually optimize it.
+38:54 - So it's just like a VAE, except that the encoder is fixed.
+38:58 - It's not learnable.
+39:00 - That's the usual ELBO objective.
+39:02 - And recall that these decoders are parameterized--
+39:05 - are all Gaussians.
+39:07 - And they have this simple form, where to sample xt minus 1,
+39:11 - you would take xt.
+39:12 - You pass it through some neural network to get the mean.
+39:15 - And then they will have fixed variance.
+39:17 -
+39:19 - And the interesting thing is that if you parameterize
+39:26 - these neural networks, that give you
+39:30 - the means of these Gaussians using this form, which is--
+39:35 - again, it depends on these betas and these alphas,
+39:37 - not super important.
+39:38 - But if you parameterize the network in terms of an epsilon
+39:43 - network that takes xt as an input
+39:47 - and then tries to predict the noise that was added to xt
+39:50 - and subtracts this estimated noise from xt
+39:56 - to get a guess of what xt minus 1 should be.
+40:02 - Then, you can show that this ELBO objective is actually
+40:06 - equivalent to the usual denoising score-matching loss.
+40:11 - So minimizing the negative ELBO or maximizing the lower bound
+40:18 - on the average log likelihood, exactly the same
+40:23 - as trying to estimate the scores of these noise-perturbed data
+40:28 - distributions.
+40:30 - And so if you were to--
+40:33 - yeah, basically, if you parameterize these mean networks
+40:38 - by saying, OK, take the data point that you have
+40:40 - and subtract something to make it look more realistic,
+40:43 - and this network essentially ends up
+40:47 - trying to estimate the score of these noise-perturbed data
+40:50 - distributions.
+40:52 - And so although we derived everything
+40:57 - from the perspective of a variational autoencoder,
+41:00 - it turns out that what you're actually doing
+41:03 - is estimating scores.
+41:05 - So the score-based model would sample differently.
+41:08 - So here I'm just claiming that the loss would
+41:12 - be the same as up to some--
+41:14 - I guess, there is some scalings, but roughly, if you look at it,
+41:19 - you're basically starting from data.
+41:21 - You're sampling a noise vector.
+41:23 - You're feeding the noisy image to this network epsilon,
+41:26 - and you're trying to estimate the noise vector that
+41:29 - was added to the data.
+41:30 - And so the training objectives, if you
+41:32 - choose this kind of parameterization, are the same.
+41:36 - Then you have different choices in terms
+41:39 - of how you sample from it.
+41:40 - In a score-based model, you would sample by doing Langevin.
+41:43 - Here, you are not sampling using Langevin.
+41:45 - You would sample based on just going through the decoding
+41:49 - process.
+41:51 - So this is the training procedure of DDPM,
+41:54 - of the denoising diffusion probabilistic model.
+41:57 - And if you look at the loss, the loss
+42:00 - is basically denoising score matching.
+42:02 - If you look at the loss that you have here,
+42:05 - that's the same as the denoising score-matching loss
+42:08 - that we had before.
+42:10 - The sampling is also very similar actually
+42:13 - to what you would do in a score-based model.
+42:17 - If you look at the way you would generate
+42:18 - samples is you start from pure noise, same as
+42:22 - score-based models.
+42:23 - And then at every step you basically follow
+42:28 - the gradient, which is epsilon theta,
+42:31 - and add a little bit of noise because that's
+42:34 - what you're supposed to do if you were to sample
+42:36 - from a Gaussian that is p of xt given xt minus 1 given xt.
+42:41 - And so the sampling procedure that you
+42:44 - get by iteratively sampling from these denoisers
+42:46 - actually is very similar to the Langevin dynamics.
+42:50 - It's just different scalings basically of the amount of--
+42:57 - this is kind of follow the gradient.
+43:00 - Take a step in the gradient direction, and then add noise.
+43:03 - You basically just do different amounts of noise.
+43:05 - But it's roughly the same procedure.
+43:08 - Usually, you would learn the encoder and the decoder
+43:11 - together.
+43:11 - And they would try to help each other out in some sense.
+43:14 - The encoder is trying to find structure,
+43:16 - and the decoder is trying to leverage the structure
+43:19 - to generate data more efficiently.
+43:21 - Here, the encoder is fixed, and it's just adding noise.
+43:24 - And so the decoder is just trying its best, basically,
+43:28 - at minimizing the KL divergences that you would have
+43:35 - or basically maximizing the ELBO, which
+43:37 - is the same as inverting the generative process.
+43:41 - And turns out that in order to do that you
+43:46 - need to estimate the scores.
+43:48 - And to the extent that you can do that process well, then
+43:53 - you would be able to generate good samples.
+43:55 -
+43:59 - It seems like you would have an easier
+44:01 - time by actually allowing yourself
+44:04 - to learn the encoder as well.
+44:07 - But that doesn't actually work in practice.
+44:11 - So it would give you better outputs but worse sample
+44:14 - quality.
+44:15 - You can also do one step of Langevin,
+44:16 - but in practice, that what you would do.
+44:18 - So at that point, what's the difference?
+44:20 - They are essentially the same thing.
+44:23 - I think one advantage of this score-based model perspective is
+44:27 - that you can actually think of it as in the limit of infinite
+44:31 - number of noise levels, as we'll see,
+44:33 - which is not something you would--
+44:34 - it would be a little bit trickier
+44:36 - to get with the VAE perspective.
+44:38 - But to some extent, they're essentially the same thing.
+44:43 - From the ELBO perspective, you're
+44:44 - going to get better numbers if you learn the encoder.
+44:48 - But then, I don't know if it's an optimization issue, but then
+44:51 - in terms of the sample quality, you're
+44:53 - going to get blurry samples, sort of like in a VAE.
+44:57 - Well, there are some intuition related to progressive coding.
+45:00 - And in practice, people don't actually optimize the ELBO.
+45:04 - In practice, people optimize a scaled version of the ELBO.
+45:08 - So the ELBO-- do I have it?
+45:13 - Yeah, so the ELBO basically looks
+45:15 - like this, where you have these lambda t's
+45:17 - that basically control how much you care
+45:20 - about the different time steps.
+45:21 - And in the limit of infinite capacity, it doesn't matter.
+45:25 - But then in practice, people would
+45:27 - set them to be all one, which is not the same--
+45:31 - which is not what you should do if you
+45:33 - wanted to optimize the ELBO.
+45:35 - So it's a matter of optimizing likelihood.
+45:39 - It doesn't necessarily correlate with sample quality.
+45:42 - So even if the encoder is fixed and it's just
+45:43 - something really simple, like adding Gaussian noise,
+45:46 - the reverse is not-- it requires you to have the score.
+45:49 - So it's nontrivial to actually invert it.
+45:53 - But you could argue that maybe if you
+45:54 - were to destroy the structure in a more structured way,
+46:00 - that maybe would be even easier to invert
+46:03 - the generative process.
+46:04 - Yeah, so they generalize to some extent, not out-of-distribution.
+46:08 - So if you train it on images of cats,
+46:10 - they're not going to generate images of dogs
+46:12 - because they've never seen them.
+46:14 - And there's no point for them to put probability mass
+46:16 - on those kind of--
+46:19 - so it's really based on the actual data distribution
+46:25 - that you're using for training the model.
+46:27 - So when you add a lot of noise, the best way to denoise
+46:31 - is to basically predict the average image in the data set.
+46:34 - And so there you already see that.
+46:37 - If you train it on images of cats, what the network will
+46:39 - do when t is equal to capital T, it
+46:42 - will basically output the average image
+46:45 - in the training set.
+46:46 - And so it's going to be completely off.
+46:48 - I think one of the main reasons is that, if you think about it,
+46:51 - the amount of compute that you can put at generation time
+46:56 - is very large because you're going to pass it through 1,000
+47:01 - VAEs, essentially.
+47:02 - Maybe t is usually--
+47:04 - capital T here is 1,000, usually.
+47:06 - So it's a very deep stack of VAEs
+47:09 - that you can use at generation time.
+47:11 - However, because of how things are set up, at training time,
+47:15 - you never have to actually look at this whole very deep, very
+47:19 - expensive computation graph.
+47:20 - You can train it layer by layer incrementally
+47:25 - without actually having to look at the whole process.
+47:28 - So even though you just train it locally
+47:29 - to just get a little bit better at every step,
+47:32 - which is very efficient--
+47:33 - AUDIENCE: [INAUDIBLE]
+47:35 - SPEAKER: It's all breaking down over--
+47:38 - level by level.
+47:39 - So the stack of VAEs would essentially-- would exactly
+47:43 - give you this, right?
+47:44 -
+47:47 - The problem is that if the encoders are not
+47:54 - structured in a certain way, you might not
+47:56 - be able to do this trick of basically jumping forward.
+48:01 - Remember that we had this--
+48:04 - now it's back a lot.
+48:05 - This process here.
+48:07 - It's very easy to go from 0 to xt.
+48:10 - If these q's are arbitrary neural network,
+48:13 - there is no way for you to jump from x0 to xt in one step.
+48:19 - And so the fact that these q's are very simple
+48:21 - and you can compose them in closed-form
+48:25 - allows you to get a very efficient training process.
+48:29 - So not all hierarchical VAEs would
+48:31 - be very efficient to train, but this is a particular type
+48:36 - of hierarchical VAE.
+48:37 - So there are certainly some that would be efficient.
+48:40 - If you were to just train the VAE the usual way,
+48:43 - you would get a loss.
+48:45 - If you go through the math, it ends up being the same thing.
+48:48 - It seems counterintuitive that you
+48:50 - would want to fix the encoder to be something strange like this,
+48:53 - where you just add noise.
+48:55 - And you're not reducing the dimensionality.
+48:57 - But once you start making that choice,
+49:01 - then the loss ends up being the same
+49:03 - as the denoising score-matching loss.
+49:06 - Historically, we came up with a score-matching first and showing
+49:10 - that it works.
+49:10 - And then people show, OK, you can take a VAE,
+49:12 - and you can get something essentially identical.
+49:15 - And that saves you a little bit of trouble
+49:17 - at inference time because you don't no longer have
+49:19 - to do Langevin dynamics.
+49:20 - You can just sample from a VAE.
+49:22 - So the lambda basically is just something
+49:25 - that turns out to be how much you
+49:27 - care about the different denoising
+49:34 - losses over different noise intensities.
+49:37 - And there is a principle-- if you just do the math
+49:40 - and you go through the ELBO, there's
+49:42 - going to be certain value of lambda t
+49:43 - that you should choose if you really care
+49:46 - about the evidence lower bound.
+49:48 - In practice, people just choose that to be 1.
+49:51 - And so you're not actually optimizing an ELBO.
+49:55 - Beta is the parameter, beta t.
+49:57 - The alphas are computed in terms of the beta t's.
+49:59 - That basically controls how quickly you add noise
+50:03 - to the data, essentially.
+50:05 - And you can choose it.
+50:07 - So at inference time, we do start from random noise
+50:09 - and then move it back to the clean data.
+50:14 - But it makes sense to do it incrementally
+50:18 - as opposed-- you could also do it in one step.
+50:21 - You could imagine a VAE where the encoder is fixed.
+50:24 - Takes the image, and adds a lot of noise.
+50:28 - Presumably, that inverse distribution
+50:31 - that you would have to learn, which is this--
+50:34 - where do I have it--
+50:35 - this procedure here that tries to invert the process-- going
+50:41 - from noise to data is going to be very complicated.
+50:44 - While if sort of q of x given xt minus 1
+50:49 - is the same thing just adding a little bit of noise.
+50:51 - Presumably, inverting that is also
+50:54 - going to be relatively easy.
+50:56 - So we're breaking down this complicated problem,
+50:58 - going from noise to data, into 1,000 little subproblems where
+51:04 - all you have to do is to just remove a little bit of noise.
+51:07 - And that ends up being better in practice
+51:12 - because the subproblems are much more tractable to learn.
+51:15 - So what you do is you start with a data point.
+51:18 - You randomly pick a t, which is a
+51:20 - like an index in this time, this sequence
+51:22 - of noisy random variables.
+51:24 - Then you start with just a standard Gaussian noise.
+51:27 - And then you generate an xt by basically adding
+51:31 - the right amount of noise.
+51:33 - So it's the same as denoising score-matching.
+51:36 - So this argument that you feed into epsilon theta
+51:40 - is just a sample from q of xt given x0.
+51:44 - Yeah, so the architecture is the same
+51:47 - as a noise-conditional score model.
+51:49 - So you have the same problem that you
+51:50 - need to learn a bunch of decoders, one for every t.
+51:55 - And instead of learning 1,000 different decoders,
+51:58 - you learn one that is amortized across the different t's.
+52:03 - So you have the same--
+52:05 - like this epsilon theta network that is trying to predict noise.
+52:11 - Basically, it takes the image, xt, the noisy image.
+52:15 - It takes t, which is encoded somehow,
+52:19 - and those are both inputs to the network that then
+52:21 - are used to predict the noise.
+52:23 - So that's the same as the noise-conditional score
+52:25 - network where you take xt.
+52:27 - You take sigma or t, and then you use it to predict the noise.
+52:33 - And so yeah, the architecture would basically
+52:35 - be usually some kind of U-Net because we're
+52:38 - doing some kind of dense image prediction task, where
+52:41 - we go from image to image.
+52:42 - And U-Net type architectures tend to be pretty good at this.
+52:45 - And this is still.
+52:46 - And people are using transformers too,
+52:48 - but this is still one of the best performing models
+52:51 - for solving, for learning denoising.
+52:54 - So we have a paper that you can look up and try to get
+52:58 - a hierarchical VAE to perform--
+53:00 - one problem with the hierarchical VAE
+53:02 - is that basically there is a lot of--
+53:05 - if you start learning the encoder, it's not identifiable.
+53:09 - There is many different ways to--
+53:13 - you basically want to encode the information
+53:15 - about the input across all these latent variables.
+53:18 - But there many different ways to do it.
+53:21 - Which bits of information you store where in the latent
+53:26 - variables is very much up to the encoder and the decoder
+53:29 - to figure out.
+53:32 - It turns out that if you use a certain kind of encoding
+53:34 - strategy that is forcing the model to spread out
+53:37 - the bits in a certain way, then you can get pretty
+53:40 - close to the performance--
+53:43 - with a learned encoder, you can get
+53:45 - pretty close to the performance of these kind of models.
+53:48 - But yeah, it's still not entirely clear how to do it.
+53:51 - There are multiple papers on trying to figure out good noise
+53:54 - schedules.
+53:56 - There is many different choices.
+53:59 - What's important is that at the end--
+54:02 - the only real constraint is that at the end you basically--
+54:06 - the signal-to-noise ratio is 0, essentially.
+54:10 - So you destroy all the information.
+54:13 - Then there is a lot of flexibility
+54:15 - in terms of how much noise you add a different steps, such
+54:18 - that you would get that result. You can even try to optimize it.
+54:26 - If you take the ELBO perspective,
+54:28 - you could just maybe learn a simple function
+54:31 - that controls how much noise you add at different steps.
+54:33 - So you still just add a Gaussian noise,
+54:35 - but you can try to learn how to--
+54:38 - so there are ways to even learn the schedule.
+54:42 - I would go in the direction of maybe let's learn the encoder
+54:46 - or let's make it more flexible.
+54:49 - In practice, there are a number of papers
+54:51 - where people have tried different strategies,
+54:53 - different ways of destroying structure, cold diffusion.
+54:57 - They've shown some empirical success,
+55:00 - but in practice, people still mostly use Gaussians.

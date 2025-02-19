@@ -1,0 +1,627 @@
+00:00 -
+00:05 - SPEAKER: At a high level, remember we
+00:07 - have your model family which could be autoregressive models.
+00:10 - You have data to train the model.
+00:12 - You have to specify some notion of distance.
+00:15 - So how good your model distribution is, how similar
+00:18 - it is to the data distribution.
+00:20 - And we've seen how to define a set of distributions
+00:24 - using neural networks.
+00:26 - And now the question is, how do you
+00:28 - optimize the parameters of the neural network
+00:30 - to become as close as possible to the data distribution?
+00:35 - And the setting is one where we assume
+00:38 - we're given a data set of samples
+00:40 - from the data distribution.
+00:42 - And each sample is basically an assignment to all the variables
+00:45 - in the model.
+00:46 - So it could be the pixel intensities.
+00:49 - Every pixel intensity in each image
+00:52 - in the model, which is the same as a standard classification
+00:55 - problem where you might have features, some label.
+00:57 - You get to see the values of all the random variables.
+01:02 - And the assumption is that each data point is coming
+01:04 - from the same distribution.
+01:06 - So they're all sampled from the same data distribution.
+01:09 - So they are identically distributed
+01:11 - and they are independent of each other, which
+01:14 - is a standard sort of assumption in machine learning.
+01:18 - And then you're given a family of models.
+01:21 - And the goal is to kind of pick a good model in this family.
+01:24 - So the model family could be all Bayesian networks with a given
+01:28 - structure, or it could be fully visible sigmoid belief network,
+01:34 - or you can think of a bunch of logistic regression classifiers.
+01:37 - They each have a bunch of parameters.
+01:39 - And the question is, how do you choose the parameters such
+01:41 - that you get a good model?
+01:44 - Well, the only thing you have access to
+01:46 - is a bunch of samples from some unknown data distribution.
+01:51 - And the goal is to come up with a model that
+01:56 - is a good approximation to this unknown data generating process.
+02:00 - And the problem is that you don't know what Pdata is,
+02:03 - like I cannot evaluate Pdata on an arbitrary input.
+02:07 - The only thing I have access to is
+02:08 - a bunch of samples from this distribution.
+02:12 - And in general, this is pretty tricky
+02:16 - because you can imagine samples tell us something
+02:21 - about which xs let's say are likely under the data
+02:24 - distribution.
+02:25 - But there is a lot of information
+02:26 - that is just lost, that we're just
+02:28 - losing whenever we get-- we just sample from our distribution.
+02:33 - All right.
+02:33 - So let's say that we're trying to model MNIST again.
+02:37 - And so we're let's say modeling 784 binary variables--
+02:42 - black and white pixels.
+02:45 - And what I claim is that this is a really, really hard problem,
+02:48 - because x is so high dimensional that there is just
+02:52 - so many different possible images that even basically
+02:58 - regardless how large your training set is,
+03:00 - this is a really, really hard problem.
+03:03 - If you think about it, how many possible images are there,
+03:08 - if we have binary variables, you have 784 of them,
+03:13 - there is like 2 to the 784, which is roughly 10
+03:17 - to the 236 different images.
+03:21 - And somehow you need to be able to assign a probability
+03:23 - to each one of them.
+03:25 - So let's say that you have maybe 10 million training
+03:29 - examples or 100 million or a billion training examples.
+03:33 - There is still like such a huge gap between however many samples
+03:38 - you have and all the possible things that
+03:40 - can happen, that this is just fundamentally a really, really
+03:44 - hard problem, like this is way more than the number of atoms
+03:48 - in the universe.
+03:49 - So there's just so many different possible combinations,
+03:52 - and somehow you need to be able to assign a probability
+03:54 - value to each one of them.
+03:58 - And so you have sparse coverage.
+04:00 - And so this is just fundamentally a pretty hard--
+04:02 - a pretty hard problem.
+04:03 - And then there are computational reasons
+04:05 - even if you had infinite data, training
+04:07 - these models might not be--
+04:09 - might still be challenging just because you have finite compute.
+04:14 - And so somehow we'll have to be OK with approximations.
+04:21 - And we'll still sort try to find, given the data we have,
+04:26 - we're going to try to find a good approximation.
+04:29 - And so the natural question is, what do we mean by best?
+04:34 - What's a good approximation?
+04:36 - What should we even try to achieve to do--
+04:39 - try to achieve here given that there are fundamental limits
+04:42 - on what we can do?
+04:45 - And so the setting, what best means really
+04:49 - depends on what you want to do.
+04:51 - One goal could be to just do density estimation.
+04:54 - So if you think about anomaly detection we just talked about,
+04:57 - you really care about being able to assign
+05:00 - reasonable probabilities to every possible inputs
+05:02 - because you care about--
+05:04 - because let's say you care about that.
+05:06 - And if you are really able to estimate
+05:08 - this full joint probability distribution accurately,
+05:11 - then you can do many other things,
+05:13 - then you can condition on a subset of the variables,
+05:16 - you can infer the others, you can do basically
+05:19 - everything you want, but it's a pretty tall order.
+05:22 - It's a pretty challenging problem
+05:24 - as we've just sort of seen before.
+05:27 - Another thing you can do is maybe
+05:28 - you have a specific task in mind.
+05:31 - If you already know how you're going to use this model,
+05:34 - perhaps you can try to train a model that performs well
+05:37 - at that particular task.
+05:39 - Like if you know you only care about classifying images
+05:42 - in spam versus not spam, then maybe you actually want
+05:45 - to build a discriminative model that just predicts y given
+05:48 - x, or if you know that you just care about captioning
+05:53 - an image or generating images given captions,
+05:56 - then maybe you don't need to learn a joint distribution
+05:59 - between images and captions.
+06:01 - You just need to learn the conditional distribution of what
+06:03 - you're trying to predict given what you have access to,
+06:06 - at test time.
+06:08 - That can make your life a little bit easier because you don't
+06:11 - think about density estimation.
+06:14 - You're saying I don't have any preference
+06:18 - about the kind of task the model is going to be given.
+06:21 - I want to do well at every single possible task.
+06:25 - But if you know that there is a very specific way
+06:28 - you're going to use the model, then
+06:30 - you might want to train the model so that it does well
+06:33 - at that specific task you care about.
+06:36 - Other times you might care about structure--
+06:39 - knowledge discovery.
+06:39 - But we're not going to talk about that in this class.
+06:43 - And so we'll see first how to do one.
+06:47 - And then we'll see how to do two.
+06:50 - And so let's say that really what you want to do
+06:52 - is you want to learn a joint probability
+06:56 - distribution over the random variables that
+06:58 - is as good as possible-- as good an approximation as
+07:01 - possible to the data distribution that generated
+07:04 - your data.
+07:05 - How do you do that?
+07:08 - This is basically density estimation.
+07:11 - It's a regression problem you can
+07:12 - think of it or as an estimation problem
+07:14 - because again you want to be able to assign a probability
+07:17 - value to every possible assignment of values
+07:20 - to the random variables you have,
+07:22 - you're trying to build a model over.
+07:25 - And so at this point, really we just
+07:28 - want the joint given-- defined by the data distribution which
+07:32 - is unknown.
+07:32 - But we have access to samples to be close to this model
+07:37 - to some distribution in your model family, P theta.
+07:42 - And so the setting is like this.
+07:45 - So there is this unknown P data.
+07:46 - There is a bunch of samples that you have access to it.
+07:49 - There is a bunch of distributions in this set.
+07:52 - So all the distributions that you
+07:53 - can get as you change parameters of your logistic regression
+07:56 - classifiers or your transformer model or it doesn't matter.
+07:59 - And somehow we want to find a point that is close with respect
+08:04 - to some notion of similarity or distance
+08:06 - to the true underlying data distribution.
+08:12 - So the first question is, how do we evaluate whether or not
+08:17 - two joint probability distributions are
+08:19 - similar to each other?
+08:21 - And there is many ways to do it.
+08:22 - And as we'll see, we're going to get
+08:24 - different kind of generative models
+08:26 - by changing the way we measure similarity between two
+08:30 - probability distributions.
+08:31 - There are some ways of comparing probability distributions that
+08:36 - are more information theoretic.
+08:37 - We're going to see today like maximum likelihood based
+08:40 - on compression that will give you certain kinds of models.
+08:43 - There's going to be other ways that are more based
+08:45 - on if you can generate-- you could say, OK, if I generate
+08:49 - samples from Pdata and I generate samples from Ptheta,
+08:52 - you should not be able to distinguish between the two.
+08:56 - That would give rise to something
+08:58 - like a generative adversarial network.
+09:00 - So there's going to be different ways of defining similarities
+09:03 - between distributions.
+09:04 - And that will be one of the x's, one of the ingredients
+09:07 - that you can use to define different types
+09:09 - of generative models.
+09:10 -
+09:12 - For autoregressive models, a natural way
+09:16 - to build a notion of similarity is
+09:20 - to use the likelihood, because we have access to it.
+09:25 - And so we can use a notion of similarity
+09:28 - that is known as the KL divergence, which
+09:31 - is defined like this.
+09:32 - The KL divergence between distribution p and q
+09:35 - is just basically this expectation
+09:37 - with respect to all the possible things that can happen.
+09:40 - All the possible things that can happen
+09:42 - x are weighted with respect to the probability under p.
+09:45 - And then you look at the log of the ratio of the probabilities
+09:48 - assigned by p and q.
+09:51 - And it turns out that this quantity is non-negative.
+09:56 - And it's 0 if and only if p is equal to q.
+10:01 - And so it's a reasonable notion of similarity
+10:04 - because it tells you if you somehow
+10:08 - are able to choose one of them, let's say p to be p data,
+10:12 - q to be your model distribution.
+10:14 - If you are able to derive this quantity as small as possible,
+10:18 - then it means that you're trying to make your model closer
+10:21 - to the data.
+10:22 - And if you're able to derive this loss to 0,
+10:24 - then you know that you have a perfect model.
+10:26 -
+10:29 - And the-- well, I have a one line proof.
+10:33 - But I'm going to skip it showing that it's non-negative.
+10:37 - The important thing is that this quantity is asymmetric.
+10:42 - So the KL divergence between p and q
+10:44 - is not the same as the KL divergence between q and p.
+10:48 - In fact, the KL divergence, if you use one versus the other,
+10:52 - it's going to give us-- both are reasonable ways of comparing
+10:54 - similarity.
+10:56 - One will give us maximum likelihood training,
+10:59 - one will be more natural to--
+11:01 - and will come up again when we talk
+11:03 - about generative adversarial networks.
+11:05 - It's going to be harder to deal with computationally.
+11:07 - But it's also like a reasonable way
+11:09 - of comparing similarity between p and q.
+11:11 -
+11:14 - So they are symmetric.
+11:15 - And the intuition, as I mentioned before,
+11:17 - is this quantity has an information theoretic
+11:20 - interpretation.
+11:21 - And it tells you something to do with compression.
+11:27 - So the idea is that when you're building a generative model,
+11:31 - you are essentially trying to learn a distribution.
+11:33 - If you have access to a good probability distribution
+11:36 - over all the possible things that can happen,
+11:38 - then you also have access to a good way of compressing data.
+11:42 - And essentially, the KL divergence between p and q
+11:46 - tells you how well compression schemes based on p versus q
+11:53 - would perform.
+11:55 - And so specifically it's telling you
+11:59 - if the data is truly coming from p and you use an optimization--
+12:04 - a compression scheme that is optimized for q,
+12:07 - how much worse is it going to be than a compression scheme that
+12:11 - was actually based on the true distribution of the data?
+12:16 - So intuitively, as I mentioned, knowing
+12:21 - the distribution that generates the data
+12:25 - is useful for compression.
+12:28 - And so imagine that you have 100 binary random variables,
+12:34 - coin flips.
+12:36 - If the coin flips are unbiased-- so 50/50,
+12:40 - heads/tails, then there is not much you can do.
+12:43 - The best way to compress the result
+12:46 - of flipping this coin 100 times is to basically use one bit--
+12:50 - let's say zero to encode head, one to encode tails.
+12:55 - And on average, you're going to use one bit per sample.
+12:58 - And that's kind of the best thing you can do.
+13:00 - But imagine now that the coin is biased.
+13:03 - So imagine that heads is much more likely than tail.
+13:06 - Then you know that you are going to-- out of these 100 flips,
+13:11 - you're expecting to see many more heads than tails.
+13:13 - So it might make sense to come up
+13:15 - with a compression scheme that assigns
+13:18 - low short codes to things that you know are
+13:22 - going to be much more frequent.
+13:24 - So you could say that you could batch things together
+13:28 - and you could say sequences like HHHH
+13:31 - are going to be much more common than sequences like TTTT.
+13:34 - And so you might want to assign a short code to sequences
+13:38 - that you know are going to be frequent,
+13:40 - and a long code to sequences that you think
+13:42 - are going to be infrequent.
+13:43 - And that gives you two savings in practice.
+13:46 - So an example that many of you are probably familiar with
+13:49 - is Morse code.
+13:50 - That's a way to encode letters to symbols,
+13:55 - like dots and dashes.
+13:58 - And if you think about it, there is a reason
+14:00 - why the vowels like E and A are assigned
+14:04 - to these very short kind of code, while a letter like U
+14:09 - is assigned a very long kind of code with four elements.
+14:14 - And that's because vowels are much more common in English.
+14:17 - So you're much more likely to use if you are trying
+14:19 - to send a message to somebody.
+14:21 - You're much more likely to use vowels.
+14:23 - And so if you want to minimize the length of the message,
+14:26 - you want to use a short encoding for frequent letters
+14:30 - and a long encoding for infrequent letters.
+14:35 - And so all this to say is that KL divergence has
+14:39 - this kind of interpretation.
+14:40 - And it's basically saying if the data is truly distributed
+14:44 - according to p and you try to build a compression scheme that
+14:49 - is optimized for q, you're going to be suboptimal.
+14:54 - Maybe in your model of the world,
+14:56 - the vowels are much more frequent
+14:58 - than the-- are much more infrequent than q.
+15:01 - So you have a bad generative model for text.
+15:04 - Then if you try to optimize-- come up
+15:06 - with a scheme based on this wrong assumption,
+15:09 - you're going to-- is not going to be
+15:11 - as efficient as the one based on the true frequencies
+15:14 - of the characters.
+15:15 - And how much more ineffective your code is,
+15:19 - is exactly the KL divergence.
+15:21 - So the KL divergence exactly measures
+15:23 - how much more inefficient your compression scheme
+15:26 - is going to be.
+15:29 - And so if you try to optimize KL divergence,
+15:33 - you are equivalently trying to optimize for compression.
+15:36 - So you're trying to build a model such
+15:39 - that you can compress data pretty well or as well
+15:43 - as possible, which is, again, a reasonable kind of way
+15:48 - of thinking about modeling the world because in some sense
+15:51 - if you can compress well, then it means that you're
+15:54 - understanding the structure of the data, which things
+15:57 - are common, which ones are not.
+15:59 - And that's the philosophy that you
+16:02 - take if you train a model using KL divergence
+16:05 - as the objective function.
+16:09 - So now that we've kind of chosen KL divergence
+16:17 - as one of the ways of measuring similarity
+16:19 - between distributions, we can set up our learning problem
+16:25 - as saying, OK, there is a true data generating process.
+16:29 - There is a family of distributions
+16:31 - that I can choose from.
+16:32 - I can measure how similar my model
+16:34 - is to the data distribution by looking at this object.
+16:39 - And so intuitively, if you think about this formula,
+16:42 - this thing is saying I'm going to look at all possible let's
+16:44 - say images that could come from the data distribution.
+16:47 - And I'm going to look at the ratio of probability assigned
+16:51 - by the data distribution and the model.
+16:54 - So I care about how different the probabilities
+16:57 - are under the model and under the data distribution.
+17:01 - If those two match, so if they assign
+17:04 - exactly the same probability, then this ratio becomes 1.
+17:09 - The logarithm of 1 is 0.
+17:11 - And you see that the KL divergence is exactly 0.
+17:13 - So you have a perfect model.
+17:16 - If you assign exactly the same probability to every x,
+17:20 - then you have a perfect model.
+17:22 - Otherwise, you're going to pay a price.
+17:24 - And that price depends on how likely x is under the data
+17:28 - distribution and how far off your estimated probability
+17:33 - is from the true probability under the data distribution.
+17:38 - Question is, OK, this looks reasonable.
+17:40 - But how do you compute this quantity?
+17:43 - How do you optimize it?
+17:44 - It looks like it depends on the true probability assigned
+17:48 - under the data distribution, which we don't have access to.
+17:51 - So it doesn't look like something we can optimize.
+17:53 - And we'll see that it simplifies into something
+17:55 - that we can actually optimize.
+17:58 - The question is, what happens if we flip the argument here?
+18:02 - And we have what's called as the reverse KL.
+18:04 - So the KL divergence between Ptheta and Pdata.
+18:07 - It would be the same thing.
+18:08 - But in that case, we would be looking at all possible things
+18:12 - that can happen.
+18:13 - We would weight them with respect to the model Ptheta.
+18:16 - And then the ratio here would again be flipped.
+18:19 - So we care about the ratios, but in a different sign basically.
+18:25 - And so that quantity would be 0 if
+18:28 - and only if they are identical.
+18:31 - But you can see that it kind of has a different flavor
+18:35 - because if you look at this expression,
+18:38 - we're sort of saying it doesn't--
+18:40 - what happens outside let's say of the support of the data
+18:42 - distribution doesn't matter with respect to this loss.
+18:46 - Well, if you had Ptheta here, then you
+18:49 - would say I really care about the loss
+18:52 - that I achieve on things I generate myself.
+18:56 - And if you think about how these models are used,
+18:58 - that actually seems like a more reasonable thing to do,
+19:02 - because maybe it really matters.
+19:05 - You really want to score the generations
+19:06 - that you produce as opposed to what's
+19:09 - available in the training set.
+19:11 - But it will turn out that the nice properties that we're
+19:14 - going to see soon that makes this tractable
+19:17 - doesn't hold for what you-- when you do reverse KL.
+19:19 - So that's why you can't really optimize it in practice.
+19:23 - So the question is, do we ever want to use other metrics?
+19:25 - Yes, we'll see that in future lectures,
+19:28 - we'll get different kinds of generative models
+19:30 - simply by changing this one ingredient.
+19:32 - So you can still define your family in any way you want.
+19:35 - But we might change the way we compare distributions,
+19:38 - because at the end of the day, here
+19:39 - we're saying we care about compression, which might
+19:42 - or might not be what you want.
+19:44 - If you just care about generating pretty images,
+19:46 - maybe you don't care about compression.
+19:48 - Maybe you care about something else.
+19:49 - And we'll see that there is going
+19:51 - to be other types of learning objectives that are reasonable
+19:56 - and they give rise to generative models that
+19:59 - tend to work well in practice.
+20:01 - So that the question is again should the expectation
+20:05 - be with respect to the true data distribution
+20:07 - or should be with respect to the model?
+20:09 - Which is what you would get if you were to flip the order here.
+20:13 - And the quantities will be zero--
+20:19 - both of them will be zero if and only
+20:21 - if you have perfect matching.
+20:23 - But in the real world where you would have finite data,
+20:28 - you would have limited modeling capacity,
+20:31 - you would not have perfect optimization,
+20:33 - you would get very different results.
+20:35 - And in fact you get a much more--
+20:38 - if you were to do the KL divergence between Ptheta
+20:41 - and Pdata, you would get a much more mode
+20:44 - seeking kind of behavior, where you can imagine sort
+20:48 - of like if you put all the probability
+20:50 - mass into a single mode, it might look like you're still
+20:55 - performing pretty well according to this objective.
+20:58 - So it tends to have a much more mode seeking kind of objective
+21:02 - compared to the KL divergence, which is forcing you to spread
+21:05 - out all the probability mass over all the possible things
+21:08 - that can happen.
+21:09 - So if there is an x that is possible under Pdata
+21:14 - and you assign it zero probability,
+21:16 - you're going to get an infinite loss.
+21:18 - So it's going to be very, very bad.
+21:20 - So you're forced to spread out the probability mass.
+21:23 - You do reverse KL, that is kind of an incentive to concentrate
+21:27 - the probability mass.
+21:28 - So the behaviors, as you said, are going to be very different.
+21:30 - And depending on what you want, one
+21:33 - might be better than the other.
+21:35 - The question is, does this have the flavor
+21:38 - of precision and recall?
+21:39 - And yes, it has a very similar-- it's not exactly
+21:42 - precision and recall.
+21:43 - It's a softer kind of thing, but it has the flavor of,
+21:45 - do you care more about precision versus recall?
+21:47 - Yeah.
+21:48 -
+21:51 - It's a good way to put it.
+21:53 - All right.
+21:54 - So we have this loss, which you can expand the expectation.
+21:59 - That's something like this.
+22:01 - And now we know that this divergence
+22:04 - is zero if and only if the distributions are the same.
+22:07 - So if you can optimize this as a function of theta
+22:09 - to make it as small as possible, it's
+22:11 - a reasonable kind of learning objective.
+22:14 - Measure compression loss.
+22:16 - The challenge is as was mentioned before is that it
+22:20 - might look like it depends on something you cannot even
+22:22 - compute it because it depends on the probability assigned to all
+22:27 - the possible things that can happen under the true model--
+22:31 - under the true data distribution,
+22:33 - which you don't know.
+22:35 - But if you just decompose the log
+22:38 - of the ratio as the difference of the logs,
+22:40 - you get an expression that looks like this.
+22:43 - And now you can note that the first term here
+22:46 - does not depend on theta.
+22:49 - It's just like a shift.
+22:50 - It's a constant that is independent on how you choose
+22:54 - the parameters of your model.
+22:57 - And so for the purposes of optimizing theta,
+23:00 - you can ignore the first term.
+23:04 - So if you're trying to make this quantity as small as possible,
+23:07 - regardless of how you choose theta,
+23:09 - this is going to be the same.
+23:10 - So you can effectively ignore it for the purposes
+23:13 - of optimization.
+23:14 -
+23:16 - And so if you try to find a theta that
+23:20 - minimizes this expression because there is a minus here,
+23:24 - the best thing you can do is to basically make this thing here
+23:29 - as large as possible, what I have here.
+23:33 - And this term here should be somewhat familiar.
+23:36 - What we're saying is that we should
+23:39 - pick the distribution that assigns basically the highest
+23:42 - probability to the xs that are sampled from the data
+23:47 - distribution.
+23:48 - And so this is really maximum likelihood estimation.
+23:52 - We're trying to choose a model that
+23:54 - puts high probability on the things
+23:56 - that you have in the training set, essentially,
+24:01 - which is the training objective that you've seen--
+24:04 - that you've seen before probably in other classes of trying
+24:08 - to pick parameters that basically
+24:11 - maximize the probability of observing a particular data set.
+24:15 - We're trying to choose parameters such
+24:17 - that in expectation, the average log likelihood of the data
+24:21 - is as high as possible.
+24:25 - So you can see that that's equivalent to minimizing our KL
+24:29 - divergence, which as we've seen is
+24:31 - the same as trying to do as well as you can
+24:34 - at this kind of compression task.
+24:36 - And one caveat here is because we've ignored this term,
+24:41 - it's possible to compare two models.
+24:44 - So you have a theta 1 and theta 2.
+24:46 - I can tell you which one is doing a better job.
+24:48 - But you can never know how close you truly
+24:51 - are to the data distribution.
+24:54 - You can only evaluate the loss up to a constant.
+24:57 - So you'll never know how much better could I have been.
+25:01 - You can't really evaluate that.
+25:03 - And that's one of the problems here is that we don't know how
+25:07 - much better could we have been, because there's always the shift
+25:12 - that cannot be evaluated.
+25:14 - And for those who have seen this in other classes,
+25:17 - that's basically the entropy of the data distribution.
+25:20 - And that's kind of telling you how hard is it to model the data
+25:24 - distribution, or what's the--
+25:26 - yeah, how random is the data distribution to begin with?
+25:30 - How hard is it to model the data distribution
+25:32 - if you had access to the perfect model?
+25:36 - That doesn't affect how well your particular model is doing.
+25:40 - But it's the kind of thing you need
+25:42 - to know how close you are truly to the data distribution.
+25:47 - Let's say you have a Ptheta 1 and A Ptheta 2
+25:50 - and you take the difference between the KL
+25:52 - divergence between data and Ptheta 1 minus the KL
+25:56 - divergence between data and Ptheta 2,
+25:59 - the constant cancels out.
+26:01 - And so you know which one is closer to the data distribution.
+26:03 - But you never know how close you are.
+26:06 - So going back to this picture, I guess, what I'm saying
+26:09 - is that maybe it's too many, given two points in here,
+26:14 - you can tell which one is closer to the data distribution.
+26:17 - But you never know the length of this segment,
+26:20 - like you don't know how close you actually are.
+26:23 - So if you have two models that achieve
+26:25 - exactly the same average log likelihood, which one is better?
+26:29 - Occam's razor would tell you pick the simplest one.
+26:32 - And that's usually a good inductive bias.
+26:34 - OK?
+26:35 -
+26:42 - Now one further problem is that this quantity here
+26:50 - still involves an expectation with respect
+26:52 - to the data distribution, which we still don't have access to.
+26:56 - So you can't still optimize this quantity.
+27:01 - However, we can approximate the expected log likelihood
+27:07 - with the empirical log likelihood or the average log
+27:11 - likelihood on the training set.
+27:14 - So remember that what we would really care about
+27:17 - is the average log likelihood with respect to all the things
+27:21 - that can possibly happen when you weight them
+27:23 - with the probability given by the data distribution
+27:26 - that we don't have access to.
+27:29 - But we can we can approximate that
+27:31 - by going through our data set and checking the log
+27:35 - probabilities assigned by the model
+27:37 - to all the data points in the data set.
+27:39 - And to the extent that the data set is sufficiently large,
+27:44 - I claim that this is a good approximation to the expected
+27:47 - value.
+27:48 - And the intuition is that you have an expectation,
+27:50 - you have a sample average to the extent
+27:52 - that you take an average with respect
+27:53 - to a large enough number of samples.
+27:55 - The sample average will be pretty close to the expectation.
+27:59 - And now this is a loss that you can compute.
+28:02 - Just go through your training set, you look,
+28:05 - what's the likelihood assigned by the model
+28:07 - to every data point?
+28:08 - And you try to make that as large as possible.
+28:10 -
+28:12 - And so that's maximum likelihood learning.
+28:14 - That's the thing that you've seen before.
+28:18 - Try to find the distribution that maximizes the average log
+28:22 - probability over all the data points in your training set D.
+28:29 - And as usual, you can ignore this 1 over D.
+28:32 - That's just a constant.
+28:33 - It doesn't involve-- doesn't depend on theta.
+28:35 - And so you get kind of the usual loss function.
+28:40 - And note this is exactly the same thing
+28:42 - as saying because the data points are independent,
+28:45 - maximizing this expression is exactly
+28:48 - the same thing as maximizing the probability
+28:51 - of observing the data set that you have access to.
+28:55 - So it's a reasonable learning objective.
+28:56 - You have a bunch of data.
+28:58 - And you're trying to find the parameters
+29:00 - that maximize the probability of sampling data set like the one
+29:05 - you have access to.
+29:07 - If you take a log of this expression, the log of a product
+29:10 - becomes a sum of logs.
+29:11 - And then you get that these two things are exactly the same.
+29:16 - So again, very reasonable training objective.
+29:19 - Let's find parameters that maximize
+29:20 - the probability of observing the data set that we have access to.
+29:25 - So the question is, can you use similar tricks to estimate this?
+29:28 - So you can certainly estimate the expectation.
+29:30 - But then the problem is this log probability.
+29:33 - And that one is much harder to estimate.
+29:35 - And you can try to do kernel density estimates,
+29:37 - or you could even use Ptheta in there.
+29:41 - If you believe you have a good approximation, then
+29:43 - you can plug it in.
+29:44 - But you'll never know how far off you are.
+29:46 - So there's always approximations there.
+29:48 - Yeah.
+29:49 - So that goes back to what we were saying,
+29:50 - what is this model doing?
+29:51 - It's trying to make sure that if something is possible in the--
+29:56 - happen in the training set, you're
+29:58 - going to be forced to put some probability mass there,
+30:00 - which is a good thing, right?
+30:01 - You're going to be forced to spread out the probability
+30:04 - mass so that the entire support of the entire data set
+30:08 - is covered by your model.
+30:10 - Now the problem is that you're going
+30:12 - to-- you always have finite modeling capacity, right?
+30:15 - So if you put probability mass there,
+30:17 - you're going to might be forced to put probability
+30:19 - mass somewhere that you didn't want to.
+30:21 - And maybe then your model will hallucinate weird stuff that
+30:25 - was not in the training set, but you
+30:28 - have to generate them because you're forced by this objective
+30:31 - to spread out the probability mass.
+30:33 - Again back to precision recall, you
+30:35 - need to have a very high recall.
+30:37 - Everything in the training set has to be non-zero probability.
+30:41 - And as a result, maybe your precision
+30:43 - goes down because then you start to generate stuff that
+30:45 - should not have been generated.
+30:47 - So that's kind of the takeaway of that one.

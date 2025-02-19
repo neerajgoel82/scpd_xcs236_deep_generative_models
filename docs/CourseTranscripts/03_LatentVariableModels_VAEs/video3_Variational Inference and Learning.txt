@@ -1,1 +1,582 @@
-
+00:00 -
+00:05 - SPEAKER: The problem is that basically you
+00:07 - have missing values.
+00:09 - And so what happens is something like this.
+00:14 - Imagine that you still want to train a autoregressive model,
+00:19 - but now some of your data is missing.
+00:21 - So you still want to fit an autoregressive model
+00:24 - over the pixel values, but now you
+00:26 - don't know the value of the top half of the images.
+00:31 - So what do you need to do?
+00:32 - Well, there is two sets of variables here.
+00:34 - Again, there is the part that you get to see
+00:36 - and then there is some part that you don't
+00:38 - get to see that is latent.
+00:41 - And then there is a joint distribution.
+00:44 - So your pixel CNN would tell you the relationship between the X
+00:48 - variables and the Z variables.
+00:50 - So you can choose--
+00:52 - you can complete the green part, the missing part any way
+00:56 - you want.
+00:56 - And let's say your autoregressive model
+00:58 - will tell you how likely the full image is because you have
+01:02 - a joint distribution over Z and X.
+01:06 - The challenge is that you only get to see the observed part.
+01:11 - So you only get to see the X part.
+01:13 - And so you need to be able to evaluate,
+01:16 - what is the probability of observing let's say
+01:20 - this bottom half of a digit?
+01:23 - And in order to do that, again, we have to marginalize.
+01:26 - So you have to basically look at all possible ways of completing
+01:29 - that image and you have to sum the probabilities of all
+01:33 - these possible completions.
+01:37 - And even though the joint is easy to evaluate
+01:40 - because maybe it's just a product of conditionals
+01:42 - or in the VIE case, it's just the product of two Gaussians
+01:46 - basically, you have this mixture in behavior.
+01:49 - Just like in the mixture of Gaussian
+01:51 - when you evaluate the probability over just
+01:56 - the X part, you have to sum out all the things
+02:00 - over all possible values of the unobserved variables.
+02:03 - You have to look at all possible completions
+02:06 - and you have to check how likely the different completions are
+02:09 - and you sum them up.
+02:10 - Just like in the mixture of Gaussian case,
+02:12 - you need to sum the probability under each mixture component.
+02:16 - It's the same thing.
+02:18 - And the problem is that there is potentially too
+02:21 - many possible completions.
+02:23 - In the mixture of Gaussian case, maybe you only
+02:25 - have K possible values that the Z variable can take.
+02:28 - And so this thing is easy to evaluate.
+02:31 - You can just brute force it.
+02:32 - But if you have a high dimensional latent variable Z,
+02:39 - this sum can be extremely expensive to evaluate.
+02:44 - You have flexibility because you're
+02:46 - mixing a lot of distributions, but then you
+02:49 - pay a price because it's hard to evaluate that quantity.
+02:53 - Sum over all possible completions.
+02:55 - So you would have to put, you put all white pixels.
+02:58 - And then you check, how likely is that?
+03:00 - Probably very low.
+03:01 - Then you try all black pixels and then
+03:03 - you try all possible combinations
+03:04 - and then you check the probability of each one of them
+03:06 - and you sum them up.
+03:08 - Variational autoencoder, you have the same thing.
+03:12 - The Z's are not observed at training time.
+03:14 - So training time you only get to see the X part.
+03:17 - So when you want to evaluate the probability of observing
+03:19 - a particular X, you kind if have to go
+03:21 - through all possible values that the Z variables can take
+03:24 - and you have to figure out, how likely
+03:28 - was I to generate that particular X?
+03:31 - And the Z variable is not even discrete.
+03:33 - So if you want to evaluate the probability of generating
+03:38 - a particular X, you have to actually integrate
+03:41 - over all possible values that the Z variables can take.
+03:45 - You have to go through all possible choices of the Z
+03:47 - variable, you have to see where it would map to.
+03:50 - It would check the probability under that Gaussian mixture
+03:53 - component and then you integrate them up.
+03:58 - Again, you can imagine that this is super expensive because yeah,
+04:03 - especially if you have a reasonable number of latent
+04:06 - variables.
+04:08 - The curse of dimensionality this is
+04:10 - very expensive to even numerically
+04:13 - approximate this integral.
+04:14 -
+04:18 - But that's where the flexibility comes from.
+04:20 - You're integrating over an infinite number
+04:22 - of mixture components.
+04:24 - Yeah, so for every Z you can evaluate the joint.
+04:27 - Just like here, for every value of Z I can evaluate p of x, z.
+04:35 - I can just check the Z I map it through the neural networks.
+04:38 - I get a Gaussian.
+04:39 - I can evaluate the probabilities.
+04:41 - The Z is not observed, so I have to try all of them.
+04:46 - Just like here, I only got to see the bottom part.
+04:51 - I don't know what was the top part for that particular image.
+04:55 - I have to guess.
+04:56 - I have to try every possible way of completing that data point
+05:00 - and I have to sum them up.
+05:03 - In this case, I'm assuming that the Z variables represent
+05:06 - the top part and the unobserved part together.
+05:10 - Cool, so that's sort of the challenge,
+05:13 - evaluating this marginal probability over X.
+05:16 - You need to integrate over all the possible values of the Z
+05:19 - variables.
+05:20 - The setting that we're going to consider
+05:21 - is one where in the data set the X variables are always observed.
+05:25 - You could also think about a setting
+05:27 - where you have some missing data and some of the x variables
+05:32 - are missing themselves.
+05:33 - So that's kind of the setting where we have a data set.
+05:36 - But for every data point, we only
+05:38 - get to see the X variables and the Z
+05:40 - variables that are missing.
+05:41 - They are unobserved.
+05:42 -
+05:47 - So you can think of the data set as being a collection of images
+05:51 - X1 through XM.
+05:54 - And what we would like to do is we
+05:57 - would like to still do maximum likelihood learning.
+05:59 - So we would still like to try to find a choice of parameters that
+06:03 - maximize the probability basically of generating
+06:06 - that particular data set.
+06:08 - It's the same objective that we had before.
+06:11 - Let's try to find theta that maximizes
+06:12 - the probability of the data maximum likelihood estimation
+06:19 - and/or equivalently the average log likelihood of the data
+06:23 - points if you apply a log.
+06:25 - And the problem is that evaluating the probability
+06:32 - of a data point under this mixture model
+06:34 - is expensive because you have to sum over all possible values
+06:38 - that the Z variable can take for that data point.
+06:41 -
+06:43 - And so evaluating this quantity can be intractable.
+06:48 - And just as an example, let's say
+06:50 - that you have 30 binary latent variables then that sum involves
+06:58 - 2 to the 30 terms.
+06:59 - So it's just way too expensive to compute this.
+07:05 - So if the Z variables can only take K different
+07:07 - values like a Gaussian mixture model.
+07:09 - You can do it.
+07:09 - You can brute force it.
+07:10 - But if you have many latent variables you cannot evaluate
+07:14 - that quantity efficiently.
+07:18 - And for continuous variables, you
+07:20 - have an integral instead, which, again, is tricky to evaluate.
+07:25 - And if you are hoping that maybe we only need gradients
+07:29 - because at the end of the day we just care about optimizing,
+07:33 - gradients are also expensive to compute.
+07:35 - So trying to do gradient ascent on that quantity
+07:39 - is not feasible directly.
+07:42 - So we need some approximations and it
+07:47 - has to be very cheap because think about it,
+07:49 - you need to be able to go over the data set many times
+07:53 - and you need to be able to evaluate
+07:56 - the gradient for every data point possibly many times.
+08:00 - So this approximation here has to be very cheap.
+08:02 -
+08:06 - And the one natural way to try, it
+08:10 - would be to try to do Monte Carlo kind of thing, right?
+08:14 - Basically, this quantity would require
+08:17 - us to sum over all possible values of Z.
+08:20 - And instead, we could try to just sample a few
+08:23 - and get an approximation.
+08:27 - And that's the usual recipe that we've seen in the last lecture.
+08:31 - The idea is that we have a sum that we're trying to compute.
+08:37 - We can try to rewrite that sum as an expectation, essentially.
+08:42 - So if there are capital Z basically possible
+08:48 - values that these Z variables can take,
+08:52 - we can multiply and divide by the total number
+08:54 - of entries in this sum.
+08:56 - And then this object here becomes
+08:58 - an expectation with respect to a uniform distribution
+09:03 - and now we can apply Monte Carlo.
+09:06 - Whenever you have an expectation,
+09:07 - you can approximate it with a sample average.
+09:09 - So you could say let's approximate this sum
+09:13 - with a sample average.
+09:16 - So essentially, you would randomly
+09:19 - sample a bunch of values of Z and then
+09:21 - you would approximate the expectation
+09:24 - with the sample average.
+09:26 - You check how likely these completions are under the joint
+09:29 - and then you rescale appropriately.
+09:32 -
+09:36 - And this would be cheaper because you just
+09:38 - need to check k completions instead
+09:40 - of all the possible completions that you
+09:44 - would have to deal with.
+09:46 - The cheapest way is to choose k1 here, just sample 1.
+09:49 - You look at the joint likelihood of that completion
+09:54 - and then you rescale appropriately.
+09:55 - And that would be a valid estimator
+09:58 - for the quantity of interest.
+10:01 - So if you can see, I'm multiplying and dividing
+10:04 - by the total number of things.
+10:05 - So that then this becomes an expectation with respect
+10:08 - to a uniform distribution, that's the trick basically.
+10:11 - You are getting at why this is not a great solution.
+10:14 - This is a first attempt doing things uniformly.
+10:18 - It's cheap.
+10:20 - It's unbiased.
+10:21 - But it's not going to work in practice because what, I think,
+10:26 - what you're suggesting is that if you think about randomly
+10:28 - guessing the Z's, most likely you're
+10:31 - not going to hit the values of Z's that have enough probability
+10:37 - under the joint.
+10:38 - And so most of the completions that you
+10:40 - get by choosing uniformly at random don't make sense.
+10:43 - So they would have a very low value of p theta.
+10:46 - And so although this technically speaking
+10:48 - is an unbiased estimator, the variance
+10:51 - would be so big that it's not going to work in practice.
+10:56 - So somehow as I think we were you were suggesting,
+10:59 - we need a smarter way of selecting these latent
+11:04 - variables.
+11:07 - We don't want to sample uniformly.
+11:08 - We want to sample them trying to guess the ones that make sense.
+11:13 - Yeah, so the question, I mean, I think it's a great question
+11:16 - and it's what the Z's would even end up representing.
+11:21 - And well, there is a first question
+11:22 - whether you are discrete or continuous,
+11:24 - that depends on just how you model them,
+11:26 - it doesn't matter too much.
+11:28 - Whether they end up representing the things that
+11:30 - matter like the hair color or the eye color,
+11:34 - it's questionable.
+11:36 - Right, right here we're just saying
+11:37 - we just try to do maximum likelihood,
+11:39 - we just try to fit the data as well as we can,
+11:42 - and we're going to try to use these latent variables to fit
+11:45 - the data, that's what the model is going to try to do
+11:48 - if you use this objective.
+11:49 - Whether you end up with something meaningful or not,
+11:53 - is not necessarily guaranteed.
+11:55 - You end up with some latent variables
+11:57 - such that if you sample from them
+11:59 - and you fit them through this model you get,
+12:01 - hopefully, good images or good distribution that
+12:05 - is very similar to the one in the training set, which
+12:07 - means that these latent variables do
+12:09 - capture the important latent factors of variation
+12:12 - in the data.
+12:13 - Whether they correspond to something
+12:15 - semantically meaningful is absolutely not guaranteed.
+12:20 - We are using multiple latent factors of variation.
+12:24 - So every X will basically be mapped.
+12:28 - I guess, well, there is many different Z's
+12:32 - that could generate that particular X. There is some that
+12:35 - are more likely than others given X when you try to infer P
+12:40 - of Z given X, you're kind of guessing
+12:43 - what are the latent features for this particular data point.
+12:46 - And if you look at what you get, indeed you end up with soft--
+12:51 - if the Z variables are continuous,
+12:55 - then you don't end up with a discrete kind of clustering
+12:58 - thing, you end up with two values.
+13:01 - You end up with a 0.5, 0.5.
+13:04 - These yellow points end up being having Z1 right around 0.5, 0.5.
+13:13 - It doesn't have a specific meaning
+13:15 - except that all the points that correspond
+13:17 - to that class, the digit end up having similar values
+13:21 - of the variables.
+13:23 - So there's not a single Z, there is multiple Z's.
+13:26 - Like in this case there's two, Z1 and Z2
+13:29 - and they capture two kind of salient factors of variation.
+13:34 - That's the problem.
+13:35 - If you have what I have here, if you had
+13:38 - the 30 binary features that you--
+13:43 - binary latent features.
+13:45 - They can all be just 01.
+13:47 - Then you have 2 to the 30 basically
+13:49 - different possible cluster assignments and then
+13:52 - you can't sum them up, basically that's the problem.
+13:55 - There is a whole field of disentangled representation
+13:59 - learning where people have been trying
+14:01 - many different ways of trying to come up with models where
+14:05 - the latent variables have a better, are more meaningful.
+14:08 - There are, unfortunately, theorems showing that it's
+14:10 - impossible to do it in general.
+14:12 - Practically, people have been able to get reasonable results,
+14:17 - but there are some fundamental limitations
+14:18 - to what you can do because the problem is essentially
+14:21 - ill-posed.
+14:22 - If the Z's are discrete then it wouldn't be normal.
+14:25 - It would be like each one of them
+14:27 - can come from a simple Bernoulli distribution.
+14:30 - If Z could be a Gaussian random vector in which case
+14:33 - you would have the integral, both cases
+14:36 - are pretty hard basically.
+14:38 - Sometimes you get to see the Z values,
+14:40 - maybe you have an annotator willing to label
+14:42 - these things for.
+14:44 - Basically, you can imagine that you can--
+14:47 - it's not hard to modify this learning objective where
+14:50 - when the value of that variable you don't sum over it,
+14:54 - you just plug-in the true value.
+14:56 - And so you can do some kind of semi-supervised learning
+14:59 - where sometimes this variable is observed and sometimes it's not.
+15:04 - OK, so this was the vanilla kind of setting where you could just
+15:07 - try a bunch of choices for the random variable at random
+15:12 - and hope that you get something, but this is not quite
+15:16 - going to work.
+15:17 - And so we need a better way of guessing the latent variables
+15:22 - for each data point.
+15:24 - And so the way to do it is using something
+15:28 - called importance sampling.
+15:29 - Where instead of sampling uniformly at random,
+15:32 - we're going to try to sample the important completions more
+15:36 - often.
+15:38 - So recall, this is the object we want,
+15:40 - is this marginal probability where
+15:41 - you have to sum over all possible values of the latent
+15:44 - variables.
+15:46 - And now what we can do is we can multiply and divide
+15:50 - by this q of z, where q is an arbitrary distribution that you
+15:55 - can use to choose completions, to choose values for the latent
+15:59 - variables.
+16:01 - And this is one, so you can multiply and divide it
+16:05 - by q is fine.
+16:06 - And now, again, we're back to the setting
+16:09 - where we have an expectation with respect
+16:12 - to q of this ratio of probabilities.
+16:16 - The probability under the true model and the probability
+16:19 - under this proposal distribution or this way
+16:22 - that you're using to guess the completion for the latent
+16:28 - variables.
+16:29 -
+16:31 - And now, what we can do, again, is just Monte Carlo.
+16:35 - Again, this is still an expectation,
+16:37 - it's still intractable in general,
+16:39 - but we can try to do the usual trick of let's sample a bunch
+16:43 - of Z's.
+16:44 - Now, we don't sample them uniformly.
+16:46 - We sample them according to this proposal distribution q,
+16:49 - which can be anything you want.
+16:51 - And then we approximate the expectation
+16:54 - with this sample average just like before.
+16:57 - And now the sample average has this importance weight
+17:05 - that you have to account for in the denominator
+17:07 - because the expression inside the expectation
+17:10 - has this q in the denominator.
+17:12 - So we have to put it here.
+17:14 - I think, what's a good choice for q?
+17:18 - Intuitively, you want to put probability mass on the z's that
+17:22 - are likely under the joint distribution.
+17:26 - You'd like to somehow be able to sample z's that makes sense.
+17:30 - So you have a current joint distribution between x and z.
+17:35 - And you want to choose the z's that
+17:37 - makes sense, that are the completions that
+17:39 - are consistent with what you observe.
+17:43 - So this is for a particular data point.
+17:45 - So I'm doing it for a single x.
+17:47 - You're perfectly right that this choice of q
+17:50 - has to depend on the x, on what you see.
+17:53 - But for now, this is a single data point.
+17:55 - So I can just have a single q that are supposed to work.
+17:58 -
+18:01 - And regardless basically of how you choose q,
+18:05 - this is an unbiased estimator.
+18:07 - Meaning that even if you choose a single sample,
+18:10 - we know this is--
+18:11 - the expected value of the sample average is the object we want.
+18:17 - So equivalently, if you want to think about it,
+18:20 - you could say if you were to repeat this experiment a very
+18:23 - large number of times and average the results,
+18:26 - you would get the true value.
+18:30 - So this is a reasonable kind of estimate.
+18:33 -
+18:36 - Now, the slight issue is that what we care about
+18:45 - is not the probability of a data point,
+18:47 - but we care about the log probability of a data point.
+18:51 - Recall that what we care about is optimize the average log
+18:55 - likelihood of the data points.
+18:56 - So we need to apply a log to this expression.
+19:01 - And so we could try to just apply
+19:04 - a log on both sides of this equation
+19:07 - and get this kind of estimate for the log likelihood.
+19:11 - But there is a problem.
+19:16 - So for example, if you were to choose, a single sample, so if k
+19:20 - here is 1, so you just sample a single possible completion
+19:25 - and then you evaluate that estimator that way.
+19:30 - So it's just the ratio of the two probabilities.
+19:33 - You can kind of see that this is no longer unbiased.
+19:38 - The expectation of the log is not the same
+19:41 - as the log of the expectation.
+19:45 - So if you take an expectation of this object
+19:48 - here even though the expectation of the right-hand side
+19:51 - here is what we want, when you apply a log there is bias.
+20:00 -
+20:03 - And that's sort of--
+20:04 -
+20:07 - we can actually figure out what that bias is.
+20:10 - So recall that what we want is this.
+20:12 - We want the log marginal probability,
+20:15 - which we can write down as this importance sampling
+20:18 - kind of distribution.
+20:21 - And we know that the log is a concave function, which
+20:28 - means that if you have two points x and x prime,
+20:32 - and you take a combination of the two
+20:33 - and you evaluate the log, this is
+20:36 - above the linear combination of the two values of the function.
+20:40 -
+20:43 - And what this means is that if you--
+20:49 - because of this concavity property,
+20:52 - we can basically work out what happens
+20:54 - if we swap the order of logarithm and expectation.
+20:57 - So if we put the expectation outside of the log,
+21:00 - we're going to get a bound on the quantity that we want.
+21:05 - So there is this thing called Jensen's inequality, which
+21:09 - basically says that the logarithm of the expectation
+21:12 - of some function, any function, which
+21:15 - is just this quantity here, is at least as
+21:20 - large as the expectation of the log.
+21:24 -
+21:28 - And kind of the picture is, again, you
+21:30 - have a log, which is a concave function.
+21:32 - And so if you have two points, fz1 and fz2.
+21:36 - And you take the linear combination of that,
+21:38 - you're always below what you would get
+21:41 - if you were to apply the log.
+21:42 -
+21:50 - And so in our world, what this means is
+21:55 - that for this particular choice of f of z,
+21:58 - which is what we have here, this density ratio,
+22:01 - the log of the estimator is at least
+22:05 - as large as the average of the log.
+22:08 -
+22:17 - So what we have here if we do this
+22:21 - is a lower bound on the object that we want.
+22:24 - So on the left, we have the thing we want,
+22:26 - which is the log marginal probability of a data point.
+22:29 - And on the right, we have a quantity, which we can estimate,
+22:34 - we take a bunch of samples from q
+22:35 - and we evaluate this log there's a lower bound,
+22:40 - which is not bad because what this means is
+22:42 - that if we were to optimize the quantity on the right,
+22:46 - the thing we care about would kind of also go up, hopefully.
+22:51 - It has to be at least as large as whatever
+22:54 - we find by optimizing the quantity on the right.
+22:58 - What we want to do is--
+23:00 - we care about doing maximum likelihood.
+23:02 - And so what we care about--
+23:04 - is where do I have it?
+23:06 - What we care about is this.
+23:09 - So we want to go through all the data points.
+23:12 - And for every data point, we want
+23:14 - to evaluate the log probability of that data point.
+23:18 - And so that's the quantity that we'd like to take gradients of
+23:21 - and would like to optimize.
+23:24 - And the good news is that we can get a lower bound on that
+23:31 - quantity through this machinery.
+23:35 - Where is it?
+23:36 - I think here.
+23:37 -
+23:41 - And then the strategy is basically
+23:44 - going to be let's try to optimize this lower bound.
+23:50 - And what we will see soon is that the choice
+23:53 - of q, the way you decide how to sample the latent
+23:57 - variables basically controls how tight this lower bound is.
+24:01 - So if you have a good choice for q, then the lower bound is tight
+24:06 - and this basically becomes a very good approximation
+24:08 - to the quantity we actually care about,
+24:11 - which is the log marginal probability.
+24:14 - This one is easy.
+24:16 - Yeah, that's the right-hand side,
+24:18 - that's what we're going to actually optimize.
+24:23 - The left-hand side what we want is exactly
+24:26 - the log marginal probability.
+24:27 - The right-hand side is the thing we can actually easily evaluate
+24:32 - to sample a bunch of q's and then get this log density ratio.
+24:36 - And this thing that you see on the right
+24:39 - is something you might have seen,
+24:40 - you might have heard before is the evidence lower bound,
+24:44 - the ELBO, which is a lower bound on the probability of evidence,
+24:49 - which is basically the probability of x.
+24:51 - So x is the evidence. x is the thing
+24:53 - you get to see is the observed part.
+24:55 -
+24:58 - The log probability of evidence is
+25:00 - the thing you would like to optimize,
+25:03 - but it's tricky to evaluate that.
+25:06 - And so instead we have this evidence lower
+25:08 - bound, the ELBO, which is the thing we can actually
+25:12 - compute and optimize.
+25:14 - Yeah, so the original thing that you would like to have
+25:18 - is this, which is still tricky.
+25:21 - You could try to--
+25:24 - the expectation itself is not something you can evaluate,
+25:28 - so you would have to do a sample average
+25:31 - and you can do the sample average inside or outside if you
+25:35 - do the simplest case where let's say you choose k equals 1.
+25:40 - Then you see that you basically end up,
+25:44 - which would be the cheapest way of doing things
+25:47 - where you take a single sample.
+25:48 - So what people would do in practice.
+25:51 - Then you see that if you take the expectation of that,
+25:55 - you end up with the expectation of the log instead
+25:59 - of the log of the expectation.
+26:01 - It's an approximation.
+26:02 - It happens to be a decent one because it's a lower bound.
+26:05 - And so it's not going to hurt us too much because optimizing
+26:09 - a lower bound.
+26:10 - If you maximize the lower bound, the true quantity
+26:14 - is always going to be above and so it's also going to go up.
+26:17 - The Jensen's inequality basically just
+26:18 - tells you what happens to if you were
+26:20 - to do this approximation where you
+26:22 - take the expectation and then the log.
+26:25 - It only makes sense to maximize a lower bound
+26:27 - to the function you want because otherwise, yeah,
+26:30 - it's not clear how what the relationship would look like.
+26:33 - There is QUBO, there is a bunch of-- there
+26:35 - is the ELBO and the QUBO and there's a bunch of techniques
+26:40 - that people have come up with come up
+26:41 - with the upper bounds to these quantities,
+26:43 - but there is much trickier to get an upper bound
+26:45 - and a lower bound.
+26:47 - And intuitively, it's because if you just sample a few z's, you
+26:52 - might-- it's very hard to know whether you're
+26:53 - missing some very important ones, which
+26:57 - is what you would need to get an upper bound
+27:00 - while it's relatively easy to say
+27:02 - that if I've seen so many z's that have
+27:04 - a certain amount of probability mass, there must be others.
+27:07 - So it's always easier to get a lower bound and an upper bound
+27:10 - because the upper bound would require you to rule out
+27:15 - that there are many z's that have a very high probability
+27:17 - somewhere and you haven't seen it.
+27:20 - That's the intuition.
+27:21 - So there is a way to quantify how tight the bound is.
+27:24 - So we know that for any choice of q,
+27:26 - you have this nice lower bound on the quantity we care about.
+27:31 - This is the quantity we care about
+27:33 - and we got a lower bound for any choice of q.
+27:35 -
+27:38 - If you expand this thing, you're going
+27:42 - to get a decomposition where you have this,
+27:46 - just the log of the ratio is the difference of the logs.
+27:49 - And you can see that this quantity here
+27:52 - is what we've seen in the last lecture being the entropy of q.
+27:56 - And so you can also rewrite this expression
+27:59 - as the sum of two terms.
+28:01 - The average log joint probability under q
+28:04 - and then you have the entropy under q.
+28:08 - And it turns out that if q is chosen
+28:12 - to be the conditional distribution of z given
+28:16 - x under the model, then this inequality becomes an equality.
+28:22 - So the bond becomes tight and there is no approximation
+28:26 - basically at that point.
+28:30 - And so essentially what this is saying
+28:31 - is that the best way of guessing the z variables
+28:36 - is to actually use the posterior distribution according
+28:40 - to the model.
+28:42 - So you have a joint distribution between x
+28:44 - and z that defines a conditional for the z variables given
+28:48 - the x ones, and that would be the optimal way of guessing
+28:52 - the latent variables.
+28:55 - The problem is that this is not going to be easy to evaluate
+28:58 - and so that's why we'll need other things,
+29:00 - but this would be the optimal way
+29:02 - of choosing the distribution.
+29:04 - And incidentally, if you've seen the EM algorithm,
+29:07 - that's what you need in the E step of EM.
+29:10 -
+29:13 - And there are some very close connections between EM
+29:17 - and what we're doing here.
+29:19 - Some says that's the best way of inferring
+29:23 - the latent variables is to use the true posterior distribution.
+29:26 - Essentially, what this would require
+29:28 - you is to say given an x, if you have a VAE you would have
+29:33 - to figure out, what kind of inputs
+29:35 - should I fit into my neural networks that
+29:37 - would produce this kind of x?
+29:40 - So of have to invert the neural network and you need
+29:43 - to figure out, what were the likely inputs
+29:47 - to the neural networks that would
+29:49 - produce the x that I'm given?
+29:52 - Which is in general pretty hard as we'll see,
+29:54 - but we can try to approximate that.

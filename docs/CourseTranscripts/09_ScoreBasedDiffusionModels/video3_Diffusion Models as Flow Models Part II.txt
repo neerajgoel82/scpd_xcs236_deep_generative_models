@@ -1,1 +1,890 @@
-
+0:00 -
+00:05 - SPEAKER: All right.
+00:07 - OK, so I thought we could finish the lecture from last time
+00:14 - and keep talking about diffusion models.
+00:17 - Also, I have another lecture already
+00:19 - on training latent variable models with discrete variables,
+00:23 - but I thought we didn't finish this
+00:25 - and there was quite a bit of interest.
+00:27 - Maybe we can go through the remaining slides
+00:30 - and really see the connections with all
+00:32 - these efficient sampling strategies and all
+00:34 - that good stuff.
+00:36 - So as a reminder, we've seen that we
+00:41 - can think of-- there is this close connection
+00:43 - between score-based models and denoising diffusion, DTPMs,
+00:48 - Denoising Diffusion Probabilistic Models.
+00:52 - The basic idea is that you can think of score-based models
+00:58 - as basically trying to go from noise to data by essentially
+01:05 - running this larger in dynamics chains.
+01:07 - And alternatively, we can think about a process that
+01:11 - does something very similar from the perspective
+01:14 - of a variational autoencoder.
+01:15 - So there is a process that basically adds noise
+01:21 - to the data, which you can think of it as an encoder.
+01:25 - And all these transitions here, q of Xt, given Xt minus 1,
+01:30 - this is just a Gaussian which is centered at Xt minus 1.
+01:33 - And you just add a little bit of noise to get Xt.
+01:37 - And so at every step, you add a little bit of noise.
+01:40 - And then eventually after many steps,
+01:44 - you've added so much noise to the data
+01:46 - that all the structure is lost, and you're left with pure noise
+01:49 - at the end of this chain.
+01:51 - And as in a regular VAE, there is a decoder
+01:58 - which is a joint distribution over the same kind
+02:01 - of random variables.
+02:02 - And we parameterize it in the reverse direction,
+02:06 - so we go from noise to clean data.
+02:10 - And we have this sequence of decoders,
+02:13 - and the decoders are basically this p theta of Xt minus 1,
+02:17 - given Xt.
+02:18 - And so given Xt, you try to guess what
+02:22 - is the value of Xt minus 1.
+02:24 - And these decoders are also in the DTPM formulation,
+02:28 - are also simple in the sense that they
+02:30 - are Gaussian distributions.
+02:32 - And the parameters of these Gaussian distributions
+02:34 - are computed using neural networks
+02:37 - just like in a regular VAE.
+02:40 - And what we're seeing is that we can
+02:43 - train these models the usual way, which
+02:45 - is by optimizing an evidence lower bound,
+02:48 - which essentially tries to minimize the KL
+02:51 - divergence between the distribution defined
+02:56 - by the decoder and the distribution defined
+02:58 - by the encoder.
+02:59 - It's kind of trying to match those two joint distributions.
+03:03 - And if you look at the ELBO objective, it looks like this.
+03:08 - And it turns out that if you do a little bit of math,
+03:12 - this objective ends up being exactly the denoising score
+03:16 - matching objective.
+03:17 -
+03:22 - Essentially, if you want to learn the best way,
+03:25 - the best decoder, the best way of guessing
+03:28 - Xt minus 1, given Xt, essentially, what you have to do
+03:31 - is you have to learn the score of the noise perturb data
+03:35 - density and which we know can be done
+03:41 - by solving a denoising problem.
+03:44 - And so essentially optimizing the ELBO corresponds
+03:48 - to learning a sequence of denoisers,
+03:51 - the same as the noise conditional
+03:54 - score models essentially.
+03:57 - And that's the main thing here, is
+04:03 - that we can interpret the whole thing
+04:05 - as a variational autoencoder.
+04:07 - Minimizing the ELBO corresponds to essentially a sum
+04:11 - of denoising score matching objectives,
+04:14 - each one corresponding to a different noise level
+04:16 - that we have in this chain.
+04:18 - And so there is this very the resulting training and inference
+04:25 - procedure in a denoising diffusion
+04:27 - probabilistic model is very, very similar
+04:30 - to the one in the noise in a score-based model.
+04:34 - During training time, you are essentially
+04:36 - learning a sequence of denoisers,
+04:39 - one for every time step.
+04:41 - And once you have the denoisers to generate samples, what you do
+04:46 - is you just use the decoders, just like you
+04:48 - would do in a normal VAE.
+04:51 - And because basically the means of these Gaussians
+04:55 - that are defined in the decoders are optimality essentially
+05:00 - correspond to the score functions, the updates
+05:04 - that you do end up looking very, very similar to the ones
+05:08 - you would do in a annealed in dynamics
+05:10 - kind of procedure, where at every step
+05:13 - you would essentially follow the score.
+05:15 - And you add a little bit of noise at every step
+05:18 - because the decoders are Gaussians.
+05:21 - And so in order to sample from a Gaussian,
+05:23 - you would compute the mean, and then you
+05:25 - would add a little bit of noise to that vector,
+05:28 - and so very similar to the procedure
+05:33 - that we will do in Langevin dynamics,
+05:34 - where, again, you would follow the gradient
+05:36 - and you would add a little bit of noise.
+05:40 - And yeah, we've seen the architectures are also
+05:42 - very similar.
+05:43 - But where we stopped last time was
+05:46 - to think about the diffusion version of this, which is really
+05:51 - the case when we have an infinite number of noise levels.
+05:54 - So instead of having, let's say, a thousand different versions
+05:57 - of the data density that has been perturbed with increasingly
+06:00 - large amounts of noise, we can consider this continuum,
+06:06 - this spectrum of distributions that are now
+06:09 - indexed by this variable t which you can think of it as time
+06:13 - that goes from 0 to 30.
+06:15 - And so just like before, on the one hand,
+06:19 - we have the clean data distribution.
+06:21 - At the other end, we have a pure noise distribution,
+06:25 - but now we have a continuum.
+06:27 - And this continuum is actually going
+06:30 - to be useful because it exposes additional structure
+06:34 - in the model that we can take advantage for coming up
+06:37 - with more efficient samplers for evaluating likelihoods
+06:40 - exactly and so forth.
+06:44 - So you can think of the variational VAE perspective
+06:52 - that we talked about so far as some kind of discretization
+06:56 - of this continuum version of the process where we only look at,
+07:01 - let's say, a thousand different slices in this sequence.
+07:07 - But it makes sense to think about the continuous version
+07:15 - because, as we'll see, yeah, it allows
+07:19 - us to do more essentially.
+07:21 - And so once we go in the continuous version,
+07:27 - again, basically there is a stochastic process
+07:30 - that describes this process of going from data to noise
+07:35 - where at every step, you add a little bit of noise
+07:38 - just like in the previous case, except that we get
+07:43 - this kind of continuous time process
+07:45 - by thinking about what happens if you were to take increasingly
+07:49 - small discretization steps in the previous perspective.
+07:54 - And so before, we were jumping.
+07:56 - We were taking a thousand different steps,
+07:58 - adding more and more and more noise until we get to the end.
+08:03 - You can imagine a continuous process
+08:05 - that goes from left to right, where at every step,
+08:09 - we add an infinitesimally small amount of noise.
+08:12 - But, of course, over time, if you integrate all of this noise,
+08:15 - you get the same effect basically destroying
+08:18 - the entire structure in the data.
+08:22 - And so formally what we're dealing with here
+08:27 - is a stochastic process where we have a collection
+08:29 - of random variables.
+08:31 - And now this collection of random variables
+08:32 - is we have an infinite number of random variables.
+08:36 - Before, we had, let's say, 1,000.
+08:38 - We had a VAE with your maybe a thousand different layers,
+08:42 - and so you had a thousand different random variables, one
+08:44 - for every discrete time step.
+08:47 - Now we have an infinite number of random variables.
+08:49 - There is one for every t, and t is continuous.
+08:52 - So you can take an infinite number of values between 0
+08:56 - and capital T.
+08:58 - And these random variables have densities.
+09:02 - Just like in the VAE perspective,
+09:04 - there is a probability density function
+09:06 - associated with each one of these random variables.
+09:10 - And it turns out that we can describe
+09:12 - how these random variables are related
+09:13 - to each other through a stochastic differential
+09:16 - equation which you can think of it as a way that would allow you
+09:19 - to sample values for these random variables.
+09:22 - It would take a whole quarter to explain
+09:23 - exactly what that notation mean and what's
+09:25 - a stochastic differential equation is.
+09:27 - But essentially, you can imagine that this is really
+09:31 - what happens if you take the previous VAE perspective
+09:35 - and you make the intervals, the time steps between one slice
+09:41 - and the next one very, very small.
+09:43 - So dxt is basically the difference
+09:47 - between Xt and Xt plus delta and with the neighboring slice.
+09:54 - And the difference between these two random variables
+09:56 - is given by some deterministic value, which
+09:59 - is just like the drift is called plus a little bit of noise,
+10:04 - an infinitesimal amount of noise.
+10:07 - And for simplicity, here we can think about--
+10:10 - if you think about the process of just adding noise,
+10:13 - you can describe it with a very simple stochastic differential
+10:16 - equation where the difference between the value
+10:20 - of the random variable at time t and the value
+10:22 - of the random variable at time t plus epsilon or t plus delta t
+10:26 - is just an infinitesimally small amount of noise which
+10:30 - is what this kind of equation really means.
+10:34 - Yeah, so the drift is basically telling you
+10:39 - how you should change basically, like, you can imagine that there
+10:42 - is some kind of velocity, like, if you think about the dynamics,
+10:46 - like, if you think about how Xt evolves.
+10:51 - So Xt is, let's say, an image.
+10:54 - And as you increase time, the value of the pixels change.
+10:58 - And if you don't have the drift, then the change
+11:02 - is entirely driven by noise, which is what we're doing here.
+11:06 - As what we will see is that when we reverse
+11:08 - the direction of time, then it becomes
+11:10 - very important to actually take into account
+11:12 - the drift because we want to have some velocity field that
+11:17 - is pushing the images towards the directions
+11:21 - where we know there is a high probability mass.
+11:23 - And so it's going to be important to have
+11:26 - a drift because if you think about
+11:30 - if you flip the direction of time
+11:32 - and you want to go from noise to data,
+11:35 - it's not a purely random process.
+11:37 - You have to change the values of the pixels in a very structured
+11:41 - way to generate at the other end something that is indeed
+11:46 - looking like an image.
+11:47 - And so if you see at this end, all the probability mass
+11:51 - is spread out according to a Gaussian.
+11:53 - But if you want to get to something
+11:55 - that looks like this where all the probability mass is here
+11:58 - and here, then you have to have some kind of velocity that
+12:01 - is pushing the particles, that is pushing this trajectory
+12:06 - to go either here or here essentially,
+12:08 - because you want to have the right probability
+12:10 - mass at the other end.
+12:11 - This is a special case of this where the drift is zero.
+12:15 - And it turns out this kind of stochastic differential equation
+12:19 - is the one that captures this kind of relatively
+12:22 - simple behavior of just adding noise to the data.
+12:24 - OK.
+12:25 - More generally, you could have a drift.
+12:27 - And we'll see that we need the drift to talk
+12:29 - about the reverse process.
+12:31 - But what I'm saying here is that this process of adding noise
+12:34 - to the data, which is just like a very fine discretization
+12:39 - of what happens in the previous VAE,
+12:41 - can be described by this simple kind of stochastic differential
+12:44 - equation where the dxt, the difference in the value
+12:48 - of the random variables take, at a very small time increment
+12:52 - is just an infinitesimally small amount of noise that you are.
+12:56 - So I guess if you add Gaussian noise
+12:58 - at the level of the densities, you are essentially convolving.
+13:03 - So there is an implicit convolution
+13:05 - that is happening here.
+13:06 - So if you think about the shape of the densities,
+13:09 - like, you have a density here, if you take one of the slices
+13:13 - here, you get a different density
+13:15 - which is actually the previous density convolved
+13:18 - with a Gaussian kernel because that's
+13:20 - what happened if you sum up two independent random variables.
+13:25 - So there is an implicit convolution happening here
+13:27 - at the level of the densities.
+13:31 - Cool.
+13:31 - Now the reason this is interesting
+13:34 - is that we can think about just changing the direction of time.
+13:39 - So we can think about the process as going from right
+13:44 - to left in the previous slide, so going from noise to data.
+13:50 - And so again we have these trajectories
+13:52 - which are samples from the stochastic process.
+13:56 - So these are realizations of these random variables that
+13:59 - are consistent with the underlying stochastic
+14:02 - differential equation.
+14:03 - And if you could somehow sample from this stochastic process,
+14:07 - then you would be able to generate data
+14:10 - by basically just discarding everything and just looking
+14:12 - at the final endpoint of this trajectory.
+14:16 - And the beauty is that if you essentially
+14:22 - do a change of variables, and it's a little bit more
+14:26 - complicated because this is stochastic,
+14:27 - but essentially if you apply a change of variables
+14:30 - and you replace t with capital T minus t prime,
+14:34 - so you just literally flip the direction of the time axis,
+14:41 - you can obtain a new stochastic differential
+14:44 - equation that describes exactly the reverse process.
+14:49 - And the interesting bit is that this stochastic differential
+14:53 - equation now has a drift term, which is this red term here,
+14:58 - which is the score of the corresponding perturbed data
+15:04 - density at time t.
+15:07 - Yeah, so this is the exact reverse of this SDE.
+15:12 - The former SDE doesn't have the drift term.
+15:14 - If it had the drift term, then you
+15:16 - would have to account for it in the reverse SDE.
+15:18 - You would have to basically flip it.
+15:22 - But we don't have to because this is for now,
+15:24 - but you could include it if you want.
+15:26 - This is the simplest case where I don't have the drift.
+15:29 - If you had it, you could include it.
+15:31 - So in the forward process there is no drift.
+15:35 - It's purely driven by noise.
+15:37 - So you can think of it literally it's like a random walk.
+15:41 - So at every step, let's say if it
+15:43 - was a one-dimensional random walk,
+15:45 - you can go either left or right with some probability.
+15:48 - And after a sufficiently large amount of time,
+15:51 - you forget about the initial condition,
+15:52 - and you get an unknown distribution.
+15:55 - This is the continuous time version
+15:57 - of that where at every step, you move by a little bit.
+16:01 - And the amount you move is basically
+16:04 - this dw, which is the amount that you move towards the left
+16:09 - or towards the right essentially.
+16:11 - But it's essentially a random walk.
+16:14 - And it turns out that you can reverse it
+16:18 - and that there is a way to describe
+16:20 - this reverse random walk where you go from noise to data.
+16:25 - And it can be captured exactly if you knew the score function.
+16:29 - So they're describing exactly the same thing.
+16:32 - So both of these SDEs describe these trajectories.
+16:36 -
+16:39 - The only thing that has happened here
+16:41 - is that we're changing the direction of time.
+16:44 - So if you flip the direction of time and you--
+16:51 - if you start from noise and you solve this SDE,
+16:54 - you get exactly the same kind of traces
+16:57 - that you would have gotten if you were to start from data
+17:00 - and add noise to it in the other direction.
+17:03 - These two are exactly equivalent to the extent
+17:06 - that you know the score function.
+17:08 - So in this case, you have to go towards because this
+17:11 - is trying to sample from the data distribution.
+17:13 - So if the data distribution had a mixture of two Gaussians,
+17:18 - so there's two things.
+17:19 - I can have two possible images, let's say,
+17:21 - and it's either one or the other.
+17:23 - Then you would want the process to go there.
+17:25 - What we'll see, and that's the towards the end of this lecture,
+17:28 - is that how to do controllable generation, which
+17:31 - is the idea if you wanted to only sample one of them--
+17:34 - maybe one is cat and the other one is dog.
+17:37 - And let's say that you had a classifier that
+17:39 - tells you if you're dealing with a cat or a dog.
+17:42 - These kind of perspective allows you to do it
+17:46 - in a very principled way.
+17:47 - So there is a relatively simple algebra
+17:49 - that allows you to basically change the drift.
+17:52 - And essentially all you have to do
+17:54 - is you just basically apply Bayes rule.
+17:57 - And you change the drift to also push
+17:59 - you towards x's that are likely to be classified
+18:03 - as, let's say you want a dog, that are likely to be classified
+18:05 - as a dog.
+18:08 - There is basically a principled way
+18:09 - to change the drift to push you in a certain direction.
+18:13 - And that is provably the right way
+18:16 - of basically sampling from a conditional distribution that
+18:19 - might be defined in terms of, let's say, a classifier.
+18:22 - Or the more relevant example would be text to image
+18:25 - where you have a distribution over images that
+18:28 - have corresponding captions.
+18:30 - Now you want to be able to sample
+18:32 - images with a particular caption,
+18:34 - then you don't want to necessarily sample
+18:36 - from the marginal distribution over all the images
+18:39 - that you had in the training set.
+18:40 - But you want to be able to sample from the condition.
+18:42 - So we'll see that there is a way to change this reversal
+18:45 - SDE to actually sample from not the data distribution
+18:50 - but some version of the data distribution that is, let's say,
+18:53 - more skewed towards a particular caption that you want.
+18:56 - So this is the gradient only with respect to x at a given t.
+19:01 -
+19:03 - There is actually ways to do it to also try
+19:05 - to estimate the score with respect
+19:08 - to t, which is the partial derivative with respect to t.
+19:10 - Turns out you can also estimated the score matching
+19:13 - kind of losses.
+19:14 - We actually had a paper on doing these sort of things where you--
+19:18 - the nice thing about that is that I
+19:21 - guess a lot of the structure deals with, I guess,
+19:23 - very specific to the diffusion kind of math.
+19:25 - And the moment that one doesn't hold anymore,
+19:28 - like, let's say if you're trying to interpolate
+19:30 - between two different data sets, then it's no longer a diffusion.
+19:34 - And so the math is different.
+19:38 - In that case, you do need the gradient with respect to to's.
+19:42 - So you can do more interesting things if you had it,
+19:44 - but here you don't need.
+19:47 - It turns out because of the Fokker-Planck equation,
+19:49 - the gradient with respect to t is completely
+19:52 - determined by these objects.
+19:54 - In the forward SDE, there is no drift.
+19:56 - This is just a random walk where you essentially are essentially
+19:59 - just adding noise to the data.
+20:02 - So there is no particular direction.
+20:04 - Like, if you're going from data to noise,
+20:07 - there is no particular direction that you
+20:11 - want to bias your trajectories towards.
+20:15 - The score is deterministic drift.
+20:17 - Yeah, yeah, and then there is still noise.
+20:19 - As you said, there is also a little bit
+20:20 - of noise at every step.
+20:22 - In the second one we have both deterministic drift
+20:24 - and random noise.
+20:26 - So it still has both.
+20:27 - And you can think of it as if you were to discretize this SDE,
+20:32 - you would get essentially larger in dynamics or essentially
+20:35 - the same sampling procedure of DPN
+20:37 - where you would follow the gradient
+20:39 - and add a little bit of noise at every step.
+20:44 - You can think of that as basically just
+20:45 - a discretization of the system.
+20:47 - And then basically then what you can do
+20:50 - is you can build a generative model here by learning this.
+20:57 - As usual, if you knew these score functions,
+21:02 - then you could just solve this SDE,
+21:04 - generate trajectories, like, let's
+21:07 - see that I can get the animation going again.
+21:12 - Yeah, so if you could somehow simulate this process
+21:16 - as you solve this SDE, then we would
+21:18 - be able to generate samples at the end.
+21:20 - But to do that, you need to know this red term.
+21:23 - You need to know the score, which we know it exists,
+21:27 - but we don't know the value of it.
+21:29 - The only thing we have access to as usual is data.
+21:33 - And so you can get a generative model
+21:34 - by basically trying to learn the score functions using
+21:40 - a neural network.
+21:41 - Just like before, there is a neural network that
+21:47 - parameterized by theta that every X
+21:49 - tries to estimate the corresponding score
+21:52 - at that X for the density corresponding to time t.
+21:56 - So this is the same as in the DTPM case,
+21:59 - you had exactly this thing, but you only cared about,
+22:02 - let's say, a thousand different time indexes
+22:05 - which were those 1,000 different views of the original data
+22:08 - density that you were considering
+22:11 - in your variational autoencoder.
+22:13 - Now, again, we have an infinite collection of score functions
+22:15 - because these are real value here.
+22:21 - And as usual, you can basically estimate these things
+22:25 - using score matching.
+22:26 - So you have the usual, like, your L2 regression loss
+22:30 - where you try to make sure that your estimated score at every X
+22:34 - is close to the true score as measured
+22:37 - by L2 distance on average with respect to the data
+22:42 - distribution.
+22:44 - And whenever you want to estimate the score of data
+22:47 - plus noise, this is something that we
+22:49 - can do with denoising score matching, essentially.
+22:53 - So again, solving this training objective
+22:56 - corresponds to learning a sequence of denoisers.
+23:02 - And it's not a collection of a thousand different denoisers.
+23:05 - It's an infinite collection of denoisers once for every t,
+23:08 - but again it's the usual thing.
+23:10 - And now what you can do is, now you can plug that
+23:13 - in into that reverse time SDE.
+23:16 - And if you discretize this SDE, which basically means
+23:21 - that you just discretize the time axis,
+23:29 - and so you just look at, instead of dX,
+23:33 - you have Xt plus 1 minus Xt essentially.
+23:38 - And you integrate that stochastic differential
+23:41 - equation.
+23:42 - You get, once again, some kind of update rule
+23:48 - that is essentially the same that
+23:51 - is very similar to Langevin dynamics
+23:53 - and is exactly the same update rule
+23:55 - that you would use in DTPM, which is at every step,
+24:00 - follow the gradient and then add a little bit of noise,
+24:05 - which is the same thing as Langevin dynamics-- follow
+24:07 - the score, add a little bit of noise.
+24:11 - But you can think of this process
+24:13 - as basically trying to start from noise,
+24:16 - and then you're trying to compute
+24:18 - this red curve to get to the good approximation of a data
+24:22 - point.
+24:23 - We are dealing with a computer, so you cannot deal with infinite
+24:28 - truly continuous time processes.
+24:30 - So you have to discretize time.
+24:32 - You have to discretize the time axis,
+24:35 - and you can try to approximate this red trajectory
+24:39 - with essentially some Taylor expansion.
+24:43 - So this is really what this thing
+24:45 - is, is just a Taylor expansion to what you should be doing.
+24:50 - And that's what the DTPM does.
+24:54 - So the DTPM basically has a thousand different time slices.
+24:59 - And then you will try to approximate this red curve
+25:03 - by taking steps according to the--
+25:08 - essentially following this white arrow
+25:12 - corresponds to sampling from one of the decoders that
+25:16 - defines the DTPM kind of model.
+25:20 - And because you're discretizing time,
+25:24 - there is going to be some error that is happening.
+25:27 - Or there's going to be some numerical errors that
+25:31 - can accumulate over time.
+25:33 - And you can think of what a score-based model MCMC does
+25:39 - as essentially trying to use Langevin dynamics to get
+25:44 - a good sample from the density corresponding to that time.
+25:50 - And so you can actually combine the sampling procedure
+25:54 - of the DTPM with the sampling procedure
+25:55 - of a score-based model.
+25:57 - And you're going to have increased compute cost,
+26:01 - but you can get a closer approximation
+26:04 - to the solution of this stochastic differential
+26:08 - equation that is defined over a continuous time.
+26:11 - One of the nice things about this whole SDE perspective is--
+26:14 - you might wonder why are we going through all of this--
+26:16 - is that there is a way to obtain an equivalent kind of--
+26:23 - or there is basically a way to convert the SDE
+26:26 - to an ordinary differential equation
+26:29 - where there is no longer noise added at every step.
+26:32 - And so that basically corresponds to converting
+26:34 - the VAE into a flow model because this is essentially
+26:41 - a kind of an infinitely deep VAE where there is a lot of--
+26:46 - as you go through this trajectory,
+26:48 - you're sampling from a lot of different decoders.
+26:52 - And a VAE is the decoders are stochastic,
+26:55 - so you would always add a little bit of noise at every step.
+26:58 - If you think about a flow model, that would be deterministic.
+27:01 - So there is randomness in the prior,
+27:04 - which is basically the initial condition of this process.
+27:07 - But then the dynamics are completely deterministic
+27:10 - or the transformations are deterministic.
+27:12 - And that will say that it's also possible to do it
+27:15 - because we have the continuous time formulation.
+27:18 - And so if you don't use it, then you have a score-based model.
+27:21 - So if you just don't use the predictor,
+27:23 - you just use corrector, then you have a score-based model.
+27:26 - If you just use predictor, then you have a DTPM.
+27:29 - If you use both, you get something a little bit more
+27:32 - expensive that actually gives you better samples,
+27:34 - because it's a closer approximation to the basically
+27:39 - underlying red curve, which is what you would really
+27:42 - want essentially.
+27:44 - Recall that basically the ELBO objective is trying
+27:46 - to essentially invert the--
+27:50 - the decoder is trying to invert the encoder.
+27:54 - And the decoder is forced to be Gaussian just by definition.
+27:59 - And basically, the true denoising process
+28:04 - is not necessarily Gaussian, the one
+28:08 - that you would get if you were to really invert the denoising
+28:10 - process.
+28:11 - And so no matter how clever you are
+28:13 - in selecting the mean and the variance of your Gaussian
+28:16 - decoder, there might always be a gap between,
+28:19 - if you think about the ELBO, between the encoder
+28:24 - and the inverse of the decoder, which means that the ELBO is not
+28:30 - tight and means that you're not modeling the data
+28:33 - distribution perfectly.
+28:36 - Basically another way to think about this math
+28:39 - is that only in the limit of continuous time
+28:43 - or basically an infinitely large number of steps
+28:46 - it's possible to essentially get a tight ELBO,
+28:50 - where if the forward process is Gaussian,
+28:52 - the reverse process is also Gaussian.
+28:55 - So you're not losing anything but basically
+28:59 - assuming that the decoders are Gaussian.
+29:02 - But that's only true if you really have
+29:04 - an infinite number of steps.
+29:06 - So it's only true in continuous time.
+29:08 - So the predictor would just take one step.
+29:11 - The corrector is just using Langevin
+29:13 - to try to generate a sample from the density corresponding
+29:17 - to that.
+29:18 - So now you would still do, let's say,
+29:19 - a thousand different steps but not an infinite number.
+29:23 - Like, in this case, I guess I'm showing three steps.
+29:25 - In reality, you would have a thousand
+29:27 - of these different white arrows.
+29:30 - Cool.
+29:30 - So the interesting thing is that so far, we've
+29:35 - been talking about stochastic differential equations, where
+29:38 - we have these paths that you can think either in forward
+29:41 - or reverse, going from data to noise or noise to data.
+29:45 - It turns out that it's possible to define a process where
+29:52 - the dynamics are entirely deterministic.
+29:55 - And its equivalent in the sense that the densities
+30:01 - that you get at every time step are the same
+30:04 - as the one you would get by solving
+30:06 - the stochastic differential equation, either forward
+30:09 - or reverse time.
+30:11 - So we basically have two different stochastic processes.
+30:16 - One is basically you have a stochastic initial condition
+30:20 - and then deterministic dynamics.
+30:22 - Those are those white trajectories that you see.
+30:27 - And another one where there is stochasticity at the beginning
+30:31 - and then also at every step.
+30:34 - And the processes are the same in the sense
+30:37 - that for every slice that you want to take, so
+30:41 - for every time index, the marginal distributions are
+30:45 - the same.
+30:46 - So if you look at how frequently you see a white line versus one
+30:52 - of the colored lines passing through a point,
+30:56 - you will get exactly the same kind of density,
+31:01 - including at time zero, which is the one that we care about,
+31:06 - which is the one corresponding to data basically.
+31:10 - So what this means is that we can basically
+31:18 - define a process that is entirely deterministic.
+31:22 - And as we were saying before, this essentially
+31:24 - corresponds to converting a VAE into a flow model.
+31:29 - So in VAE, you would have this process where at every step,
+31:34 - you sample from a decoder which has stochasticity.
+31:39 - In a flow model, you would have all these layers
+31:42 - that are just transforming the data
+31:45 - through some invertible transformation.
+31:48 - And this is essentially what's going on here.
+31:52 - What we're doing is we're converting the model
+31:54 - into an infinitely deep flow model, a continuous time
+32:00 - normalizing flow model, where there
+32:02 - is an infinite sequence of invertible transformations
+32:07 - which basically correspond to the dynamics of this defined
+32:12 - by this ordinary differential equation.
+32:14 - So the difference here is that if you look at this equation,
+32:20 - this is no longer a stochastic differential equation.
+32:23 - There is no noise added at every step.
+32:26 - Now, we only have a drift term here,
+32:29 - and there is absolutely no noise added during the sampling
+32:35 - process.
+32:37 - And again, you can see that the only thing that you
+32:41 - need in order to be able to define
+32:44 - this ordinary differential equation is the score function.
+32:48 - So if you have the score function or the sequence
+32:50 - of score functions, one for every time
+32:52 - step, then you can equivalently generate data
+32:59 - from your data distribution by solving an ordinary differential
+33:04 - equation.
+33:06 - So you just initialize this trajectory basically,
+33:10 - once again, flip the direction of time.
+33:13 - You sample an initial condition by sampling
+33:15 - from the prior, which is this usual pure noise distribution.
+33:19 - And then you follow one of these white trajectories.
+33:23 - And at the end, you get a data point, which is exactly
+33:28 - the kind of thing you would do in a flow model
+33:30 - where you sample from the prior, and then
+33:32 - you transform it using a deterministic invertible
+33:35 - transformation to get a data point.
+33:39 - And so that's basically what you would do.
+33:43 - We have this process, and we can think
+33:50 - of this basically as a continuous time
+33:52 - normalizing flow.
+33:54 - And the reason this is indeed or intuitively
+33:59 - the reason you can think of this as a normalizing flow
+34:02 - is because these ordinary differential equations
+34:05 - have a unique solution.
+34:06 - So basically these white trajectories they cannot cross
+34:11 - each other.
+34:12 - They cannot overlap, which means that there is some kind
+34:17 - of mapping which is invertible that goes from here to here
+34:23 - and which is the mapping defined by this solution of the ordinary
+34:27 - differential equation, which up to some technical condition
+34:31 - exists and is unique.
+34:35 - And so we can think of this as a very flexible kind of flow model
+34:41 - where the invertible mapping is defined
+34:44 - by the dynamics of our ordinary differential equation,
+34:49 - where the dynamics are defined by a neural network.
+34:53 - So it's a neural ODE, if you've seen
+34:55 - these kind of models, a neural Ordinary Differential Equation.
+34:59 - So it's a deep learning model where the computation is defined
+35:04 - by what you get by solving an ordinary differential
+35:07 - equation where the dynamics are defined
+35:09 - by a neural network, which in this case is the score function.
+35:12 - The ODE is equivalent to the SDE,
+35:16 - so they define exactly the same kind of distribution
+35:19 - at every step.
+35:20 - So the distribution that you get at this end,
+35:25 - so a capital T is exactly the same that you would have gotten
+35:28 - if you were to just add-- and we're doing a random
+35:31 - walk where you add the noise at every step.
+35:33 - This is true if you have the exact score
+35:37 - function or the average step, which
+35:40 - is never the case in practice.
+35:41 - But to the extent that you have the exact score
+35:44 - function, the mapping between the SDE and the ODE is exact,
+35:48 - so they're exactly defining the same--
+35:51 - it's a different stochastic process
+35:52 - with exactly the same marginal distributions.
+35:55 - Another way to think about it is that you're essentially
+35:58 - reparameterizing the randomness.
+36:00 - So remember that when we're sampling,
+36:02 - we're thinking about variational inference
+36:04 - and how to backprop through basically the encoder, which
+36:10 - is like the stochastic kind of computation.
+36:14 - We were showing that it's possible to sample
+36:17 - from a Gaussian by basically transforming
+36:20 - some simple noise through a deterministic kind
+36:22 - of transformation.
+36:23 - And in some sense what's happening here is
+36:25 - that we are reparameterizing--
+36:27 - there is a computation graph where we add randomness
+36:29 - at every step.
+36:30 - And we're defining a somewhat equivalent computation graph
+36:34 - where we're putting all the randomness
+36:36 - in the initial condition.
+36:38 - And then we're transforming it deterministically.
+36:42 -
+36:46 - But yeah, the key thing here is that the mapping is invertible
+36:50 - because if you think about an ordinary differential equation,
+36:54 - there is a deterministic dynamic.
+36:56 - So whenever you are somewhere, the ordinary differential
+36:59 - equation will push you somewhere in the next location
+37:04 - based on the dynamics.
+37:05 - And they cannot bifurcate.
+37:07 - There is only one next state that you get by solving the ODE,
+37:12 - and so there is no way for two things to possibly cross.
+37:17 - And we can invert it by basically
+37:20 - going backwards from capital T to 0,
+37:23 - which is from noise to data.
+37:26 - And this is important for several reasons.
+37:32 - The main one is that we can now think--
+37:37 - if you think of this process of going
+37:40 - from some prior, simple prior, a Gaussian distribution to data
+37:44 - through an invertible mapping, this is once again
+37:49 - a normalizing flow.
+37:51 - So what you can do is you can actually
+37:53 - compute the likelihood of any X or any image
+38:01 - by using a central change of variable formula.
+38:05 - As in a regular flow model, if you
+38:07 - want to evaluate the likelihood of some X
+38:10 - under the flow model, what you would do
+38:13 - is you would invert the flow to go in the prior space, which
+38:18 - in this case corresponds to solving the ODE backwards
+38:21 - and find the corresponding point in the latent space.
+38:27 - Evaluating the likelihood of that point under the prior,
+38:32 - and the prior is known as fixed, so we
+38:34 - can do it efficiently, then, as usual,
+38:36 - you have to keep track of that change of variable formula
+38:39 - s actually.
+38:40 - So you have to keep track of how much the volume is squeezed
+38:45 - or expanded as you transform a data point
+38:49 - through this ordinary differential equation,
+38:52 - integrating it.
+38:53 - So it looks like this.
+38:55 - So you have to integrate the--
+38:58 - so it's an ordinary differential equation.
+39:00 - So you can imagine if you were to discretize it,
+39:05 - the score would give you the direction that you
+39:07 - should move by a little bit.
+39:08 - And then you need to recompute it.
+39:11 - So you still need to somehow solve an ordinary differential
+39:15 - equation or not computer which involves discretizations.
+39:18 - But what you get is that people have
+39:20 - spent 50 years or more developing really good methods
+39:24 - for solving ordinary differential equations very
+39:27 - efficiently.
+39:28 - Like, there's very clever schemes
+39:30 - for choosing the step size, very clever schemes
+39:35 - for reducing the numerical errors that you get
+39:39 - as you go from left to right.
+39:41 - And all that machinery can be used
+39:44 - and has been used to basically accelerate sampling,
+39:48 - generate higher quality samples.
+39:50 - And that's one of the main reasons this perspective is
+39:52 - so powerful, because once you reduce sampling to solve an ODE,
+39:57 - you suddenly have access to a lot of really smart techniques
+40:02 - that people have developed to come up
+40:06 - with good numerical approximations
+40:08 - to the ordinary differential equations.
+40:10 - If you recall, you can think of the DTPM as a VAE
+40:13 - with a fixed encoder, which happens to also have
+40:17 - the same dimension.
+40:18 - And that's very important for getting the method
+40:21 - to work in practice.
+40:22 - We'll talk about latent diffusion
+40:24 - models in a few slides, and that basically embraces more
+40:30 - like the VAE perspective of saying,
+40:32 - well, let's have a first encoder and decoder that
+40:35 - will map the data to a lower dimensional space
+40:38 - and then learn a diffusion model over that latent space.
+40:42 - And so you get the best of both worlds
+40:44 - where you've both reduced the dimensionality,
+40:47 - and you can still use this machinery tool that we
+40:50 - don't practice works very well.
+40:53 - The Fokker-Planck equation is basically telling you
+40:55 - how the densities change.
+40:58 - It's a partial differential equation
+41:00 - that relates the partial derivative of PTE basically
+41:06 - of the PTX, so the probability of X across as you
+41:10 - change T to spatial derivatives, which is essentially
+41:15 - the trace of the Jacobian.
+41:17 - And so that's why the things work out,
+41:21 - and that's actually how you do the conversion from the SDE
+41:23 - to the ODE.
+41:25 - You just basically work through the Fokker-Planck equation.
+41:28 - Everything is relying on this underlying diffusion structure.
+41:34 -
+41:39 - Yeah, but basically what I'm saying here
+41:43 - is that you can use something that
+41:46 - is very similar to the vanilla change of variable formula
+41:50 - that we were using in flow models
+41:52 - to actually compute exact likelihoods using these models.
+41:55 - And again, basically, if you want
+41:57 - to evaluate the probability of a data point X,
+41:59 - 0, what you would do is you would solve the ODE backwards.
+42:03 - So you would go from data to noise.
+42:06 - To get XT, you would evaluate the probability of that latent
+42:13 - variable under the prior.
+42:15 - And that's this piece.
+42:19 - And then you have to look at the basically
+42:23 - how the volume is changed along the trajectory.
+42:27 - And it's no longer the determinant of the Jacobian
+42:31 - that you have to look at.
+42:33 - It turns out that what you have to do
+42:34 - is you have to integrate the trace of the Jacobian, which
+42:39 - is something that you can actually
+42:41 - evaluate pretty efficiently.
+42:43 - So that's basically what a consistency model does.
+42:47 - There is this recent model that was developed by Yang actually
+42:50 - at OpenAI.
+42:51 - And essentially what they do is they
+42:55 - try to learn a neural network that
+42:58 - directly outputs the solution of the ODE in one step.
+43:05 - And because there is an underlying ODE,
+43:07 - there is some clever objectives that you
+43:09 - can use for training the neural network.
+43:11 - But yeah, that's, as we'll see, that is
+43:14 - once you take this perspective, you can distill down.
+43:18 - Then you can get very fast sampling procedures
+43:22 - by taking advantage of this underlying ODE perspective.
+43:26 - You're just trying to solve ODEs,
+43:27 - and there is a lot of tricks that you can
+43:29 - use to get very fast solvers.
+43:30 -
+43:34 - But one nice thing you get is you can compute likelihoods.
+43:38 - So you can convert the VAE into a flow model,
+43:41 - and then you can compute likelihoods.
+43:43 - So the good thing is that once you learn the score once,
+43:49 - and then it's opening up, there's
+43:52 - many different ways of using the score at inference time
+43:55 - to generate samples.
+43:57 - And ODEs are good to generate samples very efficiently.
+44:02 - The SDE is still valuable.
+44:04 - In some cases, you can actually generate higher quality samples.
+44:08 - And the reason is that if you think
+44:12 - about what happens when you solve the ODE,
+44:17 - you start with pure noise.
+44:19 - And then you follow this denoiser essentially
+44:23 - to try to approximate one of these trajectories.
+44:27 - But then let's say that the denoiser is not perfect
+44:31 - and you're making some small mistakes, then
+44:33 - the kind of images that you see around the middle
+44:39 - of this trajectory, they're supposed
+44:42 - to look like data plus noise, but they're not quite
+44:44 - going to be data plus noise because your score function is
+44:47 - not perfect.
+44:48 - And so then you're starting to feed
+44:51 - data that is a little bit different from the ones
+44:53 - you've seen during training in your denoiser, which
+44:56 - is your score model.
+44:57 - And so you're going to have compounding errors,
+45:00 - because the images that you're feeding
+45:03 - into your denoiser, which is basically
+45:05 - what you get by following these trajectories,
+45:07 - are not quite going to be exactly the ones that you've
+45:10 - used for training the model, which
+45:12 - is what you get by actually going from data to data
+45:17 - plus noise by really just adding noise to the data.
+45:20 - And so if you think about the SDE on the other hand,
+45:23 - you're actually adding noise at every step.
+45:26 - And that's good because you're making
+45:28 - the inputs to the denoiser look more like the ones you've
+45:31 - seen during training.
+45:33 - And the problem is that solving SDEs efficiently
+45:37 - is a lot harder.
+45:39 - And so if you want fast sampling,
+45:43 - the ODE perspective is much more convenient to work with.
+45:46 -
+45:50 - Yep.
+45:51 - So we can get likelihoods.
+45:53 - And what you have to do is to basically solve
+45:58 - an ODE where you solve this integral over time by--
+46:04 - you can literally call a black box ODE solver
+46:07 - and compute this quantity.
+46:11 - And it turns out that it's very competitive.
+46:13 - So even though these models are not
+46:17 - trained by maximum likelihood, so they
+46:19 - are not trained as a flow model.
+46:21 - And the reason they are not trained as a flow
+46:23 - model, because you could, in principle,
+46:26 - you could try to optimize--
+46:29 - you could do exact maximum likelihood
+46:32 - because you could try to evaluate
+46:35 - this expression over your data set
+46:37 - and optimize it as a function of theta.
+46:40 - But it's numerically very tricky and very, very expensive
+46:44 - because you have to differentiate through an ODE
+46:48 - solver, because you'd have to optimize the parameters theta
+46:53 - such that the result of the ODE solver
+46:55 - gives you high likelihood, which is extremely difficult to do
+46:59 - in practice.
+47:00 - So you don't train the model on maximum likelihood.
+47:03 - You still train it by score matching,
+47:06 - but still you get very good likelihoods.
+47:09 - It's like you can actually achieve--
+47:11 - this is achieving state-of-the-art results
+47:13 - on image data sets.
+47:14 -
+47:18 - Unclear why, but I mean, well, we
+47:22 - know why because, as we've seen, score matching
+47:27 - has an ELBO interpretation, so it's not too surprising
+47:31 - that by matching gradients by doing score matching,
+47:36 - you're optimizing an ELBO and evidence lower bound.
+47:39 - So it's not too surprising that the likelihoods are good too,
+47:44 - but yeah, the results are very, very good
+47:46 - in terms of likelihoods.

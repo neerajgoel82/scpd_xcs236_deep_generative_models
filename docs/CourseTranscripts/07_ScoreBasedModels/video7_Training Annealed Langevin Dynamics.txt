@@ -1,1 +1,454 @@
-
+00:00 -
+00:05 - SPEAKER: What is the model look like?
+00:07 - So the model is going to be a single neural network that
+00:09 - will try to jointly estimate all these scores.
+00:12 - How do we actually learn it?
+00:14 - We're going to learn it by denoising score matching.
+00:17 - So there's going to be this noise conditional score
+00:19 - network, which is going to be a network that jointly estimates
+00:24 - all these vector field of scores.
+00:26 - And how should we train this?
+00:29 - You could do sliced score matching.
+00:32 - It's much more natural to just use denoising score matching
+00:35 - since denoising score matching already
+00:36 - gives you the score of a noise perturbed data density,
+00:40 - you might as well directly use that.
+00:43 - So since we were trying to model scores of data plus noise,
+00:49 - we might as well just directly use
+00:51 - denoising score matching because that's
+00:53 - a little bit more efficient.
+00:55 - And then the loss function is going
+00:57 - to be kind of a weighted combination of denoising score
+01:01 - matching losses because we want to jointly solve, let's say,
+01:06 - 1,000 different tasks.
+01:08 - And so the loss function might look something
+01:10 - like this where we have this nice conditional score
+01:14 - network that takes as input a data point and a noise level
+01:18 - and tries to estimate the score of the data distribution
+01:22 - perturbed with that noise level at that point x.
+01:26 - And we want to train this core network to perform well
+01:30 - across different noise levels.
+01:32 - So if you have the l noise levels,
+01:34 - this noise network, this noise conditional core network
+01:37 - should be able to solve all these different regression
+01:39 - problems as well as possible.
+01:42 - And so there is a lambda sigma I parameter here
+01:46 - that basically controls how much you
+01:47 - care about estimating accurately the scores at different noise
+01:51 - levels.
+01:52 - Yeah, so the loss would look like this.
+01:55 - So the data is clean as you said.
+01:56 - And then you add noise corresponding to the sigma
+02:01 - that you care about, and then you
+02:02 - try to denoise that data point.
+02:04 - And so if you think of it from the denoising perspective,
+02:07 - we're not just learning to denoise
+02:09 - data that has been perturbed with a fixed amount of noise,
+02:12 - but we're basically learning a family
+02:14 - of denoisers, each one working with different amounts of noise.
+02:19 - So there is a denoiser that works
+02:20 - when the data is corrupted with a very large amount of noise,
+02:24 - and there's going to be a denoiser that works when
+02:26 - the data is corrupted with a smaller amount of noise
+02:29 - all the way down to almost no noise being added to the data.
+02:33 - And these are different denoising problems
+02:35 - and equivalently corresponding to estimating
+02:38 - the scores of different noise perturbed data distributions.
+02:44 - Yeah, so when the noise is very large,
+02:47 - basically denoising is very hard.
+02:50 - If I add an infinite amount of noise, all the structure
+02:54 - and the original data is lost, the best you can do
+02:57 - is to basically output the average image, essentially.
+03:00 - That's the only thing you can do.
+03:02 - There is no information in x tilde about x.
+03:06 - So the best thing you can do is to basically
+03:08 - if you're trying to minimize an L2 loss, is to predict the mean.
+03:11 - And you can imagine that if that's the only thing you have,
+03:15 - you're not going to be able to generate good images.
+03:17 - But because you know also how to denoise images
+03:20 - with less amounts of noise, then if you know all this score
+03:24 - models, then you can do that annealed Langevin dynamics
+03:27 - procedure, and you can actually generate clean images
+03:30 - at the end.
+03:31 - So, yeah, we'll get to what lambdas makes sense.
+03:35 - In theory, like if you had infinite capacity,
+03:37 - this model is arbitrarily powerful.
+03:39 - It doesn't even matter because it could
+03:41 - solve perfectly each task.
+03:43 - In practice, it matters how you weight this different score
+03:48 - matching losses.
+03:49 - We'll get to that.
+03:51 - And, yeah, but the loss function basically looks like this.
+03:56 - It's a mixture of denoising score matching objectives
+04:00 - across all the different noise levels that we are considering.
+04:04 - It's true that they are all related to each other.
+04:06 - So in theory, if you know the score at a particular noise
+04:10 - level, you can in theory recover the score of different noise
+04:15 - levels.
+04:16 - But it's not just a scaling.
+04:18 - So there is something called the Fokker-Planck equation.
+04:21 - And if you were to solve that equation,
+04:24 - which is just the PDE at the end of the day,
+04:26 - but if you were able to solve that PDE,
+04:29 - that tells you basically how the scores
+04:31 - are related to each other.
+04:33 - There are papers.
+04:34 - We've done a number of--
+04:36 - we have a number of papers trying
+04:38 - to enforce that condition because in some sense,
+04:41 - this is just treating all these tasks as being independent.
+04:45 - But we know that they are related to each other
+04:47 - as you were suggesting.
+04:48 - And so you might be able to do better if you tie together
+04:53 - the losses because you know how to go from one solution
+04:56 - to the other solution.
+04:57 - In practice, it doesn't seem to help a lot.
+05:00 - But you're right.
+05:01 - There is something called-- yeah,
+05:02 - if you could solve the Fokker-Planck equation,
+05:04 - you could go from, yeah, go from any score
+05:07 - to any other score at least in continuous time.
+05:10 -
+05:14 - Cool.
+05:14 - So now we need-- we have several choices to make.
+05:17 - We need to choose what kind of noise scales
+05:21 - are we going to consider.
+05:22 - So we need to decide on what is the maximum amount of noise
+05:26 - that we're going to add.
+05:27 - We need to decide the minimum amount of noise
+05:31 - that we're going to add, and we need
+05:33 - to decide how to step in between these two extremes, essentially.
+05:38 - And for the maximum noise scale, you probably
+05:42 - want to choose it to be roughly the maximum pairwise distance
+05:47 - between any two data points.
+05:49 - And the idea is if you have two images in the data, x1 and x2,
+05:56 - you want the amount of noise to be sufficiently large
+05:59 - so that basically it's possible to go from one data
+06:04 - point to the other data point if you were to add noise,
+06:08 - essentially.
+06:08 - So if you start from data point one,
+06:10 - and you were to add a sufficiently large amount
+06:12 - of noise, there should be a reasonable probability
+06:15 - of generating a data point two and equivalently
+06:20 - going back on the other on the other direction.
+06:24 - And this basically ensures that at the beginning when
+06:27 - you do start out your lingerie in dynamics procedure
+06:31 - with a lot of noise, that's going to mix--
+06:33 - it's going to explore the space pretty efficiently because there
+06:38 - is a way to go basically from any point to any other point.
+06:42 - That's the intuition for this choice.
+06:48 - The minimum noise scale, you probably
+06:50 - want it to be sufficiently small so that the image plus noise
+06:56 - is hard to distinguish from just a clean image.
+07:00 - So the minimum noise scale should be very, very small.
+07:06 - And the other thing to decide is how you go from the maximum
+07:15 - to the minimum.
+07:16 - So how do you interpolate between these two extremes?
+07:19 - And again, the idea is that if you think about that Langevin
+07:22 - dynamics procedure, we want to make sure
+07:25 - that these different noise scales have sufficiently overlap
+07:31 - so that when you initialize the Langevin dynamics chain
+07:34 - corresponding to the next noise level,
+07:36 - you're starting with something that makes sense.
+07:40 - And so if you imagine that you have this spheres where they are
+07:45 - increasingly corresponding to what you would get
+07:49 - or the probability as you increase the amount of noise
+07:52 - that you add, and you go sigma 2, sigma 1, sigma 3, essentially
+07:59 - what you want to make sure is that when you have, let's say,
+08:02 - data plus noise level sigma 2, there
+08:06 - should be sufficiently overlap with the data points
+08:10 - you expect when you have data plus noise level sigma 3 so
+08:15 - that when you use the samples that
+08:17 - were obtained by running Langevin dynamics with sigma 2
+08:20 - noise levels, and you use them to initialize the Langevin chain
+08:24 - corresponding to noise level sigma 3,
+08:26 - you have something that makes sense
+08:29 - because if there is no overlap--
+08:31 - So you go very--
+08:32 - you have like a drastic reduction in noise level.
+08:35 - Let's say, you go from a lot of noise to very little noise
+08:38 - after running your Langevin chain for the large amount
+08:41 - of noise, you're not going to get a good initialization
+08:45 - for the next noise level.
+08:47 - But if there is a decent amount of overlap between these noise
+08:51 - levels, then you might expect this annealed Langevin dynamics
+08:57 - procedure to actually work pretty well.
+09:00 - We are deciding how to do sigmas right.
+09:03 - And so what you can do is you can actually
+09:04 - work out a little bit of math about what makes sense.
+09:09 - And it makes sense according to this heuristic
+09:12 - to basically use some kind of geometric progression
+09:16 - between the different noise levels.
+09:19 - This ensures that there is sufficiently
+09:22 - overlap between the different shells
+09:25 - that you get as you increase the-- or you decrease the amount
+09:28 - of noise that you add.
+09:30 - And this is a heuristic.
+09:32 - It's not necessarily the only valid choice,
+09:34 - but this is the first one that we did that seemed to work.
+09:39 - The other thing we can decide is the weighting factor.
+09:45 - Remember, we're jointly solving all these estimation problems
+09:48 - corresponding to different noise levels.
+09:50 - How much should we care about the different noise levels which
+09:56 - is controlled by this lambda sigma I hyperparameter that
+09:59 - decides how much weight do you put on the different components
+10:03 - of the loss?
+10:05 - And so how do we choose this weighting function?
+10:09 - The idea is that you want to balance
+10:11 - the importance of the different components in the loss.
+10:16 - And a reasonable heuristic that, again, works well in practice
+10:20 - is to choose that to be equal to the amount of noise
+10:24 - that you're adding at that level.
+10:26 - It's because the size of the arrow
+10:28 - changes also, the way it's scaled.
+10:32 - Do I have it here?
+10:34 - So the loss would look something like this.
+10:36 - And basically, yeah, essentially you actually
+10:43 - end up carrying the same about the different noise levels
+10:47 - if you do that choice because of the various scaling factors.
+10:53 - So remember there is a sigma I here.
+10:54 -
+11:00 - Again, it's like a choice.
+11:02 - Other choices can work as well.
+11:04 - But this is the thing that we did.
+11:08 - Yeah, so epsilon theta here is basically a noise prediction
+11:12 - because it's basically literally just estimating
+11:14 - the noise that was added.
+11:16 - There is different parameterization
+11:18 - where you might want to predict as we discussed when the noise
+11:23 - level is very high, then you might want to predict the mean.
+11:27 - So there are different ways of parameterizing
+11:29 - this, what the network is supposed to output.
+11:32 - This is kind of the most--
+11:33 - the simplest one where you're just predicting.
+11:35 - It's a noise prediction kind of task.
+11:37 -
+11:41 - And so the final loss looks something like this.
+11:45 - You're basically sample a mini batch of data points,
+11:48 - then you sample a mini batch of noise indices.
+11:53 - So you basically equivalently choose
+11:56 - a bunch of noise levels, one per data point, let's say,
+12:02 - uniformly across the different noise scales
+12:05 - that we're willing to consider that could be--
+12:07 - maybe L here could be 1,000 if you have 1,000 different noise
+12:11 - levels.
+12:13 - And then what you do is you sample noise IID, one noise
+12:20 - vector per data point.
+12:22 - And then you basically train this core network
+12:27 - to solve the denoising problem for each data point,
+12:31 - essentially, with the weighting function that we had before.
+12:35 -
+12:39 - And then you basically just do stochastic gradient descent
+12:42 - on this loss trying to essentially find
+12:46 - parameters theta that minimize this denoising loss which
+12:50 - is equivalent to essentially estimating
+12:53 - the scores of the data density perturbed
+12:57 - with these various noise levels as well as you can.
+13:02 - And so basically, everything is just
+13:07 - as efficient as training a single score model
+13:11 - because everything is amortized, and there's a single score
+13:14 - network that is jointly trained to estimate the score of data
+13:19 - plus noise at different noise intensities.
+13:24 - And so the final thing looks like this.
+13:28 - You have data, clean data, and then you have noise at the end.
+13:32 - And so there is going to be correspondingly kind
+13:35 - of different versions of the data distribution
+13:42 - that has been perturbed with increasingly large amounts
+13:45 - of noise going from clean data, mediumly perturbed
+13:49 - data, all the way to data plus a ton of noise
+13:52 - where basically then the structure is completely
+13:55 - destroyed.
+13:55 - So visually, you can think of clean data, data
+13:58 - plus a little bit of noise, more noise, more noise, more noise,
+14:01 - all the way to huge amount of noise
+14:04 - where you don't even recognize what you started from.
+14:07 - So during learning, I guess, there is always going to be--
+14:10 - I mean, it's a scalar, and so there's
+14:11 - always going to be an ordering.
+14:12 - And so you're always going to be considering--
+14:14 - you're going to always going to go from the smallest amount
+14:16 - to the largest amount of noise.
+14:17 - During inference, it might make sense
+14:20 - to do different things than what I described
+14:24 - is annealed Langevin dynamics where you would
+14:26 - start from a lot of noise and you go all the way
+14:29 - to clean data.
+14:30 - There are versions where you might not want to do this.
+14:33 - And so you might want to go from noise to data
+14:37 - and then maybe a little bit of noise and then go back.
+14:42 - So, yeah, there is a lot of flexibility
+14:43 - then at the inference.
+14:46 - At training time, you need to estimate all of them.
+14:48 - And there's always going to be a mean,
+14:49 - and there's going to be a max.
+14:50 - And then you can think about how you, yeah, how you space them.
+14:57 - All of them-- there is a single model
+14:59 - that is jointly trained to solve all these denoising tasks.
+15:05 - And in fact, you can get better performance
+15:07 - if you're willing to consider multiple.
+15:09 - Like some of the state of the art models that are out there,
+15:12 - they don't have a single one.
+15:13 - They might have a few of them.
+15:15 - And because they can afford to train a bunch of different noise
+15:19 - models, it might make sense to do it
+15:21 - because this is purely like a computational trick.
+15:24 - If you could, it would be better to jointly separately estimate
+15:28 - the scores for every noise level.
+15:31 - OK, so then there's going to be different noise levels.
+15:34 - For every noise level, there's going
+15:36 - to be a corresponding data density plus noise, which we're
+15:39 - going to denote p sigma 1.
+15:41 - And this is the same as the Q sigma
+15:42 - that we had at the beginning.
+15:43 - So you can think of it as data becoming increasingly corrupted
+15:48 - as you go from left to right.
+15:51 - For each one of these noise levels,
+15:53 - there's going to be a corresponding score model.
+15:57 - So all these scores are going to be different
+15:59 - because we are adding increasingly large amounts
+16:01 - of noise.
+16:02 - And then there's going to be a single neural network that
+16:05 - is jointly trained to estimate all these vector fields.
+16:09 - And the network takes the data x where you
+16:11 - are in this plot and the sigma.
+16:14 - And it will estimate the score for that noise level.
+16:17 -
+16:20 - And we jointly train them by this mixture of denoising score
+16:24 - matching objectives, and which is just
+16:29 - a mixture of this usual score matching loss.
+16:32 - And then we do, again, Langevin dynamics to sample.
+16:36 - So what you would do is you would initialize your particles
+16:39 - at random.
+16:40 - Presumably that is pretty close to just pure noise.
+16:45 - So we initialize our particles here,
+16:48 - and then we follow this course for p sigma 3
+16:52 - which is data plus a lot of noise.
+16:55 - We're getting a little bit closer to the higher data
+16:57 - density regions.
+16:58 - And then we use these samples to initialize a new Langevin
+17:02 - dynamics chain for the data density plus a little bit
+17:05 - less noise.
+17:07 - We follow this arrows again, and you
+17:11 - see that the particles are moving
+17:13 - towards the high probability regions of the original data
+17:15 - density.
+17:16 - So they're becoming more and more structured in some sense.
+17:19 - And then we use these particles to initialize another Langevin
+17:22 - chain corresponding to an even smaller amount of noise.
+17:27 - And at the end, we get samples that
+17:31 - are very close to the original data density
+17:34 - because sigma 1 is very, very small.
+17:36 - So this is almost the same as clean data.
+17:40 - And throughout the process, we are getting good information,
+17:43 - good directional information from our score models
+17:46 - because we're using the corresponding noise
+17:50 - level in the data density although the arrow is
+17:54 - pointing you in one direction because it's deterministic.
+17:58 - Recall the Langevin dynamics is following the arrow,
+18:00 - but it's also adding noise at every step.
+18:03 - And so regardless of where you are,
+18:05 - if you run it for a sufficiently long amount of time,
+18:10 - you might end up somewhere completely differently.
+18:13 - So even though you initialize the particle in the same point,
+18:16 - maybe you initialize it here, because of the randomness
+18:19 - in the Langevin dynamics, you might end up
+18:21 - in completely different places, meaning
+18:23 - that you're going to generate completely different,
+18:26 - let's say, images.
+18:26 -
+18:30 - And so that's the procedure near Langevin dynamics.
+18:34 - And here you can see it in how it works.
+18:39 - This is kind of what happens if you
+18:41 - follow that exact procedure on real data sets.
+18:46 - Let me play it again.
+18:47 - So you see how you start from pure noise,
+18:50 - and then you're kind of following this arrows,
+18:53 - you're following these gradients,
+18:54 - and you're slowly basically turning noise into data.
+18:59 -
+19:02 - Here you can see examples on some image data
+19:04 - sets, MNIST CIFAR-10, so forth.
+19:07 - And you can see that it has this flavor going from noise to data
+19:11 - by following these score models.
+19:15 - How many steps?
+19:16 - Ideally, you would want to do as many as possible.
+19:18 - In practice, that's expensive, so you might want
+19:21 - to do 1, or 2, or maybe 10.
+19:24 - Each step is expensive because it
+19:27 - requires a full neural network evaluation.
+19:29 - And so that's again, a hyperparameter.
+19:33 - You should do as many as you can.
+19:35 - But the more you do, the more expensive
+19:37 - it is to generate a sample.
+19:39 - These are all generated yeah, yeah, yeah,
+19:41 - through the Langevin dynamics, annealed Langevin dynamics
+19:45 - procedure.
+19:46 - Oh, yeah, and MNIST is basically a data set
+19:49 - of handwritten digits.
+19:50 - They look like that.
+19:51 - And then you have people's faces.
+19:52 - And you have CIFAR-10 samples.
+19:54 - So these are pretty good kind of samples that
+19:57 - were generated by this model.
+19:58 - They have the right structure.
+19:59 - And the model is able to generate reasonable
+20:02 - looking images.
+20:04 - It's not theoretically grounded.
+20:05 - I think one key advantage is that if you think about it,
+20:09 - they can be much more expensive at the inference time.
+20:12 - Imagine you're running a Langevin dynamics chain which
+20:15 - might involve evaluating a neural network 1,000 times,
+20:18 - 10,000 times.
+20:20 - So if you think of it from that perspective,
+20:22 - you have a very deep computation graph
+20:25 - that you're allowed to use at inference time.
+20:28 - But at training time, you never have to actually unroll it.
+20:31 - So that's the key insight that you're
+20:34 - allowed to use a lot of computation at inference time.
+20:37 - But it's not very expensive to train because it's not
+20:40 - trained by like, again, by generating a full sample
+20:43 - and then checking how should I change my parameters to make
+20:47 - the sample better.
+20:49 - It's trained very incrementally to slightly improve
+20:53 - the samples by a little bit, and then
+20:56 - you keep repeating that procedure at inference time,
+20:58 - and you get great samples.
+21:01 - They are trained in a very different way.
+21:03 - There is no two sample test.
+21:04 - They are trained by score matching.
+21:06 - The architectures are different.
+21:08 - The amount of compute that you use
+21:09 - during training and inference time are different.
+21:12 - So there's a lot of things that change.
+21:16 - Hard to say there's no theoretical argument
+21:18 - for why this is better.
+21:19 - But in practice, yeah, it seems to be dominating.
+21:22 - It's also much more stable to train
+21:23 - because it's all like just score matching, so no minimax.
+21:27 - Yeah, now if you look at certain kind of metrics
+21:30 - that we'll talk about more in a few
+21:32 - lectures, but this was the first model that was actually
+21:36 - able to beat GANs back then where
+21:39 - the state of the art on image generation.
+21:42 - That was the first hint that these kind of models
+21:44 - could actually outperform GANs despite a lot of years
+21:48 - and years.
+21:49 - And lots of resources that were spent in optimizing GANs,
+21:52 - this thing was actually able to improve sample quality according
+21:56 - to some metrics.
+21:58 - And indeed these are different kinds of data sets.
+22:01 - So scaling up the model a little bit,
+22:04 - it can generate pretty reasonable faces
+22:06 - of people and monuments and things like that.
+22:11 - Yeah, we'll talk about the metrics more in future lectures.
+22:15 - But there are metrics that try to quantify
+22:17 - how good the samples are, how closely they
+22:19 - match the-- they relate to how visually appealing
+22:24 - the samples are.
+22:25 - And they are automated, so there's no human in the loop,
+22:27 - and they correlate with how good the samples are.
+22:31 - Not super important what they are exactly,
+22:33 - but the important bit was that these
+22:36 - are the first model that was actually competitive with GANs.
+22:39 - And that's prompted a lot of the follow-up work
+22:43 - on really scaling these models.

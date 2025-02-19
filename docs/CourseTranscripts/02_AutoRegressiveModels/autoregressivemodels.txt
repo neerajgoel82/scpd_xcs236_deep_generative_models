@@ -1,0 +1,2949 @@
+00:00 -
+00:05 - SPEAKER: The plan for today is to talk
+00:07 - about autoregressive models, which is
+00:09 - going to be the first type of--
+00:12 - first family of generative models
+00:15 - that we're going to consider in the class.
+00:18 - This is the kind of technology behind large language
+00:21 - models, things like ChatGPT.
+00:23 -
+00:29 - So, yeah.
+00:30 - Just as a recap, remember this high level overview
+00:34 - whenever you want to train a generative model, you need data.
+00:39 - So samples from some IID unknown probability distribution Pdata.
+00:45 - And then you need to define a model family, which
+00:48 - is going to be a set of probability
+00:51 - distributions over the same space over which your data is
+00:55 - defined.
+00:56 - And these probability distributions
+00:59 - are typically parameterized somehow, for example using--
+01:05 - it could be conditional probability tables
+01:07 - in the case of a Bayesian network,
+01:09 - as we have seen in the last lecture.
+01:12 - For the most part, we're going to be thinking
+01:14 - about probability distributions that are defined
+01:16 - in terms of neural networks.
+01:18 - So you can think of theta there in that picture
+01:21 - as being kind of like the parameters of the neural network
+01:24 - that you're going to use to define this probability
+01:27 - distribution.
+01:28 - And then you're going to define some sort of notion
+01:31 - of similarity or divergence between the data distribution
+01:35 - and your model distribution.
+01:36 - And then we're going to try to optimize
+01:38 - the parameters of the neural network
+01:39 - to make your model distribution as close as possible to the data
+01:43 - distribution.
+01:45 - The caveat being that you only have access
+01:47 - to samples from the data distribution, right?
+01:49 - So you don't you know-- you can't
+01:51 - evaluate the probability of an image
+01:53 - under the data distribution.
+01:54 - The only thing you have access to are a bunch of samples.
+01:58 - And once you have this probability distribution,
+02:01 - then you can do several things.
+02:03 - You can sample from it.
+02:05 - So you can choose a vector x with probability--
+02:10 - there's many different axes that you could choose from.
+02:13 - Each one of them is assigned a probability by your model.
+02:16 - And you can choose one with the probability
+02:21 - according to this probability distribution.
+02:23 - So you sample from it.
+02:25 - And this is what you need to generate new data.
+02:28 - We're going to be interested in evaluating probabilities
+02:32 - for several reasons.
+02:34 - One is that evaluating probabilities
+02:37 - is useful for training the models.
+02:39 - So if somehow you have a way of figuring out
+02:43 - how likely is any particular image according to your model,
+02:47 - then that gives you a pretty natural way
+02:49 - of training the model, solving this optimization problem
+02:53 - or trying to find the point that is as close as
+02:56 - possible to your data distribution.
+02:57 - And one way to do that is to just do maximum likelihood.
+03:00 - You can try to find the parameters of your model
+03:03 - that maximize the probability of observing a particular data set.
+03:08 - The other thing you can do if you have access to probabilities
+03:11 - is you can do things like anomaly detection.
+03:13 - So you can-- given an input, you can see,
+03:16 - is this input likely or not?
+03:19 - So what we discussed in the last lecture,
+03:22 - one advantage of generative models compared
+03:24 - to discriminative models is that you
+03:25 - can reason about the possible inputs
+03:28 - that you might be given access to.
+03:30 - So you might, for example, try to detect adversarial examples
+03:34 - because perhaps they are different from the kind
+03:37 - of natural images that you've used for training your model.
+03:40 - So if your generative model is good,
+03:42 - you might be able to identify that something is
+03:45 - odd about a particular input.
+03:47 - Maybe the likelihood is lower than it should be.
+03:50 - And so you can say, OK, this is perhaps an anomaly.
+03:53 - Maybe I shouldn't be very confident about the kind
+03:57 - of decisions or the kind of predictions
+03:59 - that I make about this particular data point.
+04:02 - And as we discussed, another thing you can do
+04:05 - is potentially unsupervised representation learning.
+04:09 - And so in order to do well at learning a good approximation
+04:14 - of the data distribution, you often
+04:16 - need to understand the structure of the data.
+04:18 - And so in some cases, it's going to be a little bit tricky
+04:21 - for autoregressive models, which is what we're
+04:23 - going to talk about today.
+04:24 - But for other types of models, it's going to be pretty natural.
+04:27 - There's going to be a pretty natural way of extracting
+04:29 - features as a byproduct basically
+04:33 - of training a good generative model.
+04:36 - So the first question is kind of like,
+04:40 - how to represent these probability distributions.
+04:43 - So how do you define this set in a meaningful way?
+04:47 - And today, we're going to talk about autoregressive models,
+04:49 - right, which are built on the idea of using chain rule,
+04:53 - essentially.
+04:55 - And next, we're going to talk about how to learn it.
+04:59 - So recall that there is this general result
+05:04 - that you can take any probability distribution defined
+05:07 - over an arbitrarily large number of variables n.
+05:11 - And you can always factor it as a product of conditionals.
+05:14 - So if you have four random variables x1 through x4,
+05:19 - you can always write it down as the probability
+05:21 - of x1, the probability of x2 given x1, and so forth.
+05:25 - And this is just fully general.
+05:28 - You don't need to make any assumptions on the distribution.
+05:32 - Every distribution can be factorized this way exactly.
+05:37 - And in particular, you can also use any ordering you want.
+05:41 - So in this case, I'm factorizing it
+05:44 - based on the ordering x1, x2, x3, and x4.
+05:47 - But you could choose a different ordering.
+05:48 - So you could decide you could write it down
+05:50 - as the probability of x4 times the probability of x3 given x4,
+05:54 - and so forth.
+05:56 - And here you start to see that in general, you
+05:59 - can always do it.
+06:00 - But perhaps some orderings might be better than others.
+06:05 - So if there is some kind of natural causal structure
+06:07 - in the data, then perhaps modeling the data along
+06:11 - that direction is easier.
+06:13 - But the chain rule doesn't care.
+06:15 - It works regardless of whatever ordering you're going to use.
+06:18 -
+06:21 - Bayes Net essentially exploit this idea.
+06:26 - And they make progress by basically
+06:30 - simplifying these conditionals.
+06:32 - So we've seen that in general, representing-- even
+06:35 - when the random variables are discrete,
+06:38 - representing those conditionals as tables doesn't scale,
+06:41 - doesn't work.
+06:42 - And so Bayesian networks essentially
+06:45 - make some kind of conditional independence assumption.
+06:48 - They assume that certain things that are conditionally
+06:50 - independent from other things.
+06:53 - And then that gives you potentially simpler factors
+06:57 - that you can represent as tables.
+07:00 - And the other way to go about it is
+07:02 - to use a neural model, where instead you're
+07:07 - going to give up on the tabular representation.
+07:10 - So it's no longer a lookup table.
+07:12 - Now it's going to be some kind of function parameterized
+07:15 - by a neural network that you're going
+07:17 - to use to map different kind of assignments to the variables
+07:23 - you're conditioning on to parameters
+07:27 - for the conditional distribution over the next variable
+07:32 - in this ordering that you're using.
+07:35 - So in this kind of neural models, what we're going to do
+07:38 - is we're going to start from chain rule
+07:40 - and then we're going to try to approximate
+07:42 - the true conditionals using neural networks.
+07:47 - And this works to the extent that the neural network
+07:51 - is sufficiently powerful that it can well
+07:54 - approximate these conditional probabilities, which could be
+07:58 - potentially very complicated.
+08:00 - If you think about those as tables,
+08:02 - there could be really complicated relationships
+08:04 - between the entries in the table.
+08:05 - And this kind of factorization using neural models
+08:08 - works to the extent that the neural network is sufficiently
+08:11 - flexible that it can capture the structure of what
+08:14 - you would get if you had a fully general tabular representation.
+08:21 - And the good news is that a sufficiently deep neural network
+08:26 - can in principle approximate any function.
+08:30 - And so that's kind of where the magic of deep learning comes in.
+08:34 - If you can use very deep neural networks,
+08:37 - there's a good chance you might be able to actually come up
+08:39 - with a decent approximation to these conditionals.
+08:42 - And that's why these models tend to work in practice.
+08:45 -
+08:48 - So remember that the machinery that we're going to use
+08:53 - is going to be the same as the one you use in regular let's say
+08:56 - classification.
+08:58 - So you want to predict a binary label given
+08:59 - a bunch of input features.
+09:02 - You just care about the conditional distribution
+09:04 - of a single variable given a potentially large number
+09:08 - of other variables.
+09:09 - But the important thing is that you're just trying
+09:11 - to predict one thing at a time.
+09:13 - A single variable y.
+09:14 - And so you can use things like logistic regression or neural
+09:18 - networks to do these kind of things.
+09:20 - And in particular, we've seen that logistic regression
+09:24 - is kind of assuming a relatively simple dependency
+09:28 - between the values of the covariates x or the features
+09:31 - that you are conditioning on and the conditional probability of y
+09:34 - given x.
+09:35 - It's basically assuming that there
+09:37 - is a linear dependency that then is fed through a sigmoid
+09:41 - to get a non-negative number that
+09:44 - has the right normalization.
+09:46 - And you can make things more flexible
+09:50 - by assuming some kind of non-linear dependence.
+09:53 - And that's where you use neural networks, right?
+09:56 - So you can take your inputs x, you can transform them
+10:00 - by applying linear transformations,
+10:02 - non-linearities.
+10:04 - You can stack them in any way you want.
+10:06 - And then at the end of the day, you still
+10:08 - have some transformation that gives you
+10:09 - the parameters of this conditional distribution
+10:13 - over what you're trying to predict
+10:15 - given what you have access to.
+10:16 - And so maybe at the end, you use some kind of sigmoid function
+10:22 - or a softmax function to basically normalize the output
+10:26 - to a probability distribution.
+10:28 - So it's more flexible.
+10:29 - You have more parameters, which is good because the model--
+10:34 - you can capture a richer set of dependencies
+10:37 - between the variables.
+10:39 - The price you pay is that you have more parameters to learn.
+10:41 - You need more memory.
+10:42 - And you might imagine that you might need more data.
+10:46 -
+10:50 - Cool.
+10:51 - So that's the building block.
+10:52 - And then basically, the whole idea of autoregressive models
+10:56 - is that once you know how to predict one thing using
+10:59 - a neural network, you can kind of combine them
+11:02 - and you can always think of a high dimensional output,
+11:06 - let's say an image as a number of individual components.
+11:12 - And chain rule gives you a way of predicting
+11:15 - the individual components given the previous ones.
+11:18 - And so then you can plug in your neural network
+11:20 - to get a generative model.
+11:22 - And that's what neural autoregressive
+11:24 - models essentially do, right?
+11:28 - So for example, let's say that you
+11:31 - wanted to learn a generative model over images.
+11:35 - So just for simplicity, let's say
+11:37 - that you wanted to work with the binarized MNIST.
+11:41 - So MNIST is kind of a classic data set of handwritten digits.
+11:46 - So if you binarize them so that every pixel is
+11:50 - either 0 or 1, black or white, then they might look like this.
+11:54 - So you see that they kind of look like handwritten digits.
+11:58 - And each image has 28 by 28 pixels.
+12:02 - So you have 28 times 28 random variables to model.
+12:07 - And the variables are binary, 0 or 1, black or white.
+12:13 - And the goal is to basically learn a probability distribution
+12:16 - over these 784 random variables, such
+12:22 - that when you sample from it, the images
+12:25 - that you get hopefully look like the ones
+12:27 - that you have in the training set, or that in other words,
+12:30 - you're hoping that the distribution that you learn
+12:34 - is a good approximation to the data distribution
+12:37 - that generated these samples IID,
+12:41 - independent identically distributed samples
+12:43 - that you have access to in the training set.
+12:46 - And again, this is challenging because there's
+12:48 - a lot of possible images.
+12:49 - You need to be able to assign a probability to each one of them.
+12:53 - And so recall the recipe is you define a family of probability
+13:00 - distributions parameterized by theta, which we're
+13:03 - going to see in this lecture.
+13:04 - And then you define some kind of learning objective
+13:06 - to search over the parameter space
+13:09 - to do some kind of optimization, reduce the learning problem
+13:12 - to optimization over theta over the parameters that define
+13:16 - the distribution to try to find a good approximation of the data
+13:20 - distribution, which is going to be the next lecture.
+13:23 -
+13:26 - So the way to use an autoregressive model
+13:29 - to define this probability distribution
+13:32 - is you first need to pick an ordering.
+13:35 - So remember if you want to use chain rule,
+13:37 - you have to pick an ordering.
+13:39 - And for an image, is not even obvious
+13:41 - what the ordering should be.
+13:44 - There is not an obvious causal structure.
+13:46 - Like you're not modeling a time series where you might expect
+13:49 - that there is some causal structure
+13:52 - and maybe predicting the future given
+13:55 - the past is easier than going backwards.
+13:58 - But any ordering works in principle.
+14:01 - And so for example, you can take a raster scan ordering.
+14:04 - And so you can go from top-left to bottom-right.
+14:09 - You can order the 784 pixels that way.
+14:12 - And then you can apply chain rule to this probability
+14:15 - distribution.
+14:17 - And so you always-- you know that without loss of generality,
+14:21 - there is always a way to write down this distribution that way.
+14:25 - Basically as the probability of choosing an arbitrary value
+14:29 - for the first random variable.
+14:31 - And then choosing a value for the second given the first,
+14:33 - and so forth.
+14:34 - And so that's how you break down a generative modeling
+14:37 - problem that is tricky to a sequence--
+14:42 - a small number of classification regression, something
+14:46 - we know how to handle.
+14:48 - Each one of these conditionals is only
+14:50 - over a single random variable.
+14:53 - And that's the kind of setting you know how to deal with from--
+14:57 - or you typically consider when you
+14:59 - think about classification regression,
+15:01 - those kind of problems.
+15:03 - And you cannot do tabular form.
+15:08 - So a Bayesian network is out of the question here.
+15:11 - And so instead we're going to try to basically model
+15:15 - these conditionals using some kind of neural model, some kind
+15:19 - of functional form that will allow
+15:23 - us to map the different configurations of the pixels
+15:27 - we are conditioning on to a probability
+15:29 - distribution over the next pixel that we
+15:31 - need to work with in this particular ordering that we've
+15:34 - chosen.
+15:36 - And so in particular, I mean, if you
+15:39 - think about the first probability distribution,
+15:42 - you can represent it as a conditional probability table.
+15:45 - That's just a binary random variable.
+15:47 - You just need one parameter for that.
+15:49 - So that's what I'm saying PCPT here means that you can actually
+15:53 - store that one separately.
+15:55 - But the other ones become complicated.
+15:58 - And so you kind of have to make some approximation.
+16:02 - And one simple thing you can do is to just use
+16:05 - logistic regression.
+16:07 - So you can try to use logistic regression to basically predict
+16:10 - the next pixel given the previous pixels.
+16:12 - And that gives you a generative model, basically.
+16:17 - And if you do that, notice that you
+16:21 - don't have a single classification problem.
+16:24 - You have a sequence of classification problems,
+16:27 - like you need to be able to predict the second pixel given
+16:30 - the first one.
+16:31 - You need to be able to predict the third pixel given
+16:33 - the first two.
+16:35 - You need to be able to predict the last pixel,
+16:37 - the one in the bottom right given everything else.
+16:40 - So all these classification problems
+16:42 - are basically different and separate.
+16:45 - Do you even have a different number
+16:46 - of covariates or variables that are conditioning on?
+16:50 - And so in general, you're going to-- you can potentially
+16:52 - use different parameters, different models
+16:55 - for each one of them.
+16:58 - And this is what I'm alluding here.
+17:00 - There is a different vector of coefficients
+17:03 - alpha for your logistic regression
+17:04 - model for each classification problem.
+17:07 - And so more explicitly, for example,
+17:10 - you would have the first prior distribution
+17:14 - over the first pixel, which is just a single number.
+17:17 - It tells you, how often do you choose the first pixel
+17:20 - to be white versus black?
+17:23 - So if you think about the structure
+17:25 - of these images, the top--
+17:28 - this pixel here, the top-left is almost always black.
+17:31 - So you probably would want to choose this number
+17:35 - to be close to zero, assuming zero means black.
+17:39 - You want that pixel to be often black.
+17:44 - And then you need to be able to specify
+17:46 - a way of predicting the second pixel given the first one.
+17:50 - And you can do it using a simple logistic regression model.
+17:54 - And so forth, right?
+17:55 -
+17:58 - And that's a modeling assumption.
+18:02 - Whether or not this type of generative model works
+18:05 - well depends on whether or not it's
+18:07 - easy to predict the value of a pixel given
+18:10 - the previous ones in this particular arbitrary order
+18:14 - that I've chosen for the pixels.
+18:15 -
+18:18 - And whether this works again it depends on how good this--
+18:25 - how good this approximation is.
+18:26 - So it might work well or might not
+18:28 - work well, because maybe these dependencies are too simple,
+18:32 - maybe regardless of how you choose these alphas, there
+18:35 - is not a good way of figuring out how you should choose
+18:39 - the value, whether or not a pixel is
+18:41 - white or black in this case.
+18:43 -
+18:47 - But you can think of it as an autoregressive model.
+18:50 - And that's what-- because essentially what you're doing
+18:52 - is you're trying to regress, you're
+18:55 - trying to predict the structure of the data itself.
+19:01 - So you're regressing on yourself,
+19:05 - like you're trying to predict parts of each data point given
+19:09 - other parts of the data point.
+19:11 -
+19:14 - And this kind of modeling assumption
+19:21 - has been tried before.
+19:24 - This kind of model is called a fully visible sigmoid belief
+19:29 - network.
+19:30 - It's kind of a relatively simple early type of generative model
+19:35 - that as we'll see is not going to work particularly well,
+19:38 - but it's useful to work it through so
+19:42 - that you get a certain level of understanding of exactly what it
+19:45 - means to model a joint distribution in terms
+19:48 - of simple classification models.
+19:52 - So when you think about what we're doing here
+19:54 - when you think about chain rule, we
+19:57 - have all these individual pixels that we're
+20:00 - modeling conditionally on all the ones that
+20:02 - come before it in the order.
+20:04 - And so when you model the probability of xi
+20:10 - given all the variables that come before it in the ordering,
+20:12 - let's say using a logistic regression model,
+20:18 - you're basically outputting the conditional probability
+20:21 - of that pixel being on or off given the values
+20:25 - of the previous pixels.
+20:27 - And we're often going to denote this using this symbol here,
+20:32 - x minus i--
+20:34 - smaller than i, which basically means
+20:37 - given all the indexes i that are strictly smaller than--
+20:42 - all the indexes i that are strictly smaller than i.
+20:45 -
+20:48 - Which in the case of logistic regression,
+20:51 - that conditional probability is given
+20:53 - by this relatively simple expression, linear combination,
+20:56 - and then you pass it through a sigmoid.
+21:00 - Now how would you evaluate--
+21:02 - if somebody gives you a data point,
+21:03 - and you want to know how likely is this data point according
+21:07 - to my model, which is the computation you would have
+21:10 - to do if you want to train a model by maximum likelihood, how
+21:14 - would you--
+21:15 - how would you evaluate that joint probability
+21:18 - given that somehow you have all these values for alpha?
+21:22 -
+21:28 - So what you would have to do is you would go back to chain rule.
+21:31 - So you basically just multiply together all these factors.
+21:35 - And so more specifically, the first pixel x1
+21:39 - will have a value.
+21:40 - Well, I guess here I have an example with let's say imagine
+21:44 - that you only have four pixels, there is four random variable.
+21:48 - And let's say that we are observing the value 0, 1, 1, 0.
+21:51 -
+21:54 - Then you basically need to multiply together
+21:58 - all these values, which are basically
+22:02 - the predicted probability that a pixel takes a particular value
+22:05 - given the others.
+22:07 - And these predicted probabilities
+22:09 - depend on the values of the previous pixels
+22:12 - in the ordering here, right?
+22:14 - And so they depend on--
+22:17 - so x hat i which is the predicted probability
+22:20 - for the ith pixel depends on all the pixels
+22:22 - that come before it in the ordering.
+22:25 - So a little bit more explicitly, it
+22:28 - would look something like this, where
+22:30 - you would have to compute the conditional probability
+22:33 - of the second pixel when the first pixel is 0.
+22:37 - You would have to compute the conditional probability
+22:39 - of the third pixel being let's say on in this case given
+22:43 - that the previous two are 0 and 1 and so forth.
+22:47 - And then you would basically replace that expression here
+22:49 - for x hat with the standard sigmoid logistic function thing.
+22:55 - And that would give you the number.
+22:59 - How would you sample from this distribution?
+23:02 - So let's say that somehow you've trained the model
+23:05 - and now you want to generate images according to this model.
+23:08 -
+23:11 - The good thing about an autoregressive model
+23:13 - is that you can basically-- it also gives you
+23:15 - a recipe to sample from it, like in general, it might not
+23:19 - be obvious how you do this.
+23:21 - You have a recipe to evaluate how
+23:24 - likely different samples are.
+23:26 - But then how do you pick one with the right probability,
+23:29 - right?
+23:31 - You could use generic inference schemes
+23:33 - if you have a way of evaluating probabilities,
+23:35 - you could try to even brute force and kind of invert the CDF
+23:39 - and try to do something like that, of course,
+23:43 - would never scale to the situation
+23:46 - where you have hundreds of random variables.
+23:49 - The good news is that you can basically do it--
+23:52 - you can use chain rule again and kind of
+23:55 - decide the values of the pixels one by one.
+23:59 - So what you would do is we know what
+24:02 - is the prior essentially probability that the first pixel
+24:05 - is on or off.
+24:06 - And we can just pick a value for the first pixel.
+24:09 - Now once we know the value of the first pixel,
+24:11 - we know how to figure out a value probabilistically
+24:16 - for the second pixel.
+24:17 - So we can plug it into the previous expression.
+24:19 - You could do something like this just to be very pedantic.
+24:22 - You have-- there is some prior probability
+24:24 - and perhaps you always choose it to be black
+24:26 - because all the images are like that.
+24:29 - But then you pick a value.
+24:32 - And then you basically sample the second random variable given
+24:36 - the conditional distribution.
+24:39 - And this conditional distribution,
+24:40 - you can get the parameter by fitting it
+24:42 - by using this expression.
+24:43 - So the logistic regression model will
+24:46 - try to predict the second pixel given the first one.
+24:50 - And you're going to get a number from this,
+24:52 - and then you can sample from it.
+24:55 - Then you can pick--
+24:56 - you're generating-- you have two pixels now
+24:59 - that you've chosen values for.
+25:01 - And then you can fit it to the next logistic regression model
+25:04 - and you can keep generating the image one pixel at a time.
+25:07 -
+25:11 - So that's the recipe.
+25:13 - And it's good news because sampling is to some extent easy.
+25:21 - I mean, it's not great because you
+25:24 - have to sequentially go through every random variable
+25:26 - that you're working with.
+25:27 - But it's better than alternatives
+25:29 - like having to run using a Markov chain Monte Carlo
+25:33 - methods or other more complicated techniques
+25:36 - that we might have to resort to for other classes of models.
+25:40 - The good news is that for these kind of models,
+25:42 - sampling is relatively easy.
+25:45 -
+25:48 - Conditional sampling might not be.
+25:50 - So if you wanted to sample pixel values based on--
+25:56 - if you wanted to do inpainting because you have some--
+25:59 - you already have a piece of the image,
+26:01 - you want to generate the rest, depending
+26:03 - on what you know about the image, it might be easier,
+26:06 - it might be hard.
+26:07 - So it's not straightforward, the fact
+26:09 - that you can do this efficiently is a nice benefit
+26:12 - of these type of models.
+26:13 - OK.
+26:14 -
+26:17 - Now how many parameters do we have?
+26:20 -
+26:22 - So do we have a bunch of alpha vectors?
+26:24 - These alpha vectors, they have different lengths
+26:26 - because they are different-- they are logistic regression
+26:29 - models of different sizes basically.
+26:31 - Any guess?
+26:34 - It's one 1 plus n roughly squared, right?
+26:37 - So potentially not great, but maybe manageable.
+26:42 -
+26:45 - Cool.
+26:46 - Now as I kind of mentioned before,
+26:49 - this doesn't actually work particularly well.
+26:52 - So now I don't have the results on MNIST.
+26:55 - But if you train it on this data set of like, Caltech 101.
+26:59 - So the samples are on the left.
+27:02 - And you can see that they kind of have shapes,
+27:05 - like there is like objects of different types.
+27:10 - And then you can kind of train this simple model
+27:14 - based on logistic regression classifiers
+27:17 - that you can sample from it and you get these kind of blobs.
+27:21 - So not great.
+27:24 - And the reason is that basically the logistic regression
+27:27 - model is not sufficiently powerful to describe
+27:31 - these potentially relatively complicated dependencies
+27:34 - that you have on the pixel values.
+
+00:00 -
+00:05 - SPEAKER: So how can we make things more better?
+00:09 - Let's use a deeper neural network, right?
+00:11 - That's the natural thing to do.
+00:17 - And if you do that, you get a model
+00:18 - that is called NADE, neural autoregressive density
+00:21 - estimation.
+00:22 - And the simplest thing you can do
+00:24 - is to just use a single-layer neural network
+00:27 - to replace the logistic regression classifier.
+00:32 - So what would it look like?
+00:34 - Basically, what you do is for every index i, for every pixel,
+00:41 - you take all the previous pixel values
+00:43 - and you pass them through, first, a linear layer, then
+00:47 - some non-linearity.
+00:49 - And then you pass the non-linearity--
+00:56 - what you get, these features, these hidden vectors
+00:58 - that you get--
+00:59 - through a logistic regression final output layer,
+01:03 - that would give you the parameters of this Bernoulli
+01:06 - random variable.
+01:07 - So it will tell you whether or not--
+01:09 - what is the probability that the i'th pixel is on or off?
+01:14 - And as you can see now, we have a slightly more flexible model
+01:17 - because you don't just have the alphas,
+01:21 - the parameters of the logistic regression classifier,
+01:24 - or the final layer of the network,
+01:25 - but now you also have the first layer.
+01:27 - So you have a slightly more flexible model.
+01:29 -
+01:34 - And so it would look something like this.
+01:36 - So you would-- and again, the issue here is that you have--
+01:45 - if you have n random variables, you
+01:46 - have n separate kind of classification problems.
+01:49 - And so, in general, you would-- you could use completely
+01:53 - sort of like decoupled models.
+01:55 - And so the first model would have, let's say,
+01:58 - a single input, x1.
+02:01 - And so the shape of this matrix would be just a column vector,
+02:04 - basically.
+02:05 - And then if you have two inputs, x1 and x2,
+02:08 - to predict the third pixel, then this matrix
+02:10 - would have two columns, essentially, and and so forth.
+02:15 - Basically, a hidden vector, h, which we could have.
+02:19 - It's not necessarily a scalar.
+02:22 - That hidden vector is then passed to a logistic regression
+02:25 - classifier.
+02:25 - And so it's then mapped down to a scalar through this expression
+02:30 - here, which might be-- so there's a dot product there.
+02:33 -
+02:38 - All right, and so this, in principle, all
+02:43 - works, but you can see the issue is that you are basically--
+02:46 - we're separately training different models
+02:48 - for every pixel, which doesn't seem great.
+02:51 - Perhaps there is some common structure.
+02:53 - At the end of the day, we're kind
+02:54 - of solving related problems.
+02:56 - We're trying to predict a pixel given part of an image,
+02:59 - given another-- given the previous part of the image.
+03:02 - And so there might be an opportunity
+03:04 - for doing something slightly better
+03:06 - by tying the weights to reduce the number of parameters,
+03:10 - and as a byproduct, speed up the computation.
+03:15 - And so what you can do here is you can basically tie together
+03:21 - all these matrices, A2, A3, A4, that you would
+03:26 - have if you were to think of them as separate classification
+03:29 - problems.
+03:30 - What you can do is you can basically just
+03:33 - have a single matrix and then you kind of tie together
+03:38 - all these--
+03:41 - the weights that you use in the prediction problems--
+03:43 - we're basically selecting the corresponding slice
+03:47 - of some bigger matrix.
+03:49 - So before, we had the first matrix
+03:52 - that we would use to call A2 and then A3 and then A4,
+03:55 - and they were completely decoupled.
+03:58 - You could choose any values you want
+04:00 - for the entries of those matrices.
+04:02 - What you can do here is you can basically
+04:04 - choose the first row-- the first column
+04:06 - to take some set of values.
+04:10 - And then you're going to use that for all the subsequent kind
+04:13 - of classification problems.
+04:16 - So you're equivalently trying to extract the same features
+04:20 - about the first--
+04:21 - about x1.
+04:22 - And then you're going to use them
+04:25 - throughout all the classification problems
+04:27 - that you have in the--
+04:31 - when you're trying to model the full image.
+04:33 - Yeah, so the question is reducing--
+04:35 - or is overfitting also potentially a concern?
+04:38 - Yeah, reducing the number of parameters
+04:40 - is also good for overfitting issues.
+04:44 - Tying together the classification problems
+04:46 - might be good.
+04:49 - You might learn a better solution
+04:50 - that generalizes better.
+04:51 - And as we'll see, it also makes it faster.
+04:54 - And the good news is that this can reduce
+04:57 - the number of parameters.
+04:59 - So if you have size d for this hidden vector, h,
+05:07 - that you're using to make the predictions,
+05:11 - how many parameters do you need?
+05:14 - It's no longer quadratic in n.
+05:18 - That's the kind of big takeaway.
+05:20 - Before, we had something that was quadratic in n.
+05:23 - Now it's basically linear because there's basically
+05:25 - a single matrix that you have to store.
+05:27 - And then you can reuse it all the time.
+05:29 -
+05:34 - So that's good.
+05:35 -
+05:38 - Now the other advantage that you have with this kind of model
+05:42 - is that you can evaluate probabilities more efficiently,
+05:46 - because, basically, whenever you go--
+05:48 - remember, if you want to evaluate
+05:50 - the probability of a data point, you
+05:52 - have to evaluate all these conditionals.
+05:54 - You have to go through every conditional.
+05:56 - And you basically have to evaluate
+05:58 - this kind of computation if there
+06:00 - is no structure on the matrices and you
+06:01 - have to redo the computation because there is nothing shared.
+06:05 - But if you have some shared structure,
+06:07 - then you can reuse the computation.
+06:10 - So if you've already computed this dot product,
+06:12 - this product here, this matrix vector product here,
+06:15 - and then if you are adding an extra column,
+06:21 - then you can reuse the computation
+06:23 - that you've done before.
+06:25 - You can just add in an extra copy.
+06:28 - There is an assumption-- again, you're
+06:30 - kind of saying that this conditional probability tables
+06:33 - could be arbitrary, somehow can be
+06:35 - captured by prediction models that
+06:38 - have this sort of structure.
+06:40 - So somehow, that there is some relationship
+06:43 - between the way you would predict one pixel--
+06:46 - different pixels in an image.
+06:47 - Whether or not it's reasonable, it
+06:50 - becomes an empirical question.
+06:52 - I think I have the results here.
+06:55 - And it tends to work significantly better
+06:57 - than, let's say, the previous logistic regression model.
+07:00 - So it does seem like this kind of structure
+07:02 - helps modeling natural images or toy kind of images like MNIST.
+07:09 - So here you can see some examples.
+07:12 - You have MNIST binarized--
+07:15 - or no, actually, I don't have--
+07:17 - I don't have the samples for MNIST.
+07:18 - Here, what you have here is samples from the model trained
+07:22 - on MNIST on the left and the conditional probabilities
+07:26 - corresponding to these samples on the right.
+07:30 - So remember that when you generate samples
+07:32 - autoregressively, you actually get
+07:34 - probabilities for each pixel, given the previous ones,
+07:38 - and then you sample from them to generate--
+07:40 - to actually pick a value.
+07:42 - And so the images on the left are binary, 0, 1.
+07:47 - The images on the right are kind of soft because for every pixel,
+07:51 - you get a number between 0 and 1,
+07:53 - then you sample from to generate a color, in this case, 0, 1.
+07:58 - And so you can see they kind of look a little bit
+08:00 - better because they're a little bit more soft.
+08:03 - But you can see that it's doing a reasonable job at capturing
+08:07 - the structure of these images.
+08:09 - So the numbers are corresponding to the samples that you see.
+08:13 - So basically, what this is saying is that--
+08:15 - what you would actually do when you sample
+08:18 - is you would take the first pixel, you have a probability,
+08:23 - and then you plot it on the right.
+08:24 - Then you sample a value from that on the left.
+08:27 - Then you go-- based on that value, based
+08:29 - on the actual binary value, you come up
+08:31 - with a probability for the second pixel, which is just
+08:35 - a number between 0 and 1.
+08:37 - You plot it on the right image, then you sample from it,
+08:40 - and you keep going.
+08:41 - So it's basically these numbers, the predicted probabilities
+08:45 - for every pixel, which are the x hat i, so the probability
+08:48 - that that pixel is on or off.
+08:51 - And then-- but they are matching,
+08:53 - so that's why they look the same because the sample
+08:55 - that you see on the left is what you
+08:57 - get by sampling from those distributions.
+09:00 - So the question is should we take advantage of the fact
+09:04 - that maybe we have labels for the data set?
+09:06 - And so we know that there is different types of digits.
+09:09 - That there is maybe 10 digits, and then we
+09:11 - want to take advantage of that.
+09:15 - So here, I'm assuming that we don't have access
+09:17 - to the label y.
+09:18 - If you had access to the label y,
+09:20 - you could imagine trying to learn a joint distribution
+09:23 - between x and y.
+09:25 - And perhaps you would get a better model,
+09:28 - or perhaps you can assume you don't
+09:29 - have that kind of structure.
+09:31 - You just learn a model and you can
+09:33 - try to use the model to see whether it indeed figured out
+09:38 - that there are 10 clusters of data points
+09:40 - and that there's a bunch of data points
+09:42 - that kind of have this shape of a--
+09:44 - that look like a--
+09:45 - kind of like an oval, and that's a zero.
+09:47 - And that's the kind of third point
+09:50 - of how do you get features out of these models.
+09:52 - Presumably, if you have a model that
+09:54 - can generate digits that have the right structure
+09:57 - and it generates them in the right proportions,
+09:59 - it has learned something about the structure of the images
+10:02 - and what they have in common.
+10:03 - And so that was the third point of getting features
+10:06 - of unsupervised learning.
+10:08 - We'll talk about how to do that.
+10:10 - But yeah, there is two ways to see it.
+10:13 - You can either do it unsupervised,
+10:14 - or if you have access to the label,
+10:16 - then perhaps you can include it into the model.
+10:18 - You can do conditional generation
+10:20 - or you can jointly learn a distribution over x and y.
+10:23 - To check whether the model is doing a good job,
+10:25 - you could try to see what is the proportion.
+10:27 - If in the original training set, all the images come,
+10:31 - they are uniformly--
+10:32 - you see an equal proportion of the different digits,
+10:35 - then you apply an MNIST classifier to your samples,
+10:38 - and you can see, does it generate digits
+10:41 - in the right proportion?
+10:42 - If it doesn't, then there's probably
+10:43 - something wrong with the model.
+10:45 - If it does, it's doing something right.
+10:47 - Whether it's correct or not, it's hard to say.
+10:51 - Cool, so that's the NADE.
+10:54 - Now you might wonder what do you do
+10:57 - if you want to model color images, let's say?
+11:02 - So if-- the variables are no longer binary,
+11:06 - but if they can take, let's say, K different values, how do you--
+11:10 - maybe pixel intensities ranging from 0 to 255, how do you do it?
+11:15 - Now what you need to do is the output
+11:18 - of the model has to be a categorical distribution
+11:20 - over however many different values the random variables can
+11:23 - take.
+11:24 - So you can basically do the same thing.
+11:26 - You first get this kind of hidden vector or latent
+11:32 - representation, h.
+11:34 - And then you, instead of applying some kind of mapping it
+11:38 - down to just the parameters of a Bernoulli random variable,
+11:42 - you can use some kind of softmax output layer
+11:45 - to map it down to a vector of--
+11:48 - if you have k different outputs that you care about,
+11:52 - a vector of K probabilities, p i 1 through p i K.
+12:01 - And which basically would represent the probability that
+12:03 - the i'th random variable should take one of the K different
+12:07 - values that the random variable can take.
+12:10 - And that's the natural generalization
+12:13 - of the sigmoid function we had before.
+12:15 - It's just one way to take K numbers, which are not
+12:19 - necessarily non-negative.
+12:21 - And they might not be normalized.
+12:23 - And it's just a way to normalize them
+12:24 - so that they become a valid probability distribution.
+12:29 - So specifically, you just do something like this.
+12:32 - If you have a vector of arbitrary numbers,
+12:34 - you apply the softmax operation.
+12:36 - It produces another vector.
+12:38 - You apply an exponential to every component
+12:41 - to make sure it's non-negative.
+12:44 - And then you divide by the sum of these exponentials, which
+12:47 - is basically making sure that the entries are normalized.
+12:50 - So that if you sum the probabilities
+12:53 - of all the possible things that can happen, you get 1.
+12:56 -
+12:58 - And so natural generalization of what we had before.
+13:05 - Now you might wonder, what do you
+13:07 - do if you want to model continuous data.
+13:11 - So maybe you have-- you're dealing with speech
+13:13 - and it's more--
+13:14 - it's not very natural to discretize the--
+13:18 - I mean, even for images, perhaps you
+13:20 - don't want to discretize the random variables.
+13:23 - And you want to model them as continuous random variables.
+13:28 - So the solution is to basically, again,
+13:32 - use the same architecture, but now
+13:34 - the output of the neural network will
+13:37 - be the parameters of some continuous distribution.
+13:41 - It's no longer the parameter of a Bernoulli,
+13:43 - or the parameters of a categorical,
+13:45 - it could be the parameters of a Gaussian
+13:47 - or a logistic or some continuous probability density function
+13:55 - that you think should work well for your data set.
+13:59 - And so, for example, one thing you could do
+14:02 - is you could use a mixture of K Gaussians.
+14:08 - So what you have to do is you need
+14:10 - to make sure that the output of your neural network
+14:13 - gives you the parameters of K different Gaussians, which
+14:18 - are then mixtured together, let's say,
+14:21 - uniformly to obtain a relatively flexible kind of probability
+14:26 - density function.
+14:28 - Like you see here, an example where
+14:29 - there is three Gaussians with different means
+14:32 - and different standard deviations.
+14:34 - Then you combine them together and you
+14:35 - get a nice kind of green--
+14:38 - red curve, where you're allowed to move the probability mass.
+14:42 - And you're allowed to say maybe there
+14:44 - is two different values that the random variable can take.
+14:50 - Two modes, one here and one here.
+14:52 - And you're allowed to move the probability mass around
+14:55 - by changing the mean and the standard deviation
+14:57 - of the Gaussians.
+14:58 - So I think I have the more precise thing here.
+15:01 - So you would say, the conditional probability of X i,
+15:04 - given all the previous values is a mixture of K Gaussians.
+15:09 - Each one of them having a different mean
+15:11 - and a different standard deviation.
+15:14 - And as usual, you have to basically use the neural network
+15:19 - to get the parameters of these distributions.
+15:22 - So in this case, as was suggested,
+15:24 - you could use the same trick.
+15:26 - And then as an output layer, you can no longer
+15:28 - use a softmax or a sigmoid.
+15:30 - You have to use something else that
+15:32 - gives you the parameters of these random variables.
+15:34 - And so you need two K numbers.
+15:36 - You need K means and you need K standard deviations.
+15:41 - And I guess you need to be careful about if you use--
+15:47 - depending on how you parameterize,
+15:49 - like if you parameterize a variance,
+15:50 - then it has to be non-negative, but that's
+15:53 - relatively easy to enforce.
+
+00:00 -
+00:05 - SPEAKER: OK.
+00:06 - Now as a way to kind of get a deeper understanding of what
+00:11 - these kind of models do, you might
+00:13 - notice that they look a lot like autoencoders.
+00:19 - If you look at this kind of computation graph
+00:22 - that I have here where you have the data point x1,
+00:27 - x2, x3, and x4 that is being mapped to this
+00:31 - predicted probability z1 hat, x2 hat, x3 hat, and so forth,
+00:37 - it looks a little bit like an autoencoder where
+00:41 - you take your input x and then you map it
+00:44 - to some kind of predicted reconstruction of the input.
+00:51 - And more specifically, an autoencoder
+00:55 - is just a model that is often used again
+00:58 - in unsupervised learning.
+00:59 - It has two components.
+01:01 - It's an encoder.
+01:03 - Takes a data point and maps it to some kind
+01:05 - of latent representation.
+01:06 - And then, for example, it could be again a simple neural
+01:10 - network, a two layer net like this.
+01:14 - And then there is a decoder whose job
+01:17 - is to try to invert this transformation.
+01:19 - And the job of the decoder is to take the output of the encoder
+01:22 - and map it back to the original data point.
+01:26 - And in this case, in this graph that I have here,
+01:30 - it could be another neural network
+01:32 - that takes the output of the encoder
+01:34 - and maps it back to some reconstruction of the input.
+01:37 -
+01:41 - And the loss function that you would use
+01:45 - would be some kind of reconstruction loss.
+01:47 - So you would try to train the encoder and the decoder
+01:51 - so that for every data point, when
+01:56 - you apply the decoder to the encoder,
+01:58 - you get back something close to the original data point.
+02:01 - So depending on whether the data is discrete or continuous,
+02:04 - this could be something like a square loss
+02:08 - where you try to make sure that at every coordinate,
+02:10 - your reconstructed ith variable is close to the original one.
+02:16 - If you have discrete data, it's more like,
+02:19 - does the model-- is the model doing a good job at predicting
+02:22 - the value for the ith let's say in this case,
+02:26 - it's binary here, where the ith random variable
+02:29 - that I'm actually observing.
+02:30 - So if the ith random variable is true or is 1,
+02:35 - is the model giving me a high probability for the value 1?
+02:41 - But not super important, but this
+02:43 - is how you would try to learn the decoder and the encoder
+02:47 - so that they satisfy this condition.
+02:49 - And of course, there is a trivial solution
+02:50 - that is the identity mapping.
+02:53 - So if the encoder is just an identity function
+02:56 - and the decoder is some identity function,
+02:58 - then you do very well at this.
+03:01 - And it's not what you want typically.
+03:03 - So typically, you would constrain the architecture
+03:06 - somehow so that it cannot learn an identity function.
+03:09 - But that has the flavor of what we're
+03:14 - doing with this sort of autoregressive models.
+03:18 - We're taking the data point and then
+03:21 - we're trying to use parts of the data point
+03:24 - to reconstruct itself or we feed it through these networks.
+03:28 - And then we output these predicted values.
+03:31 - And if you were to think about how
+03:33 - you would train one of these models,
+03:35 - by let's say maximum likelihood, you
+03:36 - would get losses that are very similar to this.
+03:41 - If you were to train these logistic regression classifiers,
+03:44 - you would get something very similar to this, where you would
+03:47 - try to predict the value that you actually
+03:49 - see in the data point.
+03:51 - So the question is, what are autoencoders used for?
+03:55 - Yes, one typical use case would be
+03:58 - to learn a compressed representation of the data.
+04:02 - Somehow if you can do this, maybe you
+04:05 - force the output dimension of the encoder to be small,
+04:10 - and then in order to do a good job at reconstruction,
+04:13 - it has to capture the key factors of variation
+04:16 - in the data.
+04:17 - And so you can think of it as some nonlinear PCA thing that
+04:21 - will try to discover structure in the data
+04:25 - in an unsupervised way.
+04:26 - The question is, can we do sampling with an autoencoder?
+04:29 - No.
+04:29 - An autoencoder is not quite a generative model.
+04:31 - So these two things are not quite the same.
+04:33 - But they are related.
+04:34 - And that's what we're going to see next.
+04:37 - So yeah, this was coming up.
+04:40 - Typically, you would train this to do representation learning,
+04:43 - try to find good representations.
+04:46 - What is exactly if you think about kind of what we just said,
+04:52 - if you have an autoencoder, there
+04:54 - is not-- it's not really a generative model.
+04:57 - How do you generate data from an autoencoder?
+04:59 - So the variational autoencoder will
+05:01 - be let's try to learn a simple generative model to feed
+05:05 - fake inputs to your decoder.
+05:10 - And so you can fake the process and you can use it to generate.
+05:14 - So that's the variational autoencoder solution
+05:16 - I will talk about later.
+05:18 - But if you just have-- there is not an obvious way
+05:20 - to generate the inputs to the decoder, unless you have data.
+05:23 - But at that point, you're not really sampling.
+05:26 - Literally a variational auto encoder
+05:27 - is this plus what you suggested, forcing the latent
+05:31 - representations to be distributed according
+05:33 - to a simple distribution, a Gaussian.
+05:35 - And if that happens to work well,
+05:37 - then you can sample from that distribution,
+05:39 - feed the inputs to the decoder and that works.
+05:42 - But that requires a different kind of regularization.
+05:46 - The relationship here is that although these two things look
+05:51 - similar, it's not quite the same.
+05:53 - And the reason is that we cannot get generative model from
+05:59 - an autoencoder because somehow we're not putting enough
+06:02 - structure on this kind of computation graph.
+06:05 - And there is not an ordering.
+06:07 - Remember that to get an autoregressive model,
+06:09 - we need an ordering, we need chain rule.
+06:12 - So one way to actually get or to connect these two things
+06:16 - is to enforce an ordering on the autoencoder.
+06:20 - And if you do that, you get back basically
+06:22 - an autoregressive model.
+06:25 - And so basically, if you are willing to put constraints
+06:30 - on the weight matrices of these neural networks
+06:35 - so that there is a corresponding basically Bayesian network
+06:40 - or chain rule factorization, then you
+06:44 - can actually get an autoregressive model
+06:46 - from an autoencoder.
+06:49 - And the idea is that basically, if you think about it,
+06:52 - the issue is that we don't know what to feed to the decoder.
+06:57 - So somehow we need a way to generate the data sequentially
+07:01 - to feed it into this decoder that we have access to.
+07:04 - And so one way to do it is to set up the computation graph
+07:10 - so that the first three constructed random variable
+07:14 - does not depend on any of the inputs.
+07:16 -
+07:19 - If that's the case, then you can come up
+07:22 - with the first output of this decoder yourself,
+07:25 - because you don't need any particular input to do that.
+07:29 - And then you can feed your predicted first random variable
+07:34 - into--
+07:35 - then let's say that at generation time,
+07:38 - then you don't need it.
+07:39 - Now if you can--
+07:41 - it's fine if the predicted value for the second random variable
+07:47 - depends on x1, that's fine because we can make up
+07:52 - a value for x1.
+07:54 - Then we can feed it into the computation
+07:56 - and we can predict a value for x2.
+07:59 - Then we can take of this value--
+08:01 - we can take the first two, feed them
+08:02 - into the autoencoder kind of thing
+08:05 - and predict a value for x3.
+08:07 - And we can keep going.
+08:08 - And it's the same thing as an autoregressive model.
+08:12 - So if you look at this kind of computation graph,
+08:15 - you can see that the predicted value for x1
+08:18 - depends on all the inputs in general.
+08:23 - And so if you look at the arrows,
+08:27 - all the inputs have an effect on the first predicted value.
+08:31 - And so that's a problem because we cannot get an autoregressive
+08:34 - model if we do it that way.
+08:36 - But if we somehow mask the weights in the right way,
+08:39 - we can get an autoregressive model.
+08:42 - And then as a bonus, then we have a single neural network
+08:46 - that does the whole thing.
+08:47 - So it's not like before that we had different classification
+08:54 - models or that they were tied together somehow.
+08:58 - If we can do this, then it's a single neural network.
+09:02 - That in a single forward pass can produce all the parameters
+09:05 - that we need.
+09:07 - The bonus would be single pass.
+09:09 - You can get everything as opposed to n different passes.
+09:12 - And the way you do it is to basically mask.
+09:19 - So what you have to enforce is some kind of ordering.
+09:23 - And so you basically have to take the general computation
+09:27 - graph that you have from an autoencoder
+09:28 - and you have to mask out some connections so that there
+09:34 - is some ordering that then you can use to generate data.
+09:39 - And the ordering can be anything.
+09:42 - So for example, you can pick an ordering
+09:45 - where we choose the x2, x3, and x1, which corresponds
+09:51 - to the chain rule factorization of probability of x2, x3 given
+09:54 - x2 and x1 given the other two.
+09:58 - And then what you can do is you can mask out
+10:01 - some connections in this neural network
+10:03 - so that the reconstruction for x2
+10:07 - does not depend on any of the inputs.
+10:09 -
+10:12 - And then you can mask out the parameters
+10:15 - of this neural network so that the parameter of x3
+10:20 - is only allowed to depend on x2.
+10:25 - And the parameter of x1 is allowed to depend on everything,
+10:32 - just like according to the chain rule factorization.
+10:36 - And so one way to do it-- yeah, so that's I
+10:39 - think what I just said.
+10:42 - One way to do it is you can basically
+10:45 - keep track for every hidden--
+10:47 - for every unit in your hidden layers,
+10:49 - you can basically keep track of what inputs it depends on.
+10:58 - And so what you could do is you could pick for every unit,
+11:00 - you can pick an integer i and you
+11:02 - can say I'm only going to allow this unit
+11:05 - to depend on the inputs up to the ith index i.
+11:12 - And so you can see here that there's these 2, 1, 2, 2.
+11:18 - This basically means it's only allowed to depend, for example,
+11:22 - this unit is only allowed to depend on the unit 1 and 2.
+11:26 - This unit here is labeled 1, so it's only
+11:28 - allowed to depend on the first input
+11:31 - according to the ordering, which is x2.
+11:33 -
+11:35 - And then you basically recursively add the masks
+11:42 - to preserve this invariant.
+11:44 - So when you go to the next layer and you
+11:46 - have a node that is labeled 1, then you
+11:48 - are only allowing a connection to the nodes that are labeled up
+11:53 - to one in the previous layer.
+11:56 - And the way you achieve it is by basically masking
+11:58 - out and setting to 0 basically some
+12:02 - of the elements of the matrix that you
+12:04 - would use for that layer of the neural network.
+12:09 - And if you do that, then you preserve this invariant
+12:11 - and you can see that indeed the parameter of the probability
+12:15 - of x2, which is the output, the second output
+12:18 - of the neural network does not depend
+12:20 - on any input, which is what we want for our chain rule
+12:25 - factorization.
+12:26 - And if you look at the parameter of x3, which
+12:29 - is the third output, you'll see that if you follow
+12:32 - all these paths, they should only
+12:35 - depend on basically the second on x2, which
+12:41 - is the variable that come before it in the ordering.
+12:44 - And so by maintaining this invariant,
+12:47 - you get an autoencoder which is actually
+12:50 - an autoregressive model.
+12:51 -
+12:54 - You are essentially forcing the model
+12:56 - not to cheat by looking at future outputs to predict.
+13:00 - And you can only use past output--
+13:02 - past inputs to predict future outputs essentially.
+13:06 - And this is one architecture that would
+13:08 - enforce this kind of invariant.
+13:11 - This is done during training.
+13:12 - So you have to--
+13:14 - during training-- you basically have to set up an architecture
+13:17 - that is masked so that it's not allowed to cheat while you
+13:22 - train, because if you didn't mask, then it could--
+13:26 - when trying to predict the x2, you just
+13:28 - look at the actual value and you use it, right?
+13:31 - And so this is very similar if you've seen language models,
+13:34 - you also have to mask to basically
+13:37 - not allow it to look into future tokens to make a prediction.
+13:41 - If you're allowed to look into the future to predict tokens,
+13:45 - then it's going to cheat and you're not
+13:47 - going to do the right thing.
+13:48 - And this is the same thing at the level of the compute-- it's
+13:54 - a different computation graph that basically achieves
+13:56 - the same sort of result.
+13:58 - So the question is, is the benefit only at training time
+14:00 - or inference time?
+14:01 - So the benefit is only at training time
+14:03 - because at inference time, you still
+14:04 - have the sequential thing that you
+14:06 - would have to come up with a value for the first variable
+14:10 - and fit it in.
+14:11 - So it would still have to be sequential.
+14:12 - That's unavoidable.
+14:14 - Every autoregressive model has that kind of annoying flavor,
+14:18 - basically.
+14:20 - So the ordering, that's also very hard.
+14:22 - I think if you have something where you know the structure
+14:26 - and you know again that there is some causal or there is time,
+14:30 - maybe there is a reasonable way of picking an ordering.
+14:32 - Otherwise you would have to either choose many orderings
+14:37 - if you have basically have a mixture, choose one at random.
+14:41 - But there is not a good way of basically selecting an ordering.
+14:44 - There is actually research where people
+14:46 - have been trying to learn autoregressive models
+14:48 - and an ordering.
+14:49 - So you can define a family of models
+14:52 - where you can search over possible orderings
+14:55 - and search over factorizations over that ordering.
+14:59 - But you can imagine there is n factorial different orderings
+15:01 - to search over and it's discrete.
+15:03 - So it's a very tough optimization problem
+15:06 - to find the right ordering.
+15:09 - So the loss function would be the ones
+15:11 - that we have here, which would be basically
+15:17 - you would try to make the predictions close to what
+15:19 - you have in the data.
+15:20 - So the loss function wouldn't change.
+15:21 - It's just that the way you make predictions is you're
+15:24 - not allowed to cheat, for example,
+15:26 - or you're not allowed to look at xi when you predict xi.
+15:30 - And you're only allowed to predict it
+15:32 - based on previous variables in some ordering.
+15:36 - And it turns out that, that would be exactly the same loss
+15:38 - that you would have if you were to train
+15:40 - the autoregressive model.
+15:41 - It depends on kind of the model family that you choose.
+15:43 - But if you have logistic regression models,
+15:46 - it would be exactly the same loss, for example.
+15:50 - An alternative way to approach this
+15:52 - is to use RNN, some kind of recursive style of computation
+15:59 - to basically predict the next random variable given
+16:07 - the previous ones according to some model.
+16:11 - At the end of the day, this is what
+16:14 - the key problem whenever you build an autoregressive model
+16:17 - is solving a bunch of coupled kind of prediction problems,
+16:22 - where you predict a single variables-- single variable
+16:25 - given the other variables that come before it in some ordering.
+16:28 - And the issue is that this history kind of
+16:33 - keeps getting longer.
+16:34 - So you're conditioning more and more things.
+16:36 - And RNNs are pretty good at or it's one way
+16:41 - to handle this kind of situation and try
+16:48 - to keep a summary of all the information or all the things
+16:51 - you've conditioned on so far and recursively update it.
+16:57 - And so a computation graph would look something like this.
+17:01 - So there is a summary h, let's say h of t or h of t
+17:06 - plus 1, which basically is a vector that summarizes
+17:10 - all the inputs up to that time.
+17:15 - And you initialize it somehow based on some initialization.
+17:20 - And then you recursively update it
+17:22 - by saying the new summary of the history
+17:26 - is some transformation of the history I've seen so far.
+17:30 - And the new input for that time step xt plus 1.
+17:35 - And maybe this is one way to implement it.
+17:38 - You do some kind of linear transformation of ht, xt plus 1.
+17:43 - You apply some non-linearity.
+17:45 - And that gives you the new summary up to time t plus 1.
+17:52 - And then what you can do is just like what we've done so far
+17:54 - is then you use h to basically--
+17:57 - or you transform h and you map it to either let's say
+18:03 - a category-- the parameters of a categorical random variable
+18:06 - or a Bernoulli random variable or a mixture of Gaussians,
+18:10 - whatever it is that you need to predict, you do it through--
+18:15 - well, I guess you probably also would need some nonlinearities
+18:17 - here.
+18:18 - But there is some output, which is
+18:19 - the thing you use for prediction, which
+18:21 - is going to depend only on this history vector or the summary
+18:26 - vector of all the things you've seen so far.
+18:28 -
+18:31 - And the good thing about this is that basically, it
+18:37 - has a very small number of parameters,
+18:39 - like regardless of how long the history is,
+18:41 - there is a fixed number of learnable parameters
+18:43 - which are all these matrices that you use to recursively
+18:48 - update your summary of all the information you've seen so far.
+18:55 - And so it's constant with respect to n.
+18:59 - Remember we had the things that were linear in n.
+19:02 - We had things like quadratic in n.
+19:04 - This thing is actually constant.
+19:07 - The matrices are fixed and you just keep applying them.
+19:09 - So the question is, is this a Markov assumption?
+19:11 - This is not a Markov assumption in the sense
+19:13 - that if you think about xt is not just
+19:17 - a function of the previous xt minus 1, right?
+19:22 - It still depends on all the past random variables.
+19:29 - Again, not entirely general way.
+19:33 - So you can only capture the dependencies,
+19:36 - but you can write down in terms of this sort of recursion.
+19:40 - And so it's definitely not a Markov assumption.
+19:47 - And this is that if you think about the computation graph,
+19:49 - it does depend on all the previous inputs.
+19:51 -
+19:56 - And so this is an example of how you would use this kind of model
+20:01 - to model text.
+20:03 - So the idea is that in this simple example,
+20:06 - we have only let's say four different characters-- h, e, l,
+20:11 - and o.
+20:12 - And then you would basically encode them,
+20:16 - let's say using some one-hot encoding.
+20:19 - So h is 1, 0, 0, e is 0, 1, 0, 0, and so forth.
+20:25 - And then as usual, you would use some kind
+20:27 - of autoregressive factorization.
+20:30 - So you write it down in this case from the ordering
+20:32 - is the one from left to right.
+20:33 - So you write the probability of choosing the first character
+20:36 - in your piece of text, then the probability
+20:39 - of choosing the second character given the first one,
+20:42 - and so forth.
+20:43 - And what you would do is you would basically
+20:48 - obtain these probabilities from the hidden layer
+20:53 - of this recurrent neural network.
+20:56 - So you have these hidden layers that
+20:57 - are updated according to that recursion
+20:59 - that I showed you before.
+21:01 - And then you would use the hidden layer,
+21:03 - you would transform it into an output layer,
+21:08 - which is just four numbers.
+21:09 - And then you can take a softmax to basically map
+21:12 - that to for non-negative numbers between 0 and 1 that sum to 1.
+21:20 - And so in this case, for example, we have a hidden layer.
+21:24 - And then we apply some linear transformation
+21:27 - to get these four numbers.
+21:29 - And we're trying to basically choose the values such
+21:34 - that the second entry of that vector
+21:36 - is very large, because that would put a lot of probability
+21:38 - on the second sort of possible character, which
+21:42 - happens to be e, which is the one we want
+21:45 - for the second position.
+21:48 - And so then when you train these models,
+21:50 - the game is to choose values for these matrices
+21:52 - so that let's say you maximize the probability of observing
+21:55 - a particular data point or data set.
+21:58 -
+22:03 - And yeah, so again, the kind of key thing
+22:08 - here is that you have a very small number of parameters.
+22:10 - And then you use the hidden state of the RNN
+22:15 - to get the conditional probabilities
+22:16 - that you need in an autoregressive factorization.
+22:19 -
+22:26 - And then you can see kind of like the recursion,
+22:28 - then you would compute the next hidden state
+22:31 - by taking the current history.
+22:33 - Then every-- the new character that you have access to,
+22:36 - you update your recursion and you get a new hidden state.
+22:39 - You use that hidden state to come up
+22:41 - with a vector of predicted probabilities
+22:42 - for the next character and so forth.
+22:46 - So it's the same machinery as before,
+22:47 - but instead of having multiple linear regression
+22:51 - or logistic regression classifiers,
+22:53 - we have a bunch of classifiers that are tied together
+22:55 - by this recursion.
+22:57 -
+23:01 - And the pro is that you can apply it to sequences
+23:04 - of arbitrary length.
+23:06 - And it's actually in theory at least
+23:08 - RNNs are pretty general in the sense
+23:11 - that they can essentially represent
+23:15 - any computable function, at least in theory.
+23:18 - In practice, they are tricky to learn.
+23:21 - And you still need to pick an ordering, which
+23:24 - is always a problem for autoregressive models.
+23:26 - The key thing-- the key issue with this RNNs
+23:30 - is that they requires-- they're very slow during training time
+23:34 - because you have to unroll this recursion
+23:36 - to compute the probabilities.
+23:40 - And that's a problem.
+23:43 - But I'll just show you some examples
+23:45 - and then I think we can end here.
+23:47 - It actually works reasonably well, right?
+23:49 - If you take a simple three-layer RNN and you
+23:52 - train it on the all the works of Shakespeare at the character
+23:56 - level.
+23:56 - So it's literally what I just showed you, just
+23:59 - a three-layer RNN.
+24:01 - And then you sample from the model,
+24:03 - you can get things like this, which
+24:07 - has a little bit of the flavor of Shakespeare, I guess.
+24:13 - If you think about it, this is at the character level.
+24:16 - It's literally generating character by character.
+24:18 - It's actually pretty impressive, it
+24:21 - needs to learn which words are valid and which ones are not,
+24:24 - the grammar, the punctuation.
+24:26 - It's pretty impressive that a relatively simple model
+24:28 - like this working at the level of characters can do like this.
+24:33 - You could train it on Wikipedia.
+24:35 - And then you can sample and you can make up
+24:37 - fake Wikipedia pages like this one on the Italy
+24:44 - that conquering India with.
+24:48 - It's pretty interesting made-up stuff.
+24:52 - But again, you can see it's pretty interesting
+24:54 - how it's able to--
+24:55 - it has the right markdown syntax and it's closing the brackets
+24:58 - after opening them, which has to remember
+25:01 - through this single hidden state that it's carrying over.
+25:04 - Yeah.
+25:04 -
+25:07 - So it's even making up links for this made-up facts
+25:16 - that it generates.
+25:17 - And you train it on baby names and then
+25:20 - you can sample from the model.
+25:21 - You can get new names.
+25:24 - So yeah, it's a pretty--
+25:28 - works surprisingly well.
+25:30 - I guess the main issue that hopefully then maybe
+25:33 - I guess we'll go over it next time that the reason this is not
+25:36 - used for state of the art language models
+25:39 - is that you have this bottleneck that you need to capture all
+25:42 - the information up to time t in a single vector, which
+25:46 - is a problem.
+25:48 - And the sequential evaluation, that's the main bottleneck.
+25:51 - So it cannot take advantage of modern kind of GPUs
+25:55 - because in order to compute the probabilities,
+25:58 - you really have to unroll the computation and you have to go
+26:00 - through it step by step.
+26:01 - And that's kind of the main challenge.
+
+
+00:00 -
+00:04 - SPEAKER: The plan for today is to finish up
+00:08 - the material we didn't cover in the last lecture
+00:11 - on autoregressive models.
+00:13 - And then we'll talk about learning.
+00:16 - So towards the end of the last lecture,
+00:19 - we talked about RNNs as being another way
+00:22 - to parameterize autoregressive models.
+00:25 - And remember, the key idea is that you
+00:27 - have a small number of parameters, actually
+00:30 - a constant number of parameters with respect
+00:33 - to the length of the sequence you're trying to model.
+00:36 - And you're going to use these parameters to basically keep
+00:40 - track of the context that you use to make the--
+00:44 - to predict basically the next token or the next pixel.
+00:48 - And you keep track of all this information
+00:50 - through a single kind of hidden vector
+00:54 - that is supposed to summarize all the information that you've
+00:57 - seen so far and that you're going
+00:58 - to use to make the next prediction, like in this example
+01:02 - here where I'm looking at, let's say,
+01:04 - building an RNN to model text.
+01:06 - So you have tokens.
+01:07 - And you might have some prefix like my friend opened up.
+01:14 - And then you're going to use all this information.
+01:16 - You pass it through your RNN.
+01:18 - And the RNN will update its state, its hidden vector.
+01:21 - And you end up with a hidden vector h4 here.
+01:25 - And then you're going to use that vector
+01:27 - to predict the next token.
+01:29 - And maybe if you're doing a good job,
+01:30 - then you'll put high probability to reasonable ways
+01:34 - to continue this sentence like the door or the window.
+01:37 - And you're going to put low probability to things
+01:39 - that don't make sense.
+01:41 - And as we've seen, these RNN models kind of
+01:44 - work reasonably well, even if you build them at the character
+01:46 - level, which is pretty hard.
+01:48 - One challenge is that this single hidden vector
+01:52 - that you have here basically has to summarize all the information
+01:57 - that you've seen so far.
+01:58 - And that's the only thing you can use
+02:00 - to make the next prediction.
+02:02 - And that can be a problem because you kind of
+02:04 - like have to do a pretty good job of summarizing the meaning.
+02:08 - Let's say if you're building a language model,
+02:10 - this single vector has to capture all the entire meaning
+02:14 - of all the previous elements in the sequence, which
+02:19 - can be challenging.
+02:21 - The other problem of RNNs is that basically you
+02:24 - have to unroll the computation if you
+02:26 - want to compute these probabilities
+02:28 - and you want to come up with reasonable losses at training
+02:31 - time, which makes them pretty slow and pretty hard to train.
+02:35 - And the other problem is that, yeah, they
+02:38 - can be a bit problematic to train because you have
+02:43 - these long dependencies from, let's
+02:46 - say, early on in the sequence towards the, let's say,
+02:50 - the present.
+02:51 - It can take many, many updates to get there.
+02:54 - And this can lead to exploding or vanishing gradients.
+02:57 - And it can be problematic.
+02:59 - So this is now what's actually been
+03:01 - used instead of the art language model-- autoregressive language
+03:04 - models.
+03:05 - Existing state of the art models use attention.
+03:08 - And the basic idea is that they look more
+03:11 - like a NADE or a MADE, these other models
+03:14 - that we've seen before where you essentially
+03:17 - are able to use the entire sequence of inputs up to time t
+03:24 - to make the next prediction.
+03:26 - And so instead of just using the hidden vector corresponding
+03:30 - to the last time step to make the prediction,
+03:32 - you look at all the hidden vectors from previous time steps
+03:37 - to predict what's going to come next.
+03:40 - And the way to make this effective in practice
+03:44 - is to use an attention mechanism to kind of try
+03:48 - to figure out which parts, which elements of this sequence
+03:52 - are useful and which ones are not,
+03:54 - which one you should pay attention to
+03:56 - and which one you shouldn't pay attention
+03:58 - to when you make a prediction.
+04:01 - And so roughly, at a very high level,
+04:03 - the way these methods work is that there
+04:05 - is some kind of attention mechanism
+04:07 - that will tell you how relevant a query vector is
+04:14 - with respect to a key vector.
+04:18 - So this is similar to when you search in a database.
+04:21 - You have a query.
+04:22 - You have a set of keys.
+04:23 - And you want to figure out-- you want to do retrieval.
+04:25 - This has a similar flavor.
+04:27 - And it will basically tell you how relevant
+04:29 - is the hidden vector, let's say, corresponding
+04:32 - to the first time step with respect to the hidden vector
+04:35 - that you have at the current time step.
+04:38 - This could be something as similar as just
+04:40 - taking a dot product between the two vectors.
+04:42 - Once you have the similarity vectors,
+04:45 - then you turn them into an attention distribution,
+04:47 - which is the thing that we were talking about before,
+04:49 - the thing that tells you which elements of the sequence matter
+04:53 - and which ones don't.
+04:54 - And one simple way to do it is to just take all these attention
+04:57 - scores and pass them through a softmax
+05:00 - to get an actual distribution.
+05:02 - The question is whether this kind of model
+05:05 - assumes conditional independence.
+05:06 - If you build a model like this, again, there
+05:09 - is no conditional independence explicitly stated because,
+05:13 - in principle, as long as-- this is just an autoregressive model.
+05:19 - And we're just parameterizing the conditionals
+05:21 - using a function that has a very specific functional form.
+05:27 - And so we're not going to be able to capture
+05:29 - all possible dependencies.
+05:30 - But we're not explicitly making any conditional independence
+05:34 - assumption so far.
+05:35 -
+05:37 - Well, if you were to make conditional independence
+05:40 - assumptions, yes, typically performance
+05:42 - would drop significantly.
+05:44 - As we'll see, the nice thing about this kind of architecture
+05:47 - is that it allows you to take into account the full context
+05:52 - when you make a prediction while at the same time being
+05:55 - selective and kind of being able to ignore things that are not
+05:58 - relevant and pay attention to things that are relevant.
+06:01 - For example, in this kind of simplified version
+06:04 - of an attention mechanism, what you could do
+06:07 - is you could take an average of the hidden vectors
+06:10 - that you've seen before in your RNN.
+06:12 - And you weigh them with the attention score.
+06:15 - Attention distribution scores that you have, you average them.
+06:19 - And you get a new vector.
+06:20 - Then you're going to combine it with the current vector
+06:22 - to make a prediction for the next token.
+06:24 - And you see that now we're no longer bottlenecked.
+06:27 - We're not just using this green vector to make the prediction.
+06:30 - We're able to use the whole history.
+06:32 - So we're able to really compare every pair essentially
+06:35 - of tokens in the sequence.
+06:37 - And that's pretty powerful.
+06:40 - And as you can see, for example, in this little example here,
+06:46 - I have a robot that must obey the orders given it.
+06:53 - And then you need to make a prediction.
+06:55 - And if you want to make a prediction,
+06:56 - you kind of need to figure out what it refers to.
+07:00 - And the attention mechanism can help
+07:02 - you to figure out that this it is probably referring to--
+07:06 - when you're trying to figure out what it means,
+07:08 - you should pay attention to these two tokens, a robot.
+07:12 - And so that's the flavor of why this attention mechanism is
+07:16 - helpful because you can take advantage of the whole sequence.
+07:21 - As usual, in practice you need to be
+07:25 - careful about making sure that the model is autoregressive.
+07:28 - So you cannot pay attention to future vectors when you do these
+07:33 - kind of things.
+07:34 - And so you have to use a mask mechanism just like in MADE,
+07:38 - just like in these other models so that you can only basically
+07:42 - pay attention to the tokens or the random variables that
+07:45 - come before it in the sequence, in the ordering.
+07:50 - The other thing that is important
+07:52 - is that in an actual system that is used in practice,
+07:56 - you would not use any sort of recurrent architecture.
+08:00 - So you wouldn't even need these kind of recurrent computation
+08:04 - here where you update the state recursively using
+08:08 - an using an RNN.
+08:10 - You just use feedforward computation.
+08:12 - You stack multiple layers of attention.
+08:16 - And the key advantage of this is that we're back to kind of like
+08:19 - the previous MADE-like setting where you can actually
+08:24 - evaluate--
+08:26 - you can evaluate the architecture in parallel.
+08:30 - So you can do the computation necessary to make
+08:33 - a prediction at every index in parallel across indexes.
+08:40 - This is at training time, of course.
+08:42 - And this is really what makes these systems--
+08:44 - these models good in practice compared to an RNN.
+08:47 - I think actually an RNN would be reasonably good.
+08:51 - In terms of modeling power, it's just too slow to train.
+08:55 - And these transformers, because they
+08:57 - allow for massive parallelism--
+09:01 - and we'll come back to this when we talk exactly
+09:03 - how these models are trained.
+09:04 - But the key advantage is that you can basically
+09:06 - evaluate the loss very efficiently
+09:08 - without having to unroll the recursion corresponding
+09:11 - to an RNN.
+09:12 - And that's why they are-- one of the reasons
+09:14 - they've achieved this great success in practice
+09:17 - is because they can be evaluated in parallel.
+09:19 - They can take advantage of GPUs.
+09:21 - And you can scale them to very large sizes.
+09:25 - And you can see some of the demos of the systems
+09:27 - that the GPTs, GPT-2, 3, 4, that we've seen in the first lecture.
+09:37 - The amazing LLMs that everybody's talking about,
+09:43 - Llama, other systems that are available online you
+09:46 - can play around with are essentially
+09:47 - based on these on this kind of architecture.
+09:50 - Autoregressive models using this self-attention mechanism
+09:54 - that we're going to talk about more in one
+09:56 - of the section that is going to be dedicated
+09:58 - to neural architectures.
+10:00 - So this is the high level idea of one of the key ingredients
+10:06 - that is behind state-of-the-art language models.
+10:10 -
+10:13 - Cool.
+10:14 - Now back to RNNs.
+10:16 - I know people have been using them not only for text.
+10:19 - You can use them to model images.
+10:21 - So you can just think of an image as a sequence of pixels.
+10:24 - You can generate them in top left
+10:28 - to bottom right one at a time.
+10:30 - And you can use an RNN to basically model
+10:32 - all the conditionals in your autoregressive model.
+10:36 - So each pixel, you're going to have one conditional per pixel
+10:40 - giving you the distribution of that pixel given all the ones
+10:43 - that come before it in the sequence.
+10:46 - And each conditional is going to be
+10:49 - a categorical distribution over the colors
+10:52 - that that pixel can take.
+10:53 - And if you're modeling pixels using an RGB encoding,
+10:57 - then you have three channels-- red, green, and blue.
+10:59 - And so you need to sort of capture
+11:02 - the distribution over the colors of a pixel given
+11:04 - all the previous pixels.
+11:06 - And one way to do it is to use an autoregressive structure
+11:11 - kind of inside every pixel--
+11:14 - every conditional defined in the pixel.
+11:18 - So a pixel is going to involve three random variables--
+11:21 - the red, the green, and the blue channel.
+11:23 - And you can generate them, let's say, in that order.
+11:26 - So you can compute the conditional probability
+11:28 - of the red channel given the previous context.
+11:30 - And you can do the green channel given
+11:32 - the previous context and the value
+11:34 - of the red channel and so forth.
+11:37 - And in practice, you can basically
+11:39 - use an RNN-style architecture with some masking,
+11:43 - the same kind of masking we've seen
+11:45 - in MADE that enforces this kind of ordering.
+11:47 - So first, you try to compute the conditional probability
+11:51 - of the red pixel.
+11:52 - And that can depend on everything you've seen before.
+11:55 - But you cannot pick.
+11:56 - You cannot look at the green channel or the blue channel.
+11:59 - When you try to predict the green channel,
+12:02 - it's fine to look at the value of the red channel
+12:05 - for that pixel and so forth.
+12:08 - And so, again, it's basically the same idea.
+12:10 - But you're going to use some sort of masking to enforce
+12:13 - autoregressive structure.
+12:15 - And this was one of the--
+12:16 - these are some examples of the results you can get from an RNN
+12:21 - at the pixel level, trained on ImageNet, downscaled ImageNet.
+12:27 - Again, you can see that these results are not great,
+12:30 - but they're pretty decent.
+12:32 - Like what you see here is you take an image.
+12:35 - You see the rightmost column is an actual image.
+12:39 - And then what you do is you can remove the bottom half.
+12:43 - And then you can let the model complete.
+12:45 - So it's similar to a language model.
+12:47 - You have a prompt, which in this case
+12:48 - is going to be just the top half of the image.
+12:51 - And then you let your autoregressive model generate
+12:53 - the next pixel and then the next pixel and then
+12:55 - the next pixel and so forth.
+12:57 - And you can see that it's coming up
+12:59 - with somewhat reasonable completions.
+13:02 - It has the right structure.
+13:04 - It has the right symmetries.
+13:06 - It's doing a reasonable job of capturing the dependencies
+13:09 - between the pixels.
+13:11 - There is some variability in the samples like here,
+13:15 - this one versus this one.
+13:16 - Of course, there is stochasticity.
+13:17 - So if you sample from the-- even given the same initial
+13:20 - condition, if you sample--
+13:23 - there is randomness in the way you sample.
+13:24 - So you can generate different completions every time.
+13:28 - Every time you sample, you're going
+13:29 - to get a different possible way of completing that image.
+13:33 - And you can see that they have--
+13:35 - not always.
+13:36 - I mean, some of them don't make a lot of sense.
+13:38 - But some of the completions are actually decent.
+13:40 - And there is some variability, which is good.
+13:45 - The challenge is that, again, because you
+13:49 - have to evaluate the probability of an image sequentially,
+13:54 - you have to unroll the recursion.
+13:56 - These models are very slow.
+13:58 - And so in practice, what tends to work much better on images
+14:02 - is convolutional architectures.
+14:03 - These are the kind of architectures
+14:05 - that work well when you're building classification models.
+14:08 - And so it would be natural to try
+14:10 - to use a convolutional architecture to build
+14:13 - a generative model of images.
+14:16 - The challenge once again is that you
+14:17 - need to make sure that the model is
+14:20 - consistent with an autoregressive one.
+14:23 - So what you need to make sure is that when
+14:27 - you make a prediction for a pixel,
+14:29 - you only use information that is consistent with the ordering
+14:33 - you've chosen.
+14:34 - So if the ordering is once again from top
+14:36 - left to bottom right, when you make
+14:38 - a prediction for this pixel, it's
+14:40 - fine to use information from all the shaded area in the image.
+14:45 - But you cannot pick--
+14:46 - you cannot look at information coming from the future or coming
+14:49 - from any of the white region of the image.
+14:54 - And the way to do it is once again relatively simple,
+14:57 - is always masking at the end of the day.
+15:00 - So when you think about--
+15:02 - if you want to enforce autoregressive structure,
+15:04 - one way to do it is to set up the kernels of your convolutions
+15:09 - to be consistent--
+15:13 - to have zeros in the right places
+15:17 - so that the way the computation occurs
+15:20 - is consistent with the autoregressive nature
+15:22 - of the model.
+15:23 - So if you have a simple three by three
+15:27 - kind of convolutional kernel.
+15:28 - And you zero out all these entries in the kernel.
+15:32 - Then if you look at the computation graph,
+15:34 - whenever you make a prediction for this red pixel,
+15:37 - you're only going to use the blue pixels to make
+15:41 - that prediction.
+15:42 - And so that's consistent with the ordering that we had before.
+15:47 - So again, it's very similar to MADE.
+15:48 - It's very similar to transformers or self-attention.
+15:51 - You basically mask to make sure that things are
+15:53 - consistent with the ordering.
+15:55 - Yeah, so the question is whether you can use, I think,
+15:58 - attention or self-attention for modeling images
+16:02 - and whether that would recover the right inductive biases.
+16:06 - And yeah, you can use masked, once again, attention on images.
+16:12 - And there have been autoregressive models
+16:15 - that are essentially using the transformer-like architecture
+16:20 - on images.
+16:21 - And they've been very successful.
+16:23 - As far as I know, they are not in the public domain.
+16:26 - So these have been built in industry.
+16:29 - But they have not been actually released.
+16:32 - I think they tend to be more computationally
+16:34 - intensive to train.
+16:35 - And so other models seem to-- like infusion models that we're
+16:39 - going to talk about later, tend to work better in practice.
+16:41 - But there's been reported in the literature
+16:44 - some good success using transformer-based architectures
+16:48 - for images.
+16:49 - The question is, what's the right ordering for images?
+16:52 - For text, maybe left to right seems reasonable.
+16:55 - But for images, what's the right order?
+16:56 - That's a great question.
+16:57 - And we don't have a great answer.
+17:00 - Right now, the typical ordering is top left to bottom right.
+17:03 - But as you said, it's probably not the right one.
+17:06 - And you could imagine a different kind of mechanism.
+17:09 - There are people and there's been
+17:11 - research where people have tried to learn the optimal ordering.
+17:15 - Like you can imagine there's a combinatorially large number
+17:17 - of orderings.
+17:18 - But you could try to somehow set up an optimization problem
+17:20 - where you search for the right ordering first.
+17:23 - And then you find the autoregressive model
+17:26 - consistent with that order that maximizes the data fit
+17:30 - with moderate kind of success.
+17:33 - And incidentally, as far as I know, even for language,
+17:35 - you can model right to left.
+17:36 - And it works OK too.
+17:38 - So maybe the ordering is not that important
+17:41 - even for language.
+17:43 - So the question is whether these convolutional models
+17:46 - can be evaluated in parallel.
+17:49 - And to some extent, convolutions can be
+17:53 - evaluated pretty efficiently.
+17:56 - Components can be evaluated in basically just
+17:59 - matrix multiplications.
+18:01 - And they can be done very efficiently on modern hardware.
+18:05 - In fact, that's another way to build very efficient
+18:07 - language models is actually based on convolutions,
+18:10 - one deconvolutions.
+18:12 - You can get pretty close to transformers-like models using
+18:16 - convolutions that are, of course--
+18:18 - of course, they need to be causal,
+18:19 - so you cannot look into the future.
+18:21 - You can only look into the past.
+18:22 - But using kind of convolutional models
+18:25 - has shown to work reasonably well on language as well.
+18:28 - It matches the performance of transformers,
+18:31 - so that's another way to get fast parallel computation
+18:35 - and reasonably good modeling performance.
+18:39 - Yeah, so the question is whether you
+18:42 - could train a generative model based
+18:43 - on inpainting where you maybe mask out parts of an image
+18:46 - and you train a model to predict the remaining parts.
+18:50 - And in general, that wouldn't give you
+18:53 - a generative model, although there
+18:55 - are ways to generate samples from that kind of architecture
+18:58 - because in some sense, it's still trying to learn something.
+19:01 - You need to learn something about the joint
+19:03 - if you want to do well at that.
+19:04 - But it doesn't give you directly a way
+19:07 - to generate samples at least left to right.
+19:10 - You would need to use more expensive kind of sampling
+19:13 - procedures that make these models harder
+19:16 - to use in practice, although there
+19:18 - are variants like masked autoencoders that
+19:20 - are used generatively.
+19:22 - But that's a little bit more complicated.
+19:25 - So the question is whether transformers
+19:27 - are more powerful than an RNN.
+19:28 - And I think that's a little bit tricky because an RNN
+19:32 - an end by itself is already Turing-complete in general,
+19:34 - so it can implement any function at a relatively small RNN.
+19:39 - In theory, it could do that.
+19:41 - So it's been proven that they are essentially arbitrarily,
+19:45 - yeah.
+19:47 - So it's really probably more about the efficiency of training
+19:51 - or maybe inductive biases than--
+19:54 - there is not a good understanding
+19:56 - about the flexibility by itself.
+19:58 - The question is why would you use an RNN?
+20:02 - One advantage is that at inference time,
+20:05 - keeping track of a single state is actually pretty good
+20:08 - because you don't have to do a lot of computation over and over
+20:12 - if you had a vanilla model where nothing is tied.
+20:16 - You need to do a lot of computation at inference time.
+20:19 - An RNN is nice because all you have to do
+20:23 - is you keep track of a small state.
+20:24 - And you can throw away everything.
+20:26 - All the past doesn't matter.
+20:27 - You just need to keep track of the hidden state.
+20:29 - And you just keep on folding the computation.
+20:32 - I mean, it's sequential.
+20:33 - But all these models are sequential anyways.
+20:36 - But the fact that you have this very small vector
+20:38 - and that's the only thing you need
+20:40 - to keep track of with respect to the state is very appealing.
+20:43 - So that's why people are trying to actually get
+20:45 - back to RNN-like architectures because they could be much more
+20:48 - efficient at inference time.
+20:50 - Then the other thing you have to keep in mind if you do this mask
+20:53 - convolution is that you might end up
+20:56 - with this kind of blind spot thing
+20:57 - where if you look at the receptive field
+21:00 - that you get when you use kernels that are not--
+21:02 - that are masked-- when you make a prediction--
+21:05 - if you have a stack of convolutions
+21:08 - and you make a prediction for this pixel,
+21:10 - you're not actually going to take into account
+21:12 - this grayed out pixels because of the blind spot.
+21:15 - I don't know if you see what happens if you recurse
+21:19 - on this kind of computation structure
+21:21 - and you see-- you do a bunch of convolution one
+21:24 - on top of each other.
+21:25 - You end up with this blind spot.
+21:26 - And so there are some other tricks
+21:28 - that you have to do at the level of the architecture
+21:31 - to basically combine multiple convolutions
+21:34 - with different kinds of masking to solve that sort of issue.
+21:41 - And here you can see some samples that tends to work well.
+21:45 - If you replace the RNN with a CNN,
+21:47 - you get significantly better samples.
+21:50 - And it's much faster.
+21:50 -
+21:57 - And these models tend to actually not only generate
+22:00 - reasonable samples.
+22:02 - But they seem to get a pretty good understanding of what
+22:05 - is the structure of the images that they see at training time.
+22:10 - And one indication that that is indeed the case
+22:15 - is that you can use them to do anomaly detection.
+22:17 - So you might have heard that machine learning models are
+22:21 - pretty vulnerable to adversarial examples, adversarial attacks.
+22:24 - So you take an image like this one.
+22:26 - That would be classified as a dog image.
+22:28 - And then you add this noise.
+22:30 - You get back an image that looks identical to the original one
+22:33 - but would be classified with very high confidence
+22:36 - by state-of-the-art models to be something completely wrong.
+22:39 - And so these two images are different but in very subtle
+22:43 - ways.
+22:43 - And there is a natural question of whether you
+22:45 - can detect these kind of differences in the images.
+22:49 - And if you could do it, maybe you
+22:50 - can build more robust machine learning models.
+22:53 - And one way to do it is to try to fit in these two
+22:57 - types of inputs like natural images and adversarial attacks
+23:01 - into a pretrained generative model.
+23:03 - And see whether they would assign different probabilities
+23:06 - to these two types of inputs.
+23:08 - If the model is doing a good job,
+23:10 - it might be able to detect that this is a natural image.
+23:13 - It should be assigned fairly high probability
+23:16 - versus this one.
+23:17 - Something weird is going on here.
+23:19 - And so it should be assigned a lower probability.
+23:22 - And indeed, a pretrained PixelCNN model
+23:26 - does a pretty good job at discriminating
+23:29 - between natural images and ones that have been tampered with.
+23:33 - And so what you see here is basically a histogram
+23:36 - of the kind of likelihoods.
+23:38 - I guess they are written in bits per dimension.
+23:40 - But it's the same thing as the probability
+23:43 - that the different samples are given by the model
+23:46 - is on the x-axis.
+23:47 - And on the y-axis you see how frequently
+23:50 - different images, let's say, in the training set
+23:53 - are given that probability by the model.
+23:55 - And you see that the train and test set, they are kind of here,
+24:00 - while the adversarial attack are significantly kind of separated
+24:06 - from the natural images, meaning they
+24:08 - are assigned a much lower probability by the model.
+24:11 - So if you use a threshold to try to distinguish and say
+24:14 - if the probability of my input is significantly lower than what
+24:17 - I'm expected to, then I can maybe
+24:20 - say that's an adversarial attack.
+24:22 - And I can reject it.
+24:23 - And this model seemed to perform reasonably well,
+24:25 - which means that they are no longer getting the high level
+24:31 - semantics of the image.
+24:32 - But they really are able to understand
+24:34 - the subtle dependencies between the pixel values that
+24:38 - exist in natural images.
+24:40 - The question is whether people can
+24:41 - do adversarial attacks if they don't have access to the model.
+24:44 - To some extent, yes.
+24:46 - It depends.
+24:46 - There are different kinds of adversarial methods.
+24:49 - You can assume that you have exactly, you know, the weights.
+24:51 - Maybe you can only know the outputs of the model.
+24:54 - Sometimes you don't even have access to anything.
+24:56 - And you have to somehow hope that an attack built for a model
+24:59 - transfers to a different one.
+25:01 - So to some extent, there have been some success
+25:03 - even in black box settings.
+25:06 - It's not necessarily better.
+25:07 - I think that the idea is that this is just
+25:09 - to show that the generative model, the PixelCNN that
+25:13 - was just trained by maximizing the likelihood of a data set
+25:16 - is able to understand the structure of the images
+25:20 - and kind of the likelihood itself is useful.
+25:23 - So it's not just a matter of sampling from the model,
+25:25 - but the likelihood can actually be
+25:26 - used to discriminate between different kinds of inputs.
+25:31 - And in order to do well, you really
+25:33 - need to understand the relationship
+25:35 - between all the pixels.
+25:35 - You need to figure out that this image is actually
+25:38 - different from this image.
+25:40 - And so it means that those conditionals
+25:42 - that you learn through the autoregressive model
+25:44 - are actually doing a pretty good job
+25:45 - at discriminating these very subtle differences.
+25:49 - Basically, if you want to compute the probability,
+25:51 - you just use the autoregressive chain rule computation.
+25:54 - And so you evaluate the probability
+25:56 - of the first pixel, the second pixel given the first one.
+25:59 - Just multiply all those things together.
+26:01 - And that gives you the likelihood.
+26:02 - That's the formula from an autoregressive model.
+26:05 - And you do that for every input image, the same logic,
+26:08 - the same function.
+26:09 - And then you get different results
+26:11 - because the images are different in some fundamental way.
+26:17 - Yeah, so the x dimension is essentially
+26:20 - p of x, the probability--
+26:22 - the different probability values that are assigned by the model.
+26:25 - And it's in bits per dimension because it's
+26:26 - normalized by the number of dimensions
+26:28 - that you have in the images.
+26:31 - But think of it as p of x rescaled so that it's
+26:34 - a little bit more meaningful.
+26:35 - But roughly, it's the probability.
+26:38 - And on the y-axis, you have how many images are assigned--
+26:43 - it's a histogram-- how many images are assigned
+26:45 - different probability values.
+26:47 - And so you get this kind of Gaussian
+26:49 - where even all the images in the training set,
+26:52 - they are given different probability values.
+26:54 - But roughly, they range--
+26:55 - they are usually in this range between 1 and 4.
+27:00 - And if you look at adversarial attacks,
+27:02 - they are significantly separated.
+27:03 - So they're different in probability.
+27:06 -
+27:09 - Cool.
+27:09 - And then they can also be used for speech,
+27:12 - but let me skip that.
+27:13 - And the summary is that autoregressive models
+27:16 - are pretty general.
+27:18 - They're good because it's easy to sample from them.
+27:21 - It's easy to evaluate probabilities,
+27:23 - which are useful in itself because you can do things
+27:26 - like anomaly detection.
+27:29 - You can extend it to continuous variables.
+27:31 - One issue with autoregressive models
+27:33 - is that there is not really a natural way to cluster data
+27:36 - points or get features.
+27:39 - We'll see that latent variable models are going to be much more
+27:43 - natural for that.
+
+00:00 -
+00:05 - SPEAKER: At a high level, remember we
+00:07 - have your model family which could be autoregressive models.
+00:10 - You have data to train the model.
+00:12 - You have to specify some notion of distance.
+00:15 - So how good your model distribution is, how similar
+00:18 - it is to the data distribution.
+00:20 - And we've seen how to define a set of distributions
+00:24 - using neural networks.
+00:26 - And now the question is, how do you
+00:28 - optimize the parameters of the neural network
+00:30 - to become as close as possible to the data distribution?
+00:35 - And the setting is one where we assume
+00:38 - we're given a data set of samples
+00:40 - from the data distribution.
+00:42 - And each sample is basically an assignment to all the variables
+00:45 - in the model.
+00:46 - So it could be the pixel intensities.
+00:49 - Every pixel intensity in each image
+00:52 - in the model, which is the same as a standard classification
+00:55 - problem where you might have features, some label.
+00:57 - You get to see the values of all the random variables.
+01:02 - And the assumption is that each data point is coming
+01:04 - from the same distribution.
+01:06 - So they're all sampled from the same data distribution.
+01:09 - So they are identically distributed
+01:11 - and they are independent of each other, which
+01:14 - is a standard sort of assumption in machine learning.
+01:18 - And then you're given a family of models.
+01:21 - And the goal is to kind of pick a good model in this family.
+01:24 - So the model family could be all Bayesian networks with a given
+01:28 - structure, or it could be fully visible sigmoid belief network,
+01:34 - or you can think of a bunch of logistic regression classifiers.
+01:37 - They each have a bunch of parameters.
+01:39 - And the question is, how do you choose the parameters such
+01:41 - that you get a good model?
+01:44 - Well, the only thing you have access to
+01:46 - is a bunch of samples from some unknown data distribution.
+01:51 - And the goal is to come up with a model that
+01:56 - is a good approximation to this unknown data generating process.
+02:00 - And the problem is that you don't know what Pdata is,
+02:03 - like I cannot evaluate Pdata on an arbitrary input.
+02:07 - The only thing I have access to is
+02:08 - a bunch of samples from this distribution.
+02:12 - And in general, this is pretty tricky
+02:16 - because you can imagine samples tell us something
+02:21 - about which xs let's say are likely under the data
+02:24 - distribution.
+02:25 - But there is a lot of information
+02:26 - that is just lost, that we're just
+02:28 - losing whenever we get-- we just sample from our distribution.
+02:33 - All right.
+02:33 - So let's say that we're trying to model MNIST again.
+02:37 - And so we're let's say modeling 784 binary variables--
+02:42 - black and white pixels.
+02:45 - And what I claim is that this is a really, really hard problem,
+02:48 - because x is so high dimensional that there is just
+02:52 - so many different possible images that even basically
+02:58 - regardless how large your training set is,
+03:00 - this is a really, really hard problem.
+03:03 - If you think about it, how many possible images are there,
+03:08 - if we have binary variables, you have 784 of them,
+03:13 - there is like 2 to the 784, which is roughly 10
+03:17 - to the 236 different images.
+03:21 - And somehow you need to be able to assign a probability
+03:23 - to each one of them.
+03:25 - So let's say that you have maybe 10 million training
+03:29 - examples or 100 million or a billion training examples.
+03:33 - There is still like such a huge gap between however many samples
+03:38 - you have and all the possible things that
+03:40 - can happen, that this is just fundamentally a really, really
+03:44 - hard problem, like this is way more than the number of atoms
+03:48 - in the universe.
+03:49 - So there's just so many different possible combinations,
+03:52 - and somehow you need to be able to assign a probability
+03:54 - value to each one of them.
+03:58 - And so you have sparse coverage.
+04:00 - And so this is just fundamentally a pretty hard--
+04:02 - a pretty hard problem.
+04:03 - And then there are computational reasons
+04:05 - even if you had infinite data, training
+04:07 - these models might not be--
+04:09 - might still be challenging just because you have finite compute.
+04:14 - And so somehow we'll have to be OK with approximations.
+04:21 - And we'll still sort try to find, given the data we have,
+04:26 - we're going to try to find a good approximation.
+04:29 - And so the natural question is, what do we mean by best?
+04:34 - What's a good approximation?
+04:36 - What should we even try to achieve to do--
+04:39 - try to achieve here given that there are fundamental limits
+04:42 - on what we can do?
+04:45 - And so the setting, what best means really
+04:49 - depends on what you want to do.
+04:51 - One goal could be to just do density estimation.
+04:54 - So if you think about anomaly detection we just talked about,
+04:57 - you really care about being able to assign
+05:00 - reasonable probabilities to every possible inputs
+05:02 - because you care about--
+05:04 - because let's say you care about that.
+05:06 - And if you are really able to estimate
+05:08 - this full joint probability distribution accurately,
+05:11 - then you can do many other things,
+05:13 - then you can condition on a subset of the variables,
+05:16 - you can infer the others, you can do basically
+05:19 - everything you want, but it's a pretty tall order.
+05:22 - It's a pretty challenging problem
+05:24 - as we've just sort of seen before.
+05:27 - Another thing you can do is maybe
+05:28 - you have a specific task in mind.
+05:31 - If you already know how you're going to use this model,
+05:34 - perhaps you can try to train a model that performs well
+05:37 - at that particular task.
+05:39 - Like if you know you only care about classifying images
+05:42 - in spam versus not spam, then maybe you actually want
+05:45 - to build a discriminative model that just predicts y given
+05:48 - x, or if you know that you just care about captioning
+05:53 - an image or generating images given captions,
+05:56 - then maybe you don't need to learn a joint distribution
+05:59 - between images and captions.
+06:01 - You just need to learn the conditional distribution of what
+06:03 - you're trying to predict given what you have access to,
+06:06 - at test time.
+06:08 - That can make your life a little bit easier because you don't
+06:11 - think about density estimation.
+06:14 - You're saying I don't have any preference
+06:18 - about the kind of task the model is going to be given.
+06:21 - I want to do well at every single possible task.
+06:25 - But if you know that there is a very specific way
+06:28 - you're going to use the model, then
+06:30 - you might want to train the model so that it does well
+06:33 - at that specific task you care about.
+06:36 - Other times you might care about structure--
+06:39 - knowledge discovery.
+06:39 - But we're not going to talk about that in this class.
+06:43 - And so we'll see first how to do one.
+06:47 - And then we'll see how to do two.
+06:50 - And so let's say that really what you want to do
+06:52 - is you want to learn a joint probability
+06:56 - distribution over the random variables that
+06:58 - is as good as possible-- as good an approximation as
+07:01 - possible to the data distribution that generated
+07:04 - your data.
+07:05 - How do you do that?
+07:08 - This is basically density estimation.
+07:11 - It's a regression problem you can
+07:12 - think of it or as an estimation problem
+07:14 - because again you want to be able to assign a probability
+07:17 - value to every possible assignment of values
+07:20 - to the random variables you have,
+07:22 - you're trying to build a model over.
+07:25 - And so at this point, really we just
+07:28 - want the joint given-- defined by the data distribution which
+07:32 - is unknown.
+07:32 - But we have access to samples to be close to this model
+07:37 - to some distribution in your model family, P theta.
+07:42 - And so the setting is like this.
+07:45 - So there is this unknown P data.
+07:46 - There is a bunch of samples that you have access to it.
+07:49 - There is a bunch of distributions in this set.
+07:52 - So all the distributions that you
+07:53 - can get as you change parameters of your logistic regression
+07:56 - classifiers or your transformer model or it doesn't matter.
+07:59 - And somehow we want to find a point that is close with respect
+08:04 - to some notion of similarity or distance
+08:06 - to the true underlying data distribution.
+08:12 - So the first question is, how do we evaluate whether or not
+08:17 - two joint probability distributions are
+08:19 - similar to each other?
+08:21 - And there is many ways to do it.
+08:22 - And as we'll see, we're going to get
+08:24 - different kind of generative models
+08:26 - by changing the way we measure similarity between two
+08:30 - probability distributions.
+08:31 - There are some ways of comparing probability distributions that
+08:36 - are more information theoretic.
+08:37 - We're going to see today like maximum likelihood based
+08:40 - on compression that will give you certain kinds of models.
+08:43 - There's going to be other ways that are more based
+08:45 - on if you can generate-- you could say, OK, if I generate
+08:49 - samples from Pdata and I generate samples from Ptheta,
+08:52 - you should not be able to distinguish between the two.
+08:56 - That would give rise to something
+08:58 - like a generative adversarial network.
+09:00 - So there's going to be different ways of defining similarities
+09:03 - between distributions.
+09:04 - And that will be one of the x's, one of the ingredients
+09:07 - that you can use to define different types
+09:09 - of generative models.
+09:10 -
+09:12 - For autoregressive models, a natural way
+09:16 - to build a notion of similarity is
+09:20 - to use the likelihood, because we have access to it.
+09:25 - And so we can use a notion of similarity
+09:28 - that is known as the KL divergence, which
+09:31 - is defined like this.
+09:32 - The KL divergence between distribution p and q
+09:35 - is just basically this expectation
+09:37 - with respect to all the possible things that can happen.
+09:40 - All the possible things that can happen
+09:42 - x are weighted with respect to the probability under p.
+09:45 - And then you look at the log of the ratio of the probabilities
+09:48 - assigned by p and q.
+09:51 - And it turns out that this quantity is non-negative.
+09:56 - And it's 0 if and only if p is equal to q.
+10:01 - And so it's a reasonable notion of similarity
+10:04 - because it tells you if you somehow
+10:08 - are able to choose one of them, let's say p to be p data,
+10:12 - q to be your model distribution.
+10:14 - If you are able to derive this quantity as small as possible,
+10:18 - then it means that you're trying to make your model closer
+10:21 - to the data.
+10:22 - And if you're able to derive this loss to 0,
+10:24 - then you know that you have a perfect model.
+10:26 -
+10:29 - And the-- well, I have a one line proof.
+10:33 - But I'm going to skip it showing that it's non-negative.
+10:37 - The important thing is that this quantity is asymmetric.
+10:42 - So the KL divergence between p and q
+10:44 - is not the same as the KL divergence between q and p.
+10:48 - In fact, the KL divergence, if you use one versus the other,
+10:52 - it's going to give us-- both are reasonable ways of comparing
+10:54 - similarity.
+10:56 - One will give us maximum likelihood training,
+10:59 - one will be more natural to--
+11:01 - and will come up again when we talk
+11:03 - about generative adversarial networks.
+11:05 - It's going to be harder to deal with computationally.
+11:07 - But it's also like a reasonable way
+11:09 - of comparing similarity between p and q.
+11:11 -
+11:14 - So they are symmetric.
+11:15 - And the intuition, as I mentioned before,
+11:17 - is this quantity has an information theoretic
+11:20 - interpretation.
+11:21 - And it tells you something to do with compression.
+11:27 - So the idea is that when you're building a generative model,
+11:31 - you are essentially trying to learn a distribution.
+11:33 - If you have access to a good probability distribution
+11:36 - over all the possible things that can happen,
+11:38 - then you also have access to a good way of compressing data.
+11:42 - And essentially, the KL divergence between p and q
+11:46 - tells you how well compression schemes based on p versus q
+11:53 - would perform.
+11:55 - And so specifically it's telling you
+11:59 - if the data is truly coming from p and you use an optimization--
+12:04 - a compression scheme that is optimized for q,
+12:07 - how much worse is it going to be than a compression scheme that
+12:11 - was actually based on the true distribution of the data?
+12:16 - So intuitively, as I mentioned, knowing
+12:21 - the distribution that generates the data
+12:25 - is useful for compression.
+12:28 - And so imagine that you have 100 binary random variables,
+12:34 - coin flips.
+12:36 - If the coin flips are unbiased-- so 50/50,
+12:40 - heads/tails, then there is not much you can do.
+12:43 - The best way to compress the result
+12:46 - of flipping this coin 100 times is to basically use one bit--
+12:50 - let's say zero to encode head, one to encode tails.
+12:55 - And on average, you're going to use one bit per sample.
+12:58 - And that's kind of the best thing you can do.
+13:00 - But imagine now that the coin is biased.
+13:03 - So imagine that heads is much more likely than tail.
+13:06 - Then you know that you are going to-- out of these 100 flips,
+13:11 - you're expecting to see many more heads than tails.
+13:13 - So it might make sense to come up
+13:15 - with a compression scheme that assigns
+13:18 - low short codes to things that you know are
+13:22 - going to be much more frequent.
+13:24 - So you could say that you could batch things together
+13:28 - and you could say sequences like HHHH
+13:31 - are going to be much more common than sequences like TTTT.
+13:34 - And so you might want to assign a short code to sequences
+13:38 - that you know are going to be frequent,
+13:40 - and a long code to sequences that you think
+13:42 - are going to be infrequent.
+13:43 - And that gives you two savings in practice.
+13:46 - So an example that many of you are probably familiar with
+13:49 - is Morse code.
+13:50 - That's a way to encode letters to symbols,
+13:55 - like dots and dashes.
+13:58 - And if you think about it, there is a reason
+14:00 - why the vowels like E and A are assigned
+14:04 - to these very short kind of code, while a letter like U
+14:09 - is assigned a very long kind of code with four elements.
+14:14 - And that's because vowels are much more common in English.
+14:17 - So you're much more likely to use if you are trying
+14:19 - to send a message to somebody.
+14:21 - You're much more likely to use vowels.
+14:23 - And so if you want to minimize the length of the message,
+14:26 - you want to use a short encoding for frequent letters
+14:30 - and a long encoding for infrequent letters.
+14:35 - And so all this to say is that KL divergence has
+14:39 - this kind of interpretation.
+14:40 - And it's basically saying if the data is truly distributed
+14:44 - according to p and you try to build a compression scheme that
+14:49 - is optimized for q, you're going to be suboptimal.
+14:54 - Maybe in your model of the world,
+14:56 - the vowels are much more frequent
+14:58 - than the-- are much more infrequent than q.
+15:01 - So you have a bad generative model for text.
+15:04 - Then if you try to optimize-- come up
+15:06 - with a scheme based on this wrong assumption,
+15:09 - you're going to-- is not going to be
+15:11 - as efficient as the one based on the true frequencies
+15:14 - of the characters.
+15:15 - And how much more ineffective your code is,
+15:19 - is exactly the KL divergence.
+15:21 - So the KL divergence exactly measures
+15:23 - how much more inefficient your compression scheme
+15:26 - is going to be.
+15:29 - And so if you try to optimize KL divergence,
+15:33 - you are equivalently trying to optimize for compression.
+15:36 - So you're trying to build a model such
+15:39 - that you can compress data pretty well or as well
+15:43 - as possible, which is, again, a reasonable kind of way
+15:48 - of thinking about modeling the world because in some sense
+15:51 - if you can compress well, then it means that you're
+15:54 - understanding the structure of the data, which things
+15:57 - are common, which ones are not.
+15:59 - And that's the philosophy that you
+16:02 - take if you train a model using KL divergence
+16:05 - as the objective function.
+16:09 - So now that we've kind of chosen KL divergence
+16:17 - as one of the ways of measuring similarity
+16:19 - between distributions, we can set up our learning problem
+16:25 - as saying, OK, there is a true data generating process.
+16:29 - There is a family of distributions
+16:31 - that I can choose from.
+16:32 - I can measure how similar my model
+16:34 - is to the data distribution by looking at this object.
+16:39 - And so intuitively, if you think about this formula,
+16:42 - this thing is saying I'm going to look at all possible let's
+16:44 - say images that could come from the data distribution.
+16:47 - And I'm going to look at the ratio of probability assigned
+16:51 - by the data distribution and the model.
+16:54 - So I care about how different the probabilities
+16:57 - are under the model and under the data distribution.
+17:01 - If those two match, so if they assign
+17:04 - exactly the same probability, then this ratio becomes 1.
+17:09 - The logarithm of 1 is 0.
+17:11 - And you see that the KL divergence is exactly 0.
+17:13 - So you have a perfect model.
+17:16 - If you assign exactly the same probability to every x,
+17:20 - then you have a perfect model.
+17:22 - Otherwise, you're going to pay a price.
+17:24 - And that price depends on how likely x is under the data
+17:28 - distribution and how far off your estimated probability
+17:33 - is from the true probability under the data distribution.
+17:38 - Question is, OK, this looks reasonable.
+17:40 - But how do you compute this quantity?
+17:43 - How do you optimize it?
+17:44 - It looks like it depends on the true probability assigned
+17:48 - under the data distribution, which we don't have access to.
+17:51 - So it doesn't look like something we can optimize.
+17:53 - And we'll see that it simplifies into something
+17:55 - that we can actually optimize.
+17:58 - The question is, what happens if we flip the argument here?
+18:02 - And we have what's called as the reverse KL.
+18:04 - So the KL divergence between Ptheta and Pdata.
+18:07 - It would be the same thing.
+18:08 - But in that case, we would be looking at all possible things
+18:12 - that can happen.
+18:13 - We would weight them with respect to the model Ptheta.
+18:16 - And then the ratio here would again be flipped.
+18:19 - So we care about the ratios, but in a different sign basically.
+18:25 - And so that quantity would be 0 if
+18:28 - and only if they are identical.
+18:31 - But you can see that it kind of has a different flavor
+18:35 - because if you look at this expression,
+18:38 - we're sort of saying it doesn't--
+18:40 - what happens outside let's say of the support of the data
+18:42 - distribution doesn't matter with respect to this loss.
+18:46 - Well, if you had Ptheta here, then you
+18:49 - would say I really care about the loss
+18:52 - that I achieve on things I generate myself.
+18:56 - And if you think about how these models are used,
+18:58 - that actually seems like a more reasonable thing to do,
+19:02 - because maybe it really matters.
+19:05 - You really want to score the generations
+19:06 - that you produce as opposed to what's
+19:09 - available in the training set.
+19:11 - But it will turn out that the nice properties that we're
+19:14 - going to see soon that makes this tractable
+19:17 - doesn't hold for what you-- when you do reverse KL.
+19:19 - So that's why you can't really optimize it in practice.
+19:23 - So the question is, do we ever want to use other metrics?
+19:25 - Yes, we'll see that in future lectures,
+19:28 - we'll get different kinds of generative models
+19:30 - simply by changing this one ingredient.
+19:32 - So you can still define your family in any way you want.
+19:35 - But we might change the way we compare distributions,
+19:38 - because at the end of the day, here
+19:39 - we're saying we care about compression, which might
+19:42 - or might not be what you want.
+19:44 - If you just care about generating pretty images,
+19:46 - maybe you don't care about compression.
+19:48 - Maybe you care about something else.
+19:49 - And we'll see that there is going
+19:51 - to be other types of learning objectives that are reasonable
+19:56 - and they give rise to generative models that
+19:59 - tend to work well in practice.
+20:01 - So that the question is again should the expectation
+20:05 - be with respect to the true data distribution
+20:07 - or should be with respect to the model?
+20:09 - Which is what you would get if you were to flip the order here.
+20:13 - And the quantities will be zero--
+20:19 - both of them will be zero if and only
+20:21 - if you have perfect matching.
+20:23 - But in the real world where you would have finite data,
+20:28 - you would have limited modeling capacity,
+20:31 - you would not have perfect optimization,
+20:33 - you would get very different results.
+20:35 - And in fact you get a much more--
+20:38 - if you were to do the KL divergence between Ptheta
+20:41 - and Pdata, you would get a much more mode
+20:44 - seeking kind of behavior, where you can imagine sort
+20:48 - of like if you put all the probability
+20:50 - mass into a single mode, it might look like you're still
+20:55 - performing pretty well according to this objective.
+20:58 - So it tends to have a much more mode seeking kind of objective
+21:02 - compared to the KL divergence, which is forcing you to spread
+21:05 - out all the probability mass over all the possible things
+21:08 - that can happen.
+21:09 - So if there is an x that is possible under Pdata
+21:14 - and you assign it zero probability,
+21:16 - you're going to get an infinite loss.
+21:18 - So it's going to be very, very bad.
+21:20 - So you're forced to spread out the probability mass.
+21:23 - You do reverse KL, that is kind of an incentive to concentrate
+21:27 - the probability mass.
+21:28 - So the behaviors, as you said, are going to be very different.
+21:30 - And depending on what you want, one
+21:33 - might be better than the other.
+21:35 - The question is, does this have the flavor
+21:38 - of precision and recall?
+21:39 - And yes, it has a very similar-- it's not exactly
+21:42 - precision and recall.
+21:43 - It's a softer kind of thing, but it has the flavor of,
+21:45 - do you care more about precision versus recall?
+21:47 - Yeah.
+21:48 -
+21:51 - It's a good way to put it.
+21:53 - All right.
+21:54 - So we have this loss, which you can expand the expectation.
+21:59 - That's something like this.
+22:01 - And now we know that this divergence
+22:04 - is zero if and only if the distributions are the same.
+22:07 - So if you can optimize this as a function of theta
+22:09 - to make it as small as possible, it's
+22:11 - a reasonable kind of learning objective.
+22:14 - Measure compression loss.
+22:16 - The challenge is as was mentioned before is that it
+22:20 - might look like it depends on something you cannot even
+22:22 - compute it because it depends on the probability assigned to all
+22:27 - the possible things that can happen under the true model--
+22:31 - under the true data distribution,
+22:33 - which you don't know.
+22:35 - But if you just decompose the log
+22:38 - of the ratio as the difference of the logs,
+22:40 - you get an expression that looks like this.
+22:43 - And now you can note that the first term here
+22:46 - does not depend on theta.
+22:49 - It's just like a shift.
+22:50 - It's a constant that is independent on how you choose
+22:54 - the parameters of your model.
+22:57 - And so for the purposes of optimizing theta,
+23:00 - you can ignore the first term.
+23:04 - So if you're trying to make this quantity as small as possible,
+23:07 - regardless of how you choose theta,
+23:09 - this is going to be the same.
+23:10 - So you can effectively ignore it for the purposes
+23:13 - of optimization.
+23:14 -
+23:16 - And so if you try to find a theta that
+23:20 - minimizes this expression because there is a minus here,
+23:24 - the best thing you can do is to basically make this thing here
+23:29 - as large as possible, what I have here.
+23:33 - And this term here should be somewhat familiar.
+23:36 - What we're saying is that we should
+23:39 - pick the distribution that assigns basically the highest
+23:42 - probability to the xs that are sampled from the data
+23:47 - distribution.
+23:48 - And so this is really maximum likelihood estimation.
+23:52 - We're trying to choose a model that
+23:54 - puts high probability on the things
+23:56 - that you have in the training set, essentially,
+24:01 - which is the training objective that you've seen--
+24:04 - that you've seen before probably in other classes of trying
+24:08 - to pick parameters that basically
+24:11 - maximize the probability of observing a particular data set.
+24:15 - We're trying to choose parameters such
+24:17 - that in expectation, the average log likelihood of the data
+24:21 - is as high as possible.
+24:25 - So you can see that that's equivalent to minimizing our KL
+24:29 - divergence, which as we've seen is
+24:31 - the same as trying to do as well as you can
+24:34 - at this kind of compression task.
+24:36 - And one caveat here is because we've ignored this term,
+24:41 - it's possible to compare two models.
+24:44 - So you have a theta 1 and theta 2.
+24:46 - I can tell you which one is doing a better job.
+24:48 - But you can never know how close you truly
+24:51 - are to the data distribution.
+24:54 - You can only evaluate the loss up to a constant.
+24:57 - So you'll never know how much better could I have been.
+25:01 - You can't really evaluate that.
+25:03 - And that's one of the problems here is that we don't know how
+25:07 - much better could we have been, because there's always the shift
+25:12 - that cannot be evaluated.
+25:14 - And for those who have seen this in other classes,
+25:17 - that's basically the entropy of the data distribution.
+25:20 - And that's kind of telling you how hard is it to model the data
+25:24 - distribution, or what's the--
+25:26 - yeah, how random is the data distribution to begin with?
+25:30 - How hard is it to model the data distribution
+25:32 - if you had access to the perfect model?
+25:36 - That doesn't affect how well your particular model is doing.
+25:40 - But it's the kind of thing you need
+25:42 - to know how close you are truly to the data distribution.
+25:47 - Let's say you have a Ptheta 1 and A Ptheta 2
+25:50 - and you take the difference between the KL
+25:52 - divergence between data and Ptheta 1 minus the KL
+25:56 - divergence between data and Ptheta 2,
+25:59 - the constant cancels out.
+26:01 - And so you know which one is closer to the data distribution.
+26:03 - But you never know how close you are.
+26:06 - So going back to this picture, I guess, what I'm saying
+26:09 - is that maybe it's too many, given two points in here,
+26:14 - you can tell which one is closer to the data distribution.
+26:17 - But you never know the length of this segment,
+26:20 - like you don't know how close you actually are.
+26:23 - So if you have two models that achieve
+26:25 - exactly the same average log likelihood, which one is better?
+26:29 - Occam's razor would tell you pick the simplest one.
+26:32 - And that's usually a good inductive bias.
+26:34 - OK?
+26:35 -
+26:42 - Now one further problem is that this quantity here
+26:50 - still involves an expectation with respect
+26:52 - to the data distribution, which we still don't have access to.
+26:56 - So you can't still optimize this quantity.
+27:01 - However, we can approximate the expected log likelihood
+27:07 - with the empirical log likelihood or the average log
+27:11 - likelihood on the training set.
+27:14 - So remember that what we would really care about
+27:17 - is the average log likelihood with respect to all the things
+27:21 - that can possibly happen when you weight them
+27:23 - with the probability given by the data distribution
+27:26 - that we don't have access to.
+27:29 - But we can we can approximate that
+27:31 - by going through our data set and checking the log
+27:35 - probabilities assigned by the model
+27:37 - to all the data points in the data set.
+27:39 - And to the extent that the data set is sufficiently large,
+27:44 - I claim that this is a good approximation to the expected
+27:47 - value.
+27:48 - And the intuition is that you have an expectation,
+27:50 - you have a sample average to the extent
+27:52 - that you take an average with respect
+27:53 - to a large enough number of samples.
+27:55 - The sample average will be pretty close to the expectation.
+27:59 - And now this is a loss that you can compute.
+28:02 - Just go through your training set, you look,
+28:05 - what's the likelihood assigned by the model
+28:07 - to every data point?
+28:08 - And you try to make that as large as possible.
+28:10 -
+28:12 - And so that's maximum likelihood learning.
+28:14 - That's the thing that you've seen before.
+28:18 - Try to find the distribution that maximizes the average log
+28:22 - probability over all the data points in your training set D.
+28:29 - And as usual, you can ignore this 1 over D.
+28:32 - That's just a constant.
+28:33 - It doesn't involve-- doesn't depend on theta.
+28:35 - And so you get kind of the usual loss function.
+28:40 - And note this is exactly the same thing
+28:42 - as saying because the data points are independent,
+28:45 - maximizing this expression is exactly
+28:48 - the same thing as maximizing the probability
+28:51 - of observing the data set that you have access to.
+28:55 - So it's a reasonable learning objective.
+28:56 - You have a bunch of data.
+28:58 - And you're trying to find the parameters
+29:00 - that maximize the probability of sampling data set like the one
+29:05 - you have access to.
+29:07 - If you take a log of this expression, the log of a product
+29:10 - becomes a sum of logs.
+29:11 - And then you get that these two things are exactly the same.
+29:16 - So again, very reasonable training objective.
+29:19 - Let's find parameters that maximize
+29:20 - the probability of observing the data set that we have access to.
+29:25 - So the question is, can you use similar tricks to estimate this?
+29:28 - So you can certainly estimate the expectation.
+29:30 - But then the problem is this log probability.
+29:33 - And that one is much harder to estimate.
+29:35 - And you can try to do kernel density estimates,
+29:37 - or you could even use Ptheta in there.
+29:41 - If you believe you have a good approximation, then
+29:43 - you can plug it in.
+29:44 - But you'll never know how far off you are.
+29:46 - So there's always approximations there.
+29:48 - Yeah.
+29:49 - So that goes back to what we were saying,
+29:50 - what is this model doing?
+29:51 - It's trying to make sure that if something is possible in the--
+29:56 - happen in the training set, you're
+29:58 - going to be forced to put some probability mass there,
+30:00 - which is a good thing, right?
+30:01 - You're going to be forced to spread out the probability
+30:04 - mass so that the entire support of the entire data set
+30:08 - is covered by your model.
+30:10 - Now the problem is that you're going
+30:12 - to-- you always have finite modeling capacity, right?
+30:15 - So if you put probability mass there,
+30:17 - you're going to might be forced to put probability
+30:19 - mass somewhere that you didn't want to.
+30:21 - And maybe then your model will hallucinate weird stuff that
+30:25 - was not in the training set, but you
+30:28 - have to generate them because you're forced by this objective
+30:31 - to spread out the probability mass.
+30:33 - Again back to precision recall, you
+30:35 - need to have a very high recall.
+30:37 - Everything in the training set has to be non-zero probability.
+30:41 - And as a result, maybe your precision
+30:43 - goes down because then you start to generate stuff that
+30:45 - should not have been generated.
+30:47 - So that's kind of the takeaway of that one.
+
+00:00 -
+00:05 - SPEAKER: Now why does this work?
+00:08 - That's an example of why can you approximate this expectation
+00:12 - with this sample average.
+00:14 - This is something that is basically a Monte Carlo
+00:17 - estimate.
+00:18 - You might have seen it before, the idea is
+00:21 - that if you have an expectation of some function,
+00:23 - there's a random variable x, there is a function g of x.
+00:26 - You want to get the expected value of g
+00:29 - of x which is just this thing, you can approximate this
+00:34 - by just taking, the true thing would look at all the things
+00:38 - that can happen and it would weight them with the probability
+00:41 - under P. Alternatively, what you can
+00:44 - do is you can just generate T scenarios,
+00:47 - T samples and look at the average value of g
+00:51 - under these T samples and that should
+00:55 - be a reasonable approximation, right?
+00:57 - You can approximate the expectation
+01:00 - by looking at the value of the function on this T
+01:04 - representative samples.
+01:06 -
+01:08 - And this g hat is a random variable
+01:13 - because it depends on these samples x1 through xT.
+01:17 -
+01:21 - But it has good properties in the sense
+01:25 - that in expectation it gives you back what you wanted.
+01:31 - So although this g hat is now a random variable, in expectation
+01:39 - that this random variable has the right value which
+01:44 - is the true expectation of the function, the thing
+01:46 - you want it to compute.
+01:49 - And the more samples you get, the better the approximation is.
+01:54 - So although g hat is random, as you increase
+01:59 - the number of samples T, g hat converges pretty strongly
+02:05 - to this expected value.
+02:08 - So the more samples you take, kind of the less randomness
+02:12 - there is and the more likely you are
+02:14 - to get close to the true answer you're
+02:16 - looking for which is the expectation of the function.
+02:21 - And the variance also goes down as the number
+02:24 - of samples increases.
+02:27 - So you have a random variable that an expectation gives you
+02:30 - the answer you want and as you increase
+02:32 - the number of samples, the variance of this random variable
+02:35 - becomes smaller and smaller which
+02:37 - means that your approximation becomes more and more reliable.
+02:41 - The less unlikely you are that the estimate
+02:44 - you have is wildly off.
+02:47 - And that's exactly what we're doing here,
+02:53 - this expectation is a number, it's not random,
+02:56 - we're approximating it with a quantity that
+02:59 - depends on the training set.
+03:01 - So different training sets would give you different answers
+03:05 - but if the training set is sufficiently large,
+03:07 - this sample average would be very close to the expectation.
+03:13 - And the larger the training set is, the more likely
+03:16 - it is that this sample average that you get on the data set
+03:20 - is actually going to be pretty close to the true expected value
+03:24 - that you care about.
+03:25 -
+03:28 - Cool.
+03:31 - And we'll see this idea come up often,
+03:35 - this idea that there is an intractable expectation that you
+03:38 - have to deal with and you're going to approximate it using
+03:41 - samples from the distribution.
+03:43 - It's a pretty convenient way of making
+03:47 - algorithms more computationally tractable essentially.
+03:52 - Now back to learning, you've probably seen maximum likelihood
+03:56 - learning in examples like learning the parameters
+03:59 - of a Bernoulli random variable.
+04:01 - So let's say you have two outcomes, heads and tails,
+04:06 - you have a data set, so you've seen
+04:09 - that you flip the coin five times and the first two times
+04:13 - were heads then you have a tail then a heads and a tail.
+04:17 - You assume that there is some underlying data distribution
+04:21 - that produced the results of this experiment
+04:24 - that you did with five tosses of the coin.
+04:28 - And then you model all these Bernoulli distributions
+04:32 - and then again, you just need one parameter
+04:34 - to describe the probability of heads
+04:36 - versus the probability of tail.
+04:38 - And then you could try to fit and you
+04:40 - try to find a model of the world that
+04:43 - is as close as possible to the true data generating process.
+04:47 -
+04:49 - For example, you might see that there is 3 heads out of 5 coin
+04:53 - flips and then you try to find a good model
+04:56 - for this kind of data.
+04:59 - And a way to do it is maximum likelihood, so in this case
+05:02 - P theta would be really, really simple,
+05:04 - it's just a single kind of Bernoulli random variable.
+05:07 - You have one parameter which is the probability of heads,
+05:10 - 1 minus theta is the probability of tails.
+05:12 - And then you have your data set which is 3 heads and 2 tails
+05:17 - and then you can evaluate the likelihood of the data
+05:20 - and it's just that expression.
+05:22 - So you have theta, theta, 1 minus
+05:25 - theta because the third result is a tail and so forth.
+05:30 - And now this is a function of theta
+05:32 - as you change theta, the probability
+05:34 - that your model assigns to the data set changes
+05:37 - and if you plot it, it kind of has the shape
+05:41 - and then maximum likelihood would
+05:44 - tell you pick the theta that maximizes
+05:46 - the probability of observing this particular data set
+05:49 - and that basically corresponds to trying to find
+05:52 - a maximum of this function.
+05:55 - And in this case what's the solution?
+05:59 - Yeah, 0.6, right?
+06:01 - In this case you can actually solve this in closed form
+06:03 - and you can work out what is the optimal theta
+06:05 - and it's going to be 0.6.
+06:08 - And so we're basically going to do the same thing now
+06:11 - but for autoregressive models.
+06:14 - So this is the same idea, except that now theta
+06:19 - is very high dimensional, it's all possible parameters
+06:22 - of a neural network but the y-axis is the same,
+06:26 - it's basically the probability that your model assigns
+06:29 - to the data set and then you try to find theta that maximizes
+06:33 - the probability of observing the data set that you have access
+06:36 - to.
+06:38 - And the good news is that, in an autoregressive model evaluating
+06:42 - likelihoods is relatively easy.
+06:45 - If you want to evaluate the probability
+06:47 - that the model assigns to a particular image or sentence
+06:51 - or whatever, the probability of x is just given by chain rule,
+06:56 - is the product of the conditional probabilities.
+07:00 - And so evaluating the probability of a single data
+07:04 - point is very easy, it's exactly the same computation
+07:08 - we did before when we were trying to do anomaly detection.
+07:11 - You just go through all the conditionals
+07:14 - and you multiply them together.
+07:17 - And how to evaluate the probability of a data set?
+07:24 - Well, the probability of the data set
+07:26 - is just the product of the probabilities
+07:28 - of the individual data points and the individual data points
+07:32 - are just obtained through chain rule.
+07:36 - And so again, it's all pretty simple,
+07:39 - if you want to maximize the probability of observing
+07:43 - the data set that you have access to,
+07:45 - you can also take a log and you can maximize the log likelihood
+07:49 - and you get an expression that when
+07:55 - you can turn the log of a product into a sum of logs.
+07:59 - But we no longer have a closed form solution.
+08:02 - So before for the Bernoulli coin flips,
+08:05 - you all knew the answer is 0.6.
+08:07 - If you have a deep neural network here,
+08:10 - you no longer have a closed form way of choosing theta
+08:13 - and you have to rely on some optimization algorithm
+08:16 - to try to make this objective function as high as possible
+08:21 - or you negate it and try to make it as small as possible.
+08:26 - And so for example, you can use gradient descent.
+08:31 - So that's the objective function that we're trying to optimize.
+08:35 - And if you take a log, I guess it boils down
+08:39 - to this which is much more natural,
+08:43 - so you go through all the data points,
+08:45 - you go through all the variables in each data point,
+08:47 - and you look at the log probability assigned
+08:51 - by of that variable given all the ones
+08:53 - that come before it in that data point.
+08:57 - So equivalently, what you're doing is,
+08:59 - remember that this P neural here are basically
+09:01 - classifiers that try to predict the next value given
+09:05 - everything before it.
+09:08 - This loss is basically just evaluating
+09:09 - the average loss of all these classifiers across data points
+09:14 - and across variables.
+09:17 - And so again, basically minimizing L divergence
+09:21 - is the same as maximizing log likelihood
+09:24 - which is the same as basically trying
+09:26 - to make these classifiers perform as well as they can.
+09:29 - They should do a pretty good job at predicting
+09:32 - overall data points j, overall variables i.
+09:34 - They should do a pretty good job at predicting the next variable
+09:38 - given what they've seen so far for that particular data point.
+09:45 - And so all of this is basically boiling down to,
+09:48 - let's try to make these classifiers that
+09:51 - predict the next variable given the ones
+09:53 - before it as efficient, as good as
+09:55 - possible in terms of the essentially cross entropy.
+10:00 - So one way to do it is you can initialize all the parameters
+10:03 - at random and then you can compute gradients on this loss
+10:07 - by back propagation and then you just do gradient ascent
+10:11 - on this thing.
+10:14 - It's nonconvex but in practice, basically that's
+10:17 - how you would train all these models
+10:19 - and it tends to work pretty well in practice.
+10:24 - One thing to note is that as written this quantity involves
+10:32 - a sum over an entire data set, like if you want to you know
+10:36 - what's the effect of changing the parameter of one of these
+10:40 - classifiers, you want to get the gradient of the loss with
+10:45 - respect of let's say theta i, where theta i is basically
+10:48 - the parameters of the i'th conditional.
+10:52 - You would have to sum over the whole data set
+10:56 - to get this gradient which would be of course way too expensive
+11:00 - because you would have to go through the whole data set
+11:02 - to figure out how to adjust the parameters of your classifier.
+11:07 - And that's tricky but well, here I'm actually--
+11:17 - the good news is each conditional
+11:19 - can be optimized separately if there is no parameter sharing.
+11:22 - In practice there is always parameter sharing.
+11:24 -
+11:26 - The challenge is that you have this big sum over all the data
+11:31 - points in the data set but again, what we can do
+11:35 - is we can use a Monte Carlo estimate.
+11:37 - So instead of going through the whole data set,
+11:40 - we can try to estimate what is the gradient just
+11:43 - by looking at a small sample of data points.
+11:46 - Just like before, we were approximating an expectation
+11:50 - with a sample average.
+11:52 - We can think of this sum over m or all the data points,
+11:56 - we can multiply by m and divide by 1 over m
+11:59 - and then we can think of this sum 1
+12:02 - over m as an expectation with respect
+12:05 - to a uniform distribution over the data points in the data set.
+12:09 -
+12:12 - And so you can write down the gradient
+12:14 - as the expectation of the gradient with respect
+12:17 - to a uniform distribution over the data set.
+12:22 - So far we haven't gained anything
+12:24 - but now you can do Monte Carlo.
+12:27 - You can approximate this expectation
+12:30 - by taking a bunch of samples and evaluating the gradient only
+12:34 - on those samples and that's basically stochastic gradient
+12:37 - descent or mini batch where you would basically select
+12:42 - a small subset of data points.
+12:45 - You will evaluate the gradient on those data points
+12:48 - and you would update your model accordingly.
+12:52 - And so we see another layer of Monte Carlo simulation or Monte
+12:58 - Carlo estimate where instead of evaluating the full gradient,
+13:01 - you evaluate the gradient on a subset of data points
+13:04 - to make things scalable.
+13:05 -
+13:08 - And what else?
+13:11 - The other thing to keep in mind is that, well, there
+13:13 - is always the risk of overfitting that came up before.
+13:17 - If you just blindly optimize that objective,
+13:19 - you could just memorize the data set.
+13:23 - So if the data becomes the model,
+13:27 - you're going to perform pretty well at this prediction task
+13:31 - but that's not what we want.
+13:34 - So we don't care about the performance on the data set,
+13:39 - we care about performance on unseen samples
+13:43 - that come from the same distribution
+13:45 - as the one we've used for training.
+13:47 - So the same problems that we've seen
+13:49 - when you train a machine learning model apply here.
+13:52 - Blindly minimizing this loss might not
+13:55 - do what we want because you can do very well on the training
+13:58 - set, but you might not be doing well in general,
+14:01 - you might not be generalizing.
+14:04 - And so what you would need to do is
+14:07 - to somehow restrict the hypothesis space
+14:10 - or regularize the model somehow so that this doesn't happen,
+14:13 - so that it doesn't just memorize the training set,
+14:16 - and you don't get this overfitting behavior.
+14:20 -
+14:24 - And then you get the usual bias variance tradeoffs
+14:29 - where if you limit the model too much, if you restrict
+14:33 - the modeling capacity too much instead of using
+14:36 - deep neural network, you use logistic regressions,
+14:38 - or you make very strong conditional independence
+14:41 - assumptions, your modeling capacity or hypothesis space
+14:46 - becomes too limited and you might not
+14:48 - be able to do well at minimizing that loss on the training set.
+14:52 - And this is basically bias because it
+14:56 - limits how well you can approximate the target
+14:58 - distribution even if you could optimize as well as you could.
+15:03 - And then the tradeoff here is that if you
+15:06 - choose model families that are too flexible, then
+15:10 - you encounter the other issue which is variance.
+15:14 - So your model might be fitting too well,
+15:18 - it might be fitting even better than the true model that
+15:21 - generated the data and even small changes to the data set
+15:25 - could have huge changes to the parameters that you output
+15:30 - and that's variance.
+15:32 - So you kind of like want to find a sweet spot
+15:35 - where you balance the effect of bias
+15:38 - and variance on the performance of your model.
+15:42 - And kind of visually I think this is an example,
+15:48 - let's say that you have a bunch of data points
+15:50 - and you're trying to fit a curve,
+15:52 - trying to predict y from x.
+15:54 - If you choose a very simple kind of space
+15:57 - of possible relationships like all linear models,
+16:00 - you can do very well at fitting but somehow
+16:02 - if the model class is too simple,
+16:04 - you're not going to be able to capture
+16:06 - the true trend in the data.
+16:08 - So the bias here will hurt you too much, so it underfits.
+16:15 - If you choose a very flexible model lots of parameters,
+16:18 - you're going to be fitting the data set extremely well but you
+16:23 - can see that perhaps it's too flexible the model.
+16:27 - If you were to change one single data point a little bit,
+16:29 - the predictions would change drastically
+16:32 - and that's maybe overfitting.
+16:35 - And so you want maybe that sweet spot
+16:37 - where you have a low degree polynomial that
+16:39 - fits the data a little bit worse than this high degree
+16:42 - polynomial, but it will generalize
+16:45 - and it will perform OK in practice.
+16:47 - So there's a few things you can do,
+16:49 - one is to prevent overfitting is you could be Bayesian
+16:51 - but that's very hard computationally.
+16:55 - Another thing you can do is you can
+16:57 - try to do cross validation where you kind of keep some held out
+17:02 - data to evaluate the performance of your model
+17:05 - and if you see that there is a big gap between the performance
+17:07 - that you had at training time versus what
+17:09 - you had on the validation set, then you know you're overfitting
+17:13 - and so maybe you want to reduce the complexity of your model.
+17:16 -
+17:19 - And so, yeah, one thing you can do
+17:20 - is you can reduce the complexity of your neural networks,
+17:23 - reduce the number of parameters, share parameters, kind of make
+17:27 - the set smaller in some way.
+17:31 - Another thing that was mentioned before is you
+17:33 - could try to use some kind of like soft preference for simpler
+17:36 - models so that if you have two models that
+17:39 - fit the data equally well, they achieve the same loss.
+17:42 - Maybe you have a regularization term
+17:44 - that says prefer the simpler one, maybe the one
+17:47 - with fewer parameters or the one where the magnitude
+17:51 - of the parameters is smaller.
+17:53 -
+17:56 - And the other thing is what I just mentioned,
+18:00 - you can always evaluate performance
+18:02 - on some held out validation set.
+18:03 - This is actually what people do in practice
+18:06 - and you can check if there is a big gap between training
+18:11 - and validation loss, then you know
+18:12 - that you're probably overfitting and maybe you
+18:15 - want to reduce the size of the set
+18:18 - or you want to do something to prevent that overfitting.

@@ -1,1 +1,228 @@
-
+00:00 -
+00:04 - SPEAKER: Well, let's say that somehow you've
+00:06 - used the real vanilla score matching or denoising
+00:12 - score matching, or SLI score matching,
+00:14 - and you're able to train your neural network as theta so
+00:19 - that the estimated vector field of gradients
+00:22 - is close to the true vector field of gradients of the data
+00:25 - density.
+00:27 - The question is, How do you use this?
+00:30 - You no longer have access to a likelihood.
+00:33 - There is no autoregressive generation.
+00:37 - How do you generate samples?
+00:40 - And so the intuition is that the scores are basically
+00:45 - telling you in which direction you
+00:47 - should perturb a sample to increase its likelihood most
+00:52 - rapidly.
+00:54 - And so you could imagine a basic procedure
+00:58 - where an MCMC kind of procedure like
+01:01 - what we talked about before where you initialize particles
+01:07 - at random.
+01:08 - And here I'm showing multiple particles,
+01:10 - but you could imagine sampling x0 based
+01:15 - on some initial distribution.
+01:17 - Then you could imagine repeatedly
+01:19 - kind of taking this update where you're basically
+01:24 - taking a step in the direction of the estimated gradient, which
+01:28 - you just do gradient ascent on using the estimated
+01:32 - scores to decide the direction.
+01:36 - And if you do that, you're going to get something
+01:39 - like this where the particles kind of will all
+01:43 - converge in this local optima, the local maxima hopefully
+01:48 - of this density, which is kind of right.
+01:54 - Imagine you start with random noise, which is an image which
+01:58 - is pure noise, and then you follow the gradient
+02:00 - and then until you reach a local optimum where
+02:03 - you can no longer improve.
+02:05 - We know that that's not the right way to generate a sample.
+02:08 - The right way to generate a sample
+02:10 - is to follow the noisy gradient.
+02:12 - That's what we call Langevin MCMC, which is exactly
+02:16 - the same procedure, except that we also
+02:19 - add a little bit of Gaussian noise at every step.
+02:22 - And if you do that, then you'll see
+02:25 - that we'll actually generate--
+02:27 - when you run it for long enough, this procedure
+02:29 - is guaranteed to produce samples from the underlying density.
+02:35 - So remember that this vector field corresponded to a density
+02:39 - where we have a lot of probability mass
+02:41 - here, a lot of probability mass there.
+02:43 - And indeed, if you look at the distribution of these particles,
+02:46 - they're going to have the right distribution
+02:49 - because what we've seen is that these longevity dynamics
+02:53 - sampling is a valid MCMC procedure in the limit.
+02:57 - So it's a way of sampling from a density when you only
+03:01 - have access to the score.
+03:03 - So we know that if you initialize your particle--
+03:07 - it doesn't matter how you do it--
+03:09 - and then you repeat this process of following the noisy gradient
+03:17 - in the limit of small step, sizes,
+03:19 - and infinite number of steps, this
+03:22 - will give you a sample from the underlying density.
+03:26 - So literally all we're doing is replacing the true score
+03:29 - function with the estimated score function.
+03:34 - And basically that's one way of generating samples.
+03:40 - Your first estimated score by score
+03:42 - matching, trying to match this neural network output arrows,
+03:48 - output gradients that are close to the true one,
+03:51 - and then you just follow the directions.
+03:53 -
+03:55 - And to the extent that you've done a good job
+03:58 - at estimating the gradient and to the extent
+04:01 - that this technical conditions are satisfied,
+04:04 - this would produce a valid sample.
+04:06 -
+04:09 - And so that's basically the full picture.
+04:13 - The full pipeline is you start with data,
+04:15 - you estimate the score, and you generate samples
+04:17 - by basically following the score which kind of corresponds
+04:23 - to removing noise because we know that the score is telling
+04:27 - you the direction that you should follow
+04:29 - if you want to remove noise.
+04:30 - And so back to what we were discussing before,
+04:33 - it has a little bit of this flavor
+04:34 - of removing noise and then adding noise because that's what
+04:40 - Langevin is telling you to do.
+04:41 -
+04:45 - And unfortunately, if you just do this, it doesn't work.
+04:49 - So this is what you get if you use this procedure.
+04:52 - You try to train a model on MNIST,
+04:54 - even simple data sets like MNIST, CelebA, CIFAR-10.
+04:57 - It just doesn't work.
+04:59 - And this is what the Langevin procedure looks like.
+05:04 - You start with pure noise, and then it gets stuck somewhere.
+05:10 - But it doesn't produce good samples.
+05:15 - And there are several reasons for this.
+05:19 - One is that basically data tends to-- real world data tends
+05:24 - to basically lie on a manifold.
+05:26 -
+05:30 - And if the data is really on a manifold,
+05:32 - the score might not be defined.
+05:35 - And you can see this intuitively.
+05:36 - Like imagine you have a density that is over concentrated
+05:40 - on a ring, as you make the ring thinner and thinner,
+05:45 - the magnitude of the gradient gets bigger and bigger,
+05:48 - and at some point it becomes undefined.
+05:52 - And so that's a problem.
+05:55 - And indeed real data tends to lie
+05:58 - on low dimensional manifolds.
+06:01 - Like, if you just take MNIST samples,
+06:03 - and then you take the first 595 PCA components,
+06:09 - so you project it down on a linear manifold
+06:12 - of dimension 585, there is almost no difference.
+06:17 - So basically means that indeed, even just
+06:24 - if you restrict yourself to linear manifolds,
+06:26 - that you can get PCA.
+06:27 - There is almost no loss.
+06:29 - And if you take CIFAR-10, and you
+06:30 - take a 2,165 dimensional manifold,
+06:35 - again, almost no difference after you project the data.
+06:39 - So it seems like indeed that's an issue.
+06:45 - And you can see if you look at the training
+06:47 - curve on CIFAR-10, that's the sliced score matching loss.
+06:51 - It's very, very bumpy, and it doesn't quite train.
+06:56 - The other issue which was hinted at before
+07:00 - is that if you think about it, we're
+07:03 - going to have problems in the low data density regions
+07:06 - because if you think about points that
+07:09 - are likely under the data distribution,
+07:12 - we're going to get a lot of samples from those regions.
+07:18 - If you think about the loss, the loss
+07:20 - is an expectation with respect to the data distribution
+07:23 - of the difference between the estimated
+07:24 - gradient and the true gradient.
+07:27 - But with this expectation, we're approximating it
+07:32 - with a sample average.
+07:34 - And most of our samples are going to come--
+07:36 - let's say, are going to be up here
+07:38 - and are going to be down here.
+07:40 - And we're never going to see samples in between.
+07:44 - And so if you think about the loss,
+07:45 - the neural network is going to have
+07:47 - a pretty hard time estimating the gradients in between.
+07:52 - And you can see here an example where we have the true data
+07:55 - scores in the middle panel and the estimated data
+07:59 - scores on the right panel.
+08:00 - And you can see that the arrows, they
+08:02 - match pretty well at the corners where we're going
+08:05 - to see a lot of training data.
+08:07 - But they're pretty bad the moment you
+08:09 - go away from the high data density regions.
+08:13 - Yeah, that's how you find it.
+08:16 - And I guess one way you're trying
+08:18 - to find stationary points, you're
+08:19 - trying to maximize, I guess, the log likelihood.
+08:22 - And it's not obvious how you would do it.
+08:25 - You could do gradient ascent and try to find a local maximum.
+08:30 - But the problem is that the gradient is not
+08:32 - estimated accurately.
+08:34 - If you imagine randomly initializing a data point,
+08:37 - very likely you're going to be initializing it
+08:39 - in the red region, and then you're
+08:42 - going to follow the gradients.
+08:43 - But the gradients are not accurate
+08:44 - because they're estimated very inaccurately.
+08:46 - And then your Langevin dynamics procedure
+08:48 - will get lost, basically.
+08:51 - That's kind of what happens is that if you think
+08:56 - about those particles, a lot of those particles starts out here.
+08:59 - And you're going to follow these arrows,
+09:01 - but the arrows are pointing you in the wrong direction.
+09:04 - So you're never going to be able to reach these high data density
+09:09 - regions by following the wrong instructions somehow.
+09:14 - You could try to initialize one of the data points.
+09:16 - The problem is that still then it's not
+09:19 - going to mix, which is what's going to come up next.
+09:21 - But even though Langevin dynamics in theory converges,
+09:26 - it can take a very long time.
+09:28 - And you can kind of see the extreme case here
+09:30 - where if you have a data density that
+09:34 - is kind of like a mixture of two distributions
+09:37 - where the mixture weights are pi and 1 minus pi, but crucially
+09:42 - p1 and p2 have disjoint support.
+09:44 -
+09:48 - And so basically, you have probability pi, pp1
+09:55 - when you are in A, and you have 1 minus pi p2 when you are in B.
+09:59 - So there's two sets that are disjoint,
+10:01 - and you have a mixture of two distributions that
+10:03 - are with disjoint supports.
+10:04 - Think of a mixture of two uniform distributions
+10:07 - with two disjoint supports.
+10:11 - If you look at the score function,
+10:13 - you'll see it has this expression.
+10:17 - It's just the log of this in the support
+10:21 - of the first distribution and the log of this
+10:23 - in the support of the second distribution.
+10:26 - And you can see that when you take the gradient with respect
+10:28 - to X, the pi disappears.
+10:33 - So it does not depend on the weight
+10:36 - that you put of the two mixture modes.
+10:40 - And so that's the problem here is
+10:42 - that the score function does not depend on the weighting
+10:45 - coefficient at all.
+10:46 - So if you were to sample just using the score function,
+10:49 - you would not be able to recover what is the relative probability
+10:52 - that you assign to the first mode versus the second mode.
+10:56 - This is kind of an extreme case of Langevin
+11:00 - not even mixing, basically.
+11:03 - And, yeah, basically if you're not Langevin,
+11:07 - it will not reflect pi.
+11:08 - And here you can see an example of this where the true samples,
+11:12 - they are--
+11:13 - there is more samples up here than down here.
+11:16 - So this p1 is maybe, I don't know, 2/3 of them are up here,
+11:22 - and one third are down here.
+11:24 - If you just run Langevin, you kind of
+11:26 - end up with half and half.
+11:28 - So it's not reflecting the right weight.
+11:32 - And that's basically an indication that, again, Langevin
+11:35 - is mixing too slowly.
+11:38 - And then what we'll see in the next lecture is a way to fix it.
+11:42 - That will actually make it work.
+11:44 - And that's the idea behind diffusion models, which
+11:47 - is to essentially figure out a way
+11:49 - to estimate these scores more accurately all over the space
+11:55 - and get better guidance.
+11:56 - And that will actually fix this problem,
+11:59 - and we'll get to the state of the art
+12:01 - certainly diffusion models.

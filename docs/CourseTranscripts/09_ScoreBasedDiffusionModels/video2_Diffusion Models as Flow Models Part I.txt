@@ -1,1 +1,283 @@
-
+00:00 -
+00:05 - SPEAKER: What we can do now is to start
+00:07 - thinking about what happens.
+00:09 - We have this diffusion model perspective hierarchical VAE
+00:11 - kind of perspective.
+00:13 - Where we have clean data and then we have 1,000,
+00:16 - let's say different versions of the data
+00:19 - distribution perturb, the increasingly large amounts
+00:23 - of noise.
+00:24 - Really, if you think about it in terms of a diffusion process.
+00:29 - A diffusion process is a continuous time kind of process.
+00:34 - If you think about how heat diffuses over some metal bar,
+00:40 - that process is not happening at discrete time intervals,
+00:44 - it's really more naturally thought
+00:47 - as something happening over continuous time
+00:50 - where time is continuous.
+00:52 - And so or another way to think about it is you
+00:56 - can imagine making this discretization finer and finer.
+01:00 - Maybe you're fine, you're still we're still
+01:01 - going to take the hierarchical VAE perspective.
+01:04 - But you can start thinking about what
+01:06 - happens if we were to take more and more steps.
+01:09 - If we go from 1,000, 2,000, 4,000,
+01:11 - we make these steps smaller and smaller and smaller and smaller
+01:17 - until eventually we kind of get this continuum of distributions.
+01:22 - Which really correspond to the diffusion process.
+01:24 - And so we have on the--
+01:27 - as usual on the left hand side, we
+01:29 - have the clean data distribution which
+01:31 - is this mixture of two gaussians where there's these two spots.
+01:34 - Where most of the probability mass is.
+01:37 - And then there is this continuous time diffusion
+01:40 - process happening here that is spreading out
+01:42 - the probability mass over time until at the end--
+01:49 - on the right hand side, you get this pure noise kind
+01:51 - of distribution.
+01:54 - So literally what's happening here
+01:55 - is we're thinking about a very, very fine grained discretization
+02:03 - or a lot of different steps over which we go from pure--
+02:10 - to from data to pure noise.
+02:12 - So if you were to destroy the structure,
+02:14 - a very little bit at a time, you get--
+02:18 - you can imagine in the limit, you
+02:20 - get a process which continues.
+02:24 - And so instead of having 1,000 different distributions,
+02:30 - we have an infinite number of distributions that are now
+02:33 - indexed by t where t is now like a time variable
+02:36 - going from zero to capital T, just like before.
+02:39 - But instead of taking 1,000 discrete different values,
+02:42 - it takes an infinite number of values.
+02:45 - So it's a continuous random.
+02:46 - It's a continuous variable going from zero to capital T.
+02:52 - And so we have as usual data on the one hand.
+02:56 - And then pure noise on the other-- on the other extreme.
+03:01 - And so how do we now describe the relationship
+03:06 - between all these random variables that
+03:08 - are now indexed by time.
+03:11 - We can describe it in terms of a stochastic process.
+03:15 - So there is a basically a collection of random variables
+03:19 - and there is an infinite number of random variables now.
+03:21 - In the VAE case, we had 1,000 different random variables.
+03:25 - Now we have an infinite number of random variables, xd.
+03:29 - And all these random variables have densities
+03:32 - that again are indexed by time.
+03:35 - And instead of describing that relationship using
+03:38 - these encoders, we can describe how
+03:41 - they are related to each other through a stochastic
+03:44 - differential equation.
+03:47 - Which is basically the way you would describe
+03:49 - how the values of these random variables that are now
+03:51 - indexed by a continuous time variable t
+03:54 - are related to each other.
+03:56 - And so what you're saying is that over a small time interval
+04:02 - dt, dx, x changes by an amount which
+04:06 - is determined by some deterministic drift
+04:08 - and a little small amount of noise
+04:11 - that you basically added every step.
+04:14 - Not super important what that formula means.
+04:16 - But without loss of generality you
+04:19 - can think about a very simple stochastic differential
+04:22 - equation that describes a diffusion process where
+04:25 - all that's happening is that over a small time increment dt.
+04:32 - What you do is you change the value
+04:34 - of x by adding an infinitesimally small amount
+04:37 - of noise essentially.
+04:40 - And that is basically how you describe the encoder
+04:45 - or how all these random variables are
+04:47 - related to each other through this essentially diffusion
+04:50 - process.
+04:52 - Now what's interesting is that just like before, we
+04:55 - can think about the reverse process
+04:56 - of going from noise to data.
+04:59 -
+05:01 - And the random variables are the same, we're not changing them.
+05:06 - But it turns out that they can be described equivalently
+05:10 - through a different stochastic differential
+05:12 - equation that now goes where time goes from large to small.
+05:17 - From capital t to 0.
+05:20 - And what's interesting is that this stochastic differential
+05:25 - equation, it can be--
+05:29 - has a closed form solution.
+05:31 - And again not super important what the formula is.
+05:35 - But the only thing that you need to be
+05:38 - able to characterize this stochastic differential equation
+05:41 - is the score function.
+05:43 - So just like in the discrete case,
+05:46 - in the VAE case kind of like if you knew the score,
+05:49 - then you would get optimal decoders
+05:51 - and you would be able to reverse the generation process.
+05:55 - In continuous time, if you have all the score functions,
+05:59 - you can reverse the generative process.
+06:01 - And go from pure noise to data.
+06:04 - Yeah.
+06:04 - So it's close form up to the score function which is unknown.
+06:08 - So maybe a little bit of a--
+06:10 - but there is-- basically this is the equation.
+06:15 - This exactly inverts the original stochastic differential
+06:18 - equation if the score function, which you don't.
+06:20 - So you're right that we don't know it.
+06:22 - But if you knew it, then you would
+06:23 - be able to exactly invert the process.
+06:27 - So the stochasticity is basically this dwt.
+06:30 - Basically at every infinitesimal step,
+06:34 - you add a little bit of noise.
+06:36 - And in the reverse process, you're also doing it.
+06:40 - So in that sense, it's a stochastic differential
+06:42 - equation.
+06:43 - So if that term was zero.
+06:45 - So if you didn't have that here, then it
+06:49 - would be an ordinary differential equation.
+06:51 - Where the evolution is deterministic.
+06:55 - So given the initial condition, if this--
+06:57 - if this gt here was zero or this piece doesn't exist.
+07:01 - Then you would have just a regular ordinary differential
+07:04 - equation, given the initial condition, you can integrate it.
+07:07 - And you would get a solution.
+07:09 - This one is a little bit more complicated
+07:11 - because at every step, you add a little bit of noise.
+07:13 - And so that's why you kind of have these paths here
+07:19 - that are a little bit--
+07:20 - see all these little jags in the curve,
+07:23 - that's because there is a little bit of noise that
+07:25 - is added at every step.
+07:26 - If you want to do things in continuous time, what we can do
+07:30 - is we can try to learn a model of all these score functions.
+07:34 - Which is just like before is going to be a neural network.
+07:37 - It takes as input x and t and tries
+07:39 - to estimate the score of the noise perturbed data density
+07:43 - at time t evaluated at x.
+07:46 - So this is just like the continuous time
+07:48 - version of what we had before.
+07:50 - Before we were doing this for 1,000 different t's, now we
+07:54 - do it for every t between 0 and capital t where t can be
+07:58 - is a real valued variable.
+08:02 - We estimate it again during score matching.
+08:04 - De-noising score matching.
+08:06 - So it's the usual thing where we estimate scores of the noise
+08:11 - perturbed data density.
+08:12 - We can do de-noising score matching
+08:14 - and the solution to that regression problem
+08:18 - is basically a denoising kind of objective.
+08:22 - And then what we can do is to sample instead
+08:25 - of using the decoders and go through 1,000 steps
+08:28 - of the decoders, we can actually just try
+08:31 - to solve numerically the reverse time stochastic differential
+08:35 - equation.
+08:36 - Where we plug-in our estimate of the score for the true score
+08:41 - function.
+08:42 - So here we have the exact stochastic differential
+08:45 - equation.
+08:46 - OK.
+08:46 - Sorry, this doesn't show right.
+08:49 - But see whether, yeah, so we had this differential equation
+08:56 - which involves the true score.
+08:57 - And now we are approximating that with our score model.
+09:03 - And then what we can do is we can try to in practice.
+09:07 - We can solve this in continuous time.
+09:09 - In practice, you will still have to discretize it
+09:11 - by taking small steps.
+09:14 - And there are numerical solvers that you
+09:17 - can use to solve a stochastic differential equation.
+09:20 - And they all have the same flavor of basically,
+09:23 - you update your x by following the score.
+09:26 - And then adding a little bit of noise at every step.
+09:29 - If you were to take 1,000 different steps and you
+09:32 - would essentially do that machinery of using the decoders.
+09:40 - That basically corresponds to a particular way
+09:42 - of solving this stochastic differential equation, which
+09:46 - is just this discretization or Euler-Maruyama kind
+09:48 - of discretization.
+09:51 - What's a noise score based model would do instead
+09:56 - is, it would attempt to correct.
+10:01 - Because there are numerical errors,
+10:03 - you're going to make some mistakes.
+10:05 - And so what a score based model would do is,
+10:10 - it would try to basically fix the mistakes by running
+10:12 - Langevins for that time step.
+10:15 - So you can combine just regular sampling from a diffusion model
+10:23 - where you would take 1,000 different steps or even less
+10:25 - with the MCMC style sampling to correct
+10:29 - the mistakes of a basic sort of numerical SDE solver.
+10:36 - It's non-normally distributed.
+10:37 - So it's a normally distributed conditioned
+10:39 - on the initial condition.
+10:42 - But the marginals are far from normal.
+10:45 - The transitions are, yes, that's key.
+10:46 - Yeah, because then that's why we can simulate it forward
+10:49 - very efficiently.
+10:51 - But the marginally, they are not.
+10:54 - The DPM is just this.
+10:57 - It's like a particular type of discretization of the underlying
+11:01 - SDE.
+11:03 - Score based models would attempt to solve
+11:05 - this SDE in a slightly different way
+11:07 - that there is basically two types of solvers.
+11:11 - Predictor solvers, corrector solvers,
+11:13 - basically score based models which
+11:14 - is MCMC or Langevin dynamics is something called a corrector
+11:18 - method for SDE solving.
+11:20 - So it's just a different way of solving the same underlying
+11:24 - stochastic differential equation.
+11:25 - So DPM is just predictor.
+11:28 - Score based model is just corrector.
+11:30 - You can combine them.
+11:32 - And just get a more accurate solver for the underlying SDE.
+11:37 - DDIM is a different beast.
+11:38 - DDIM works by basically converting the--
+11:44 - let me skip this.
+11:45 - But basically converts the SDP into an ODE.
+11:50 - So I guess we're out of time.
+11:52 - But again, it turns out that it's
+11:55 - possible to define an ordinary differential equation that
+12:02 - has the same marginals at every dt
+12:06 - as the original stochastic differential equation
+12:08 - that we started from.
+12:10 - So now the evolution is entirely deterministic.
+12:13 - There is no noise added at every step.
+12:15 - So you see that how these wide trajectories, they are very--
+12:19 - there is no noise added at every step.
+12:21 - They are straight.
+12:22 - But marginally, they define exactly the same density.
+12:27 - So the probability that you see across time are the same.
+12:30 - Whether you run this kind of simple diffusion,
+12:34 - Brownian motion thing or you do this deterministic,
+12:39 - you follow these deterministic paths.
+12:41 - The marginals that you see, how frequently do you
+12:43 - see these trajectories going through different parts
+12:46 - of the space are exactly the same.
+12:48 - So there are two advantages.
+12:49 - One advantage and again, it's still
+12:52 - depends on the score function.
+12:54 - One advantage is that as you said, can be more efficient.
+12:58 - The other advantage is that now it's a deterministic invertible
+13:03 - mapping.
+13:05 - So now it's a flow model.
+13:06 - So now we've converted that VAE into a flow model.
+13:11 - Basically, what's happening is that, if you recall,
+13:14 - you can think of these random variables
+13:16 - here as latent variables in a some generative model.
+13:22 - And in the VAE perspective, we're
+13:24 - inferring these latent variables by stochastically simulating
+13:29 - this diffusion process.
+13:32 - But if you solve the ODE, now you
+13:34 - are inferring the latent variables deterministically.
+13:38 - And because you ODEs have unique solutions,
+13:40 - the mapping is invertible and so you can also
+13:43 - convert basically this model.
+13:47 - Once you have the score you can convert it
+13:49 - into a flow model that has exactly
+13:53 - the same marginal densities over time.
+13:57 - And one advantage of a flow model
+13:59 - is now you can compute the likelihoods exactly.
+14:01 - So now you can use something similar to the change
+14:04 - of variable formula to actually compute
+14:07 - exactly what is the probability of landing
+14:11 - at any particular point.
+14:12 - You can just solve the ODE which is
+14:15 - the same as inverting the flow and then compute the probability
+14:19 - under the prior.
+14:20 - And then you do change of variable formula
+14:22 - and you can get exact likelihoods.
+14:25 - So by converting a VAE into a flow,
+14:28 - you also get exact likelihood evaluation.

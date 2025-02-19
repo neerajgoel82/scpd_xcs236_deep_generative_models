@@ -1,1 +1,456 @@
 
+00:00 -
+00:05 - SPEAKER: Now, there is another way
+00:07 - of training energy-based models, which
+00:09 - is going to be somewhat loosely similar to generative
+00:13 - adversarial networks, which is essentially a way
+00:17 - to fit an energy-based model by instead of contrasting data
+00:24 - to samples to them from the model,
+00:26 - we're going to contrast the data to samples from some noise
+00:31 - distribution, which is not necessarily
+00:34 - the model distribution itself.
+00:37 - And so that's how it works.
+00:40 - You have the data distribution.
+00:42 - And then there's going to be a noise distribution, which
+00:44 - is any distribution you can sample from
+00:47 - and for which you can evaluate probabilities.
+00:52 - And what we're going to do is we're essentially
+00:56 - going to go back through the GAN idea of training a discriminator
+01:00 - to distinguish between kind of data samples and noise samples.
+01:07 - So far there is no energy-based models, just
+01:09 - the usual GAN-like objective.
+01:15 - And the reason I'm bringing this up
+01:18 - is that if you have the optimal discriminator, then
+01:21 - you would somehow get this density
+01:23 - ratios between the noise distribution and the data
+01:26 - distribution.
+01:28 - So recall that if you train a discriminator optimally
+01:32 - by minimizing cross-entropy, and so if you're
+01:35 - trying to discriminate between real data and samples
+01:40 - from the noise distribution, what
+01:44 - is the optimal discriminator?
+01:46 - It has to basically give you the density ratio.
+01:48 - For every X, it has to be able to know
+01:50 - how likely X is under data and how likely X is under the noise
+01:55 - distribution--
+01:57 - so useful recap for the midterm.
+02:01 - This is the optimal discriminator
+02:04 - is the density ratio between--
+02:06 - for every X, you need to figure out
+02:08 - how likely it is under the data versus how likely it
+02:10 - is under the data and the alternative noise distribution.
+02:16 - And the reason I'm bringing this up
+02:19 - because what we could try to do is we
+02:23 - could try to basically parameterize
+02:27 - the discriminator in terms of our generative model, which
+02:31 - could be an energy-based model.
+02:33 - So we know that the optimal discriminator
+02:36 - has this form, P data over P data plus noise distribution.
+02:40 - And so we could try to just define a discriminator.
+02:44 - So instead of having your whatever MLP, whatever
+02:48 - neural network you want to discriminate between data
+02:52 - versus noise, we're going to define
+02:55 - a special type of discriminator where
+02:59 - when we evaluate the probability of X being real,
+03:04 - being real data, we get the number.
+03:06 - Instead of just feeding X through a neural network
+03:09 - arbitrarily, we get it by evaluating the likelihood of X
+03:14 - under a model P theta versus the probability
+03:20 - under the noise distribution, which again we're
+03:24 - assuming is known because we're generating the noise
+03:26 - distribution, the noise data points ourselves.
+03:31 - And so the good thing is that if you could somehow come up
+03:36 - with the optimal discriminator that distinguishes data
+03:39 - versus noise, we know that the optimal discriminator will
+03:44 - have this form.
+03:45 - And this has to match the P data or P data plus noise.
+03:51 - And so you can see that somehow if this classifier is
+03:54 - doing very well at distinguishing data from noise,
+03:57 - it has to learn--
+03:59 - basically P theta has to match P data.
+04:01 -
+04:04 - So the classifier is forced to make decisions
+04:07 - based on the likelihood of X under P theta.
+04:10 - And then if it's able to make good decisions,
+04:13 - then this P theta has to match the data distribution basically.
+04:17 -
+04:21 - That's essentially the trick that we're leveraging here.
+04:26 - And then what we're going to do is
+04:28 - we're going to actually parameterize the P theta using
+04:30 - an energy-based model.
+04:31 -
+04:35 - But that's the key idea.
+04:38 - Instead of using an arbitrary neural network
+04:41 - as the discriminator as you would do in a GAN,
+04:44 - we're defining a discriminator in terms
+04:46 - of another generative model.
+04:48 -
+04:52 - And the idea is that by training the discriminator the usual way
+04:57 - by minimizing cross-entropy loss,
+04:59 - we're forcing it to learn a P theta that matches the data
+05:05 - distribution because that's the only way it can do well
+05:09 - at this binary classification task.
+05:11 - It really needs to know which x's are likely under P data
+05:15 - to get good cross-entropy loss.
+05:18 - And that's only possible when P theta matches P data.
+05:23 - And we're going to see that this is suitable
+05:26 - when P theta is defined up to a constant, when P theta is going
+05:29 - to be an energy-based model.
+05:32 - So, well, yeah, maybe let me skip this
+05:37 - since we're running out of time.
+05:38 - But you can also use the classifier
+05:40 - to correct the noise distribution.
+05:42 - But for now, let's assume that P theta is an energy-based model.
+05:48 - So we're going to parameterize P theta
+05:51 - in that previous expression in terms of an energy usual trick.
+05:56 - Let's define up to a constant.
+05:58 - And what we're going to further do is in general,
+06:05 - this normalization constant Z theta
+06:07 - is a function of the parameters F theta,
+06:10 - and it's a complicated function because we
+06:13 - don't know how to compute that integral, that
+06:15 - sum over all possible things that can happen.
+06:18 - So what we're going to do is we're
+06:21 - going to treat Z theta as being an additional trainable
+06:24 - parameter.
+06:27 - So not only we're going to optimize F theta,
+06:30 - but we're going to treat Z theta itself
+06:32 - as an additional trainable parameter which is not
+06:35 - explicitly constrained to take the value of the normalization
+06:38 - constant.
+06:40 - So you're going to be some other scalar parameter
+06:42 - that we can optimize over.
+06:45 - So if you do that, then basically the density model
+06:49 - that we're going to use in the classifier now depends on theta
+06:52 - and depends on Z.
+06:56 - And then we just plug this.
+06:58 - The idea is that basically if we plug-in this expression
+07:04 - into the classifier, into the discriminator,
+07:07 - and we train the discriminator the usual way by minimizing
+07:11 - cross-entropy, we know that under the optimal parameters,
+07:15 - this classifier will have the density model that we're
+07:21 - using to build the classifier will have
+07:23 - to match the data distribution.
+07:25 - And what this means is that the optimal theta and the optimal Z
+07:30 - are going to be such that the energy-based model is
+07:34 - equal to the data distribution.
+07:36 - But crucially now Z is just a learnable parameter.
+07:41 - It happens to be the correct partition function in the limit
+07:45 - because you take the integral of both sides with respect to X,
+07:50 - you're going to see that the integral
+07:52 - of this optimal energy-based model
+07:55 - is equal to the integral of the data, which
+07:57 - is one by definition.
+07:59 - So even though we treat Z as a learnable parameter,
+08:05 - in the limit of learning an optimal classifier,
+08:09 - this learnable parameter that is not
+08:11 - constrained to be the actual partition function
+08:14 - will take the value of the true partition function of the model
+08:19 - because that's what like the optimal classifier
+08:21 - should do if it does really well with this binary cross-entropy
+08:26 - classification loss.
+08:28 - The loss function which ends up being--
+08:33 - let's see-- something like this.
+08:35 - So if you plug it in, recall we're basically
+08:38 - saying we're going--
+08:40 - instead of picking an arbitrary neural network
+08:43 - for the discriminator like in a GAN,
+08:45 - we're going to pick a neural network that
+08:46 - has a very specific functional form
+08:49 - so that when you evaluate what is the probability that X
+08:52 - is real, you have to get it through this kind
+08:54 - of computation.
+08:55 - But you have an energy-based model that tells you
+08:58 - how likely X is under the model where both F theta and Z are
+09:04 - learnable parameters.
+09:06 - And then if you just multiply numerator and denominator by Z,
+09:10 - you get an expression that, again, as it should,
+09:14 - depends on F theta and Z and the noise distribution, which
+09:17 - is known, Pn.
+09:19 - The noise distribution is, again,
+09:20 - something that we are deciding.
+09:22 - You can pick whatever you want as long as you can sample
+09:25 - from it and you can evaluate probabilities
+09:27 - under the noise distribution.
+09:30 - And then literally what we do is we still
+09:33 - train the classifier by doing binary classification
+09:37 - with cross-entropy loss.
+09:40 - Just like in a GAN, we have data.
+09:42 - We have real data.
+09:43 - We have fake data which is generated
+09:45 - by this noise distribution, which we decide ourselves.
+09:48 - So this is different from a GAN.
+09:50 - The fake data is coming from a fixed noise distribution.
+09:54 - So we're contrastive.
+09:56 - We're contrasting the real data to fake samples generated
+10:00 - by the noise distribution, and we're
+10:02 - training the classifier to distinguish between these two.
+10:06 - And the classifier has this very specific functional form
+10:10 - where it's defined in terms of an energy-based model
+10:14 - where the partition function is itself a learnable parameter.
+10:19 - And then we optimize this with respect
+10:21 - to both theta and Z trying to do as well as we can
+10:25 - at this classification task.
+10:27 - What happens is that in theory, this
+10:31 - works regardless of what is the noise distribution.
+10:34 - In practice, what you want is you want a noise
+10:37 - distribution that is very close to the data distribution
+10:41 - so that the classifier is really forced
+10:43 - to learn what makes for a good sample,
+10:47 - what makes for the real--
+10:48 - what kind of structures do the real samples have.
+10:52 - At the end of the day, what you learn is
+10:53 - you learn an energy-based model.
+10:55 - So you learn an F theta, and you learn a partition function.
+10:58 - And in the limit of infinite data, perfect optimization,
+11:03 - then if you optimize this loss perfectly,
+11:06 - the energy-based models matches the data distribution.
+11:09 - And the partition function, which
+11:11 - is just the value of these learnable parameters Z
+11:13 - that you get actually is the true partition function
+11:17 - of the energy-based model.
+11:18 - So even though we're just training it
+11:20 - in an unconstrained way, so there is no relationship here
+11:23 - between theta and Z, it just so happens
+11:27 - that the best thing to do is to actually properly normalize
+11:30 - the model where Z theta becomes the partition function
+11:34 - of the energy-based model.
+11:36 - So in principle, this does the right thing.
+11:39 - In practice, it heavily depends on how good
+11:42 - the noise distribution is.
+11:44 - So there is no generator.
+11:47 - The generator is fixed.
+11:48 - Or you can think of it as being fixed.
+11:49 - So the noise distribution would be the generator,
+11:52 - and that's fixed.
+11:54 - We are training a discriminator, but it's
+11:56 - a very special discriminator.
+11:58 - So you are not allowed to take x and then fit it
+12:01 - through a ConvNet or an MLP and then
+12:04 - map it to a probability of being real versus fake.
+12:07 - You have to get the probability by using this expression.
+12:11 - There is only a discriminator.
+12:12 - Once you've trained it, you can extract an energy-based model,
+12:16 - which is the f theta, from the discriminator.
+12:19 - So in this flavor, which is the simpler version,
+12:22 - the noise distribution is fixed.
+12:24 - We'll see soon, if we have time, in a few couple
+12:26 - of slides that indeed it makes sense to change the noise
+12:29 - distribution in trying to adapt it and make it
+12:32 - as close as possible to the data or the current best
+12:36 - guess of the model distribution.
+12:38 - So, yeah, that's an improvement over this basic version
+12:42 - of things where the noise distribution is fixed for now.
+12:45 - So we're assuming that the noise distribution is something you
+12:48 - can sample from efficiently.
+12:49 - So you can always basically get some stochastic gradient ascent
+12:56 - here on this.
+12:57 - Once you train them-- so the learning is fine.
+12:59 - It's efficient.
+13:00 - As long as Pn is efficient to sample form,
+13:03 - you never have to sample from P theta.
+13:06 - Once you've trained a model, you have an EBM.
+13:09 - So if you want to generate samples from it,
+13:12 - you have to go through the MCMC Langevin.
+13:15 - So at inference time, you don't get any benefit.
+13:18 - This is just at training time.
+13:19 - This loss function does not involve sampling from the model.
+13:23 - It's fair game in the sense only to the point-- to the extent
+13:26 - that in the limit, you will learn the partition function.
+13:30 - In general, you will not.
+13:32 - So the solution to this optimization problem
+13:35 - will give you a Z. In practice, that is not the true partition
+13:38 - function of the model-- is just going to be an estimate.
+13:41 - And you're going to end up with an energy based model that
+13:43 - is suboptimal because you're short of the Z
+13:47 - that you estimated is not the true partition
+13:50 - function for that model.
+13:52 - So when you have finite data, imperfect optimization,
+13:56 - there are-- you pay a price for this approximation.
+13:59 - But in the limit of things being perfect,
+14:04 - this is not an issue, basically.
+14:06 - Yeah, so if you have infinite data,
+14:10 - and somehow you're able to perfectly optimize over
+14:13 - theta and Z, then we know that the optimal solution
+14:16 - over theta and Z will be one where this matches the data
+14:20 - distribution.
+14:21 - And so the only way that for that to happen is for Z star
+14:26 - to be the true partition function
+14:28 - of that energy-based model.
+14:30 - But in practice, this is not going to happen.
+14:32 - So you just get an estimate.
+14:34 - If it's not a true partition function,
+14:36 - you still have an energy-based model
+14:38 - for which there is going to be a real partition function.
+14:42 - It's just not the one you've estimated.
+14:43 - So F theta still defines a valid energy-based model.
+14:47 - It's just that the partition function for that model
+14:50 - is not going to be the solution to this optimization
+14:54 - problem over Z. So it's not going to satisfy the constraint.
+14:58 - But there's going to be a partition function for that F
+15:00 - theta.
+15:01 - So that's going to be a valid energy-based model.
+15:03 - So it turns out that they are actually very much related.
+15:06 - And then if the noise distribution
+15:09 - is like what you get by perturbing data
+15:13 - by adding a little bit of Gaussian noise essentially,
+15:16 - then this turns out to be exactly denoising
+15:18 - score matching.
+15:19 - So it very much depends on the noise distribution
+15:23 - that you choose.
+15:24 - But there are instances where this becomes exactly a score
+15:28 - matching.
+15:29 - So I don't think it's fair to say that this is always bad.
+15:31 - It's just different thing.
+15:33 - So either you do contrastive divergence
+15:36 - where you would sample from it.
+15:38 - And so in some sense, it involves the partition function
+15:40 - in the sense that you would estimate the gradient of the log
+15:43 - partition function by using samples from the model,
+15:45 - but that's also too expensive.
+15:47 - Or that's exactly what we're doing right now.
+15:49 - Let's come up with a training objective that does not depend
+15:51 - on the partition function.
+15:52 - So it's going to be efficient.
+15:54 -
+15:58 - Cool.
+15:59 - And then, yeah, so then for numerical stability,
+16:03 - let me see what do I have here.
+16:05 - So, yeah, that's the objective.
+16:07 - And then you plug-in the expression for the discriminator
+16:13 - in here, and you get a loss that looks like this.
+16:15 - And you have the log of a sum of two things.
+16:19 - So for numerical stability, it's actually easier
+16:22 - to use the LogSumExp trick where the log of e of theta plus XPN,
+16:29 - which is what you have in the denominator, it's
+16:32 - more numerically stable to write as a LogSumExp.
+16:36 - But then practically speaking, the implementation
+16:39 - is very simple.
+16:40 - You start with a sample, a batch of data points.
+16:44 - You have a batch of noise samples, and you just do--
+16:49 - basically you have this classifier
+16:53 - which has a very specific functional form
+16:54 - and just you evaluate the cross-entropy loss
+16:57 - of that classifier on this mini batch which happens
+17:00 - to have this functional form.
+17:03 - And then you optimize it as a function of theta and Z.
+17:09 - And that's just basically what we had before.
+17:11 - And so you're evaluating the loss
+17:15 - of the classifier over these two batches of real and fake
+17:19 - or real and samples from the noise distribution,
+17:22 - then you try to maximize these as a function of theta and Z,
+17:27 - and, yeah, stochastic gradient ascent with respect to theta
+17:30 - and Z. And, again, key thing, you don't need to sample
+17:35 - from the model.
+17:36 -
+17:38 - And you can see that the dependence on Z
+17:41 - is non-trivial in the sense that sometimes it's
+17:44 - not optimal to just make Z as small as possible or as
+17:47 - big as possible.
+17:49 - It depends on Z on some non-trivial way.
+17:50 - And so there is some interesting learning happening here
+17:54 - over both theta and Z.
+17:59 - But at the end of the day, yeah, you
+18:01 - end up with an estimate of the energy of the model f theta
+18:05 - and an estimate of the log partition function.
+18:07 - And everything can be trained without using samples
+18:11 - from the energy-based model.
+18:13 - So it looks a lot like a GAN, Generative Adversarial Network,
+18:19 - in the sense that in both cases you are training a discriminator
+18:22 - with binary cross-entropy.
+18:23 - So that part is the same.
+18:25 -
+18:27 - Both are likelihood-free.
+18:30 - We don't have likelihoods in EBM, so it better be.
+18:33 - There is never a need to evaluate likelihoods
+18:36 - under the EBM or under the data distribution
+18:40 - because we don't have either of them.
+18:42 - So it's all just like a standard cross-entropy loss basically
+18:45 - on a classification task reduced to a discriminative modeling,
+18:49 - generative model to discriminative
+18:51 - classifier training.
+18:54 - The key difference is that in the GAN,
+18:57 - you are actually have a minimax optimization where you are also
+19:01 - training the noise or you're training the generator.
+19:03 - Here we are not.
+19:04 - So here this is table, is easy to train.
+19:07 - The noise distribution is fixed, and you're just
+19:10 - maximizing that objective function as a function of theta.
+19:13 - It's non-convex, but there is no minimax.
+19:15 - There is no instability.
+19:17 - It's actually relatively stable to train.
+19:19 -
+19:22 - And the kind of slight difference
+19:26 - is that in noise contrastive estimation,
+19:28 - you need to be able to evaluate the likelihoods
+19:30 - of the contrastive samples that you generate from the noise
+19:33 - distribution while in a GAN, you just need to be able to sample
+19:37 - from the generator.
+19:38 - So if you look at the loss here, we
+19:40 - need to be able to evaluate-- when we generate
+19:43 - from Pn from the noise distribution,
+19:44 - we also need to be able to evaluate how
+19:46 - likely these noisy samples are.
+19:49 - In a GAN, you don't have to.
+19:50 - You just need to be able to generate them fast.
+19:53 - So that's slightly different.
+19:55 - And when you're training an NCE model,
+20:01 - you just train the discriminator.
+20:02 - And then from the discriminator, you
+20:04 - get an energy function which defines an energy-based model.
+20:07 - While in a GAN, you're actually training deterministic sample
+20:12 - generator.
+20:13 - So the outcome of the learning is going to be different.
+20:17 -
+20:20 - And maybe the last thing that I'll say is that kind of what
+20:23 - was suggested before is that it might make sense
+20:27 - to adapt the noise distribution as you go during training.
+20:33 - And so instead of keeping a fixed noise distribution,
+20:37 - we can try to learn it jointly with the discriminator.
+20:41 - So recall we need an energy-- we need a noise distribution
+20:44 - that we can sample from efficiently
+20:46 - and we can evaluate probabilities over efficiently.
+20:49 - And so the natural candidate is a flow-based model for this.
+20:54 - And intuitively, we're training the noise distribution
+20:59 - to make the classification problem as
+21:00 - hard as possible so that the noise distribution is close to P
+21:06 - data.
+21:07 - And so the flow contrastive estimation
+21:10 - is basically this idea where the noise distribution
+21:12 - is defined by a normalizing flow with parameters phi.
+21:18 - And then it's basically the same,
+21:21 - except that now the discriminator
+21:24 - depends on the noise distribution, which
+21:25 - is a flow model.
+21:26 - So it will depend on the parameters of the flow.
+21:29 - A flow model you can sample from efficiently.
+21:31 - You can evaluate likelihoods efficiently so
+21:33 - it fits with this API.
+21:36 - And then now we optimize the discriminator over theta
+21:40 - and Z the usual way by noise contrastive estimation.
+21:44 - And then what they propose is to train the flow model
+21:50 - in a minimax way so it goes back to GANs in some way by train
+21:56 - the flow model to confuse the discriminator as
+21:59 - much as possible.
+22:01 - So that's their proposal.
+22:04 - In the end, they use the flow model.
+22:06 - So here are some samples.
+22:07 - And they are actually generated from the flow model
+22:10 - although technically, they get both.
+22:12 - They get an energy-based model, and they get a flow model,
+22:14 - and they show that for some things,
+22:16 - you're better off using the energy-based model.
+22:19 - But, yeah, you get both at the end of the day.
+22:21 - Yeah, so basically, noise contrastive estimation
+22:24 - where the noise distribution is a flow that
+22:26 - is learned adversarially recall that the inside--
+22:31 - this max here inside is basically the loss
+22:34 - of a discriminator in a GAN.
+22:36 - It tells you how confused the discriminator is and so--
+22:40 - well, not how confused, how not confused.
+22:42 - And so by minimizing it, you're trying
+22:46 - to make the life of the discriminator
+22:48 - as hard as possible.
+22:49 - And so you're learning something by minimizing a two-sample test
+22:52 - essentially.
+22:53 - And so it's the same as the usual GAN training.

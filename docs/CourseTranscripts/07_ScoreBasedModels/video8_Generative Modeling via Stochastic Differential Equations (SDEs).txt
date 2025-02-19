@@ -1,1 +1,442 @@
 
+00:00 -
+00:05 - SPEAKER 1: And you might also wonder,
+00:07 - because I think it was also kind of brought up here,
+00:09 - like what does the noise levels that you use during inference
+00:14 - have to match the ones that you see during training,
+00:17 - can we use more noise levels, less.
+00:20 - And so it's pretty natural to think
+00:22 - about what happens if you have an infinite number of noise
+00:24 - levels.
+00:26 - Right now, we have kind of the clean data
+00:28 - distribution, which let's say is just a mixture of two Gaussians.
+00:32 - So here yellow denotes high probability density
+00:35 - and blue denotes low probability density.
+00:38 - And then so far, what we said is that we're
+00:41 - going to consider multiple versions of this data
+00:43 - distribution perturbed with increasingly large amounts
+00:47 - of noise.
+00:47 - So sigma 1, sigma 2, sigma 3, where
+00:50 - sigma 3 is a very large amounts of Gaussian noise.
+00:54 - So that's kind of the structure in the data is completely lost.
+00:57 - So if you start out with a distribution,
+00:59 - it's just a mixture of two Gaussians.
+01:01 - After you add a sufficiently large amount of noise,
+01:04 - you are left with just pure noise essentially.
+01:08 - And you could imagine using maybe here I
+01:11 - have 3 different noise levels.
+01:13 - You could imagine--
+01:16 - And you can always plot these densities.
+01:19 - So you have most of the probability mass
+01:22 - is here and here, because it's a mixture of two Gaussians.
+01:25 - Then you can see that the probability mass spreads out
+01:28 - as you add more and more Gaussian noise to the data.
+01:32 - And now you might wonder well, what
+01:34 - happens if we were to consider multiple noise levels that
+01:38 - are kind of in between?
+01:40 - What happens if we add a noise level that
+01:44 - is in between 0 and sigma 1?
+01:46 - Then you're going to get a density that
+01:47 - is kind of in between these 2.
+01:50 - And in the limit, you can think about what
+01:52 - happens if you were to consider an infinite number of noise
+01:56 - levels going from 0 to whatever was the maximum amount.
+02:00 - And what you're going to get is an infinite number
+02:04 - of data densities perturbed with increasingly large amounts
+02:09 - of noise that are now indexed by t, where
+02:12 - t is a kind of random variable continuous variable
+02:17 - from 0 to the kind of maximum that you have
+02:21 - on the right on the other end.
+02:23 - So each slice here, each vertical slice
+02:27 - is basically the density of data convolved
+02:33 - where we've added noise corresponding
+02:37 - to this continuous index t.
+02:40 - Right?
+02:41 - And so you can see how I got here.
+02:44 - We started out with a finite number of noise levels,
+02:48 - where all the probability mass was here.
+02:50 - And then it spreads out.
+02:52 - And then you can think about a finer kind
+02:55 - of interpolation and finer, and finer,
+02:57 - until you have something continuous.
+03:00 - And so you go from pure data at time 0, here on the left,
+03:04 - to pure noise on the other extreme, where
+03:10 - kind of corresponding to the maximum amount of noise
+03:13 - that you're adding to the data.
+03:16 - So now instead of having 1,000 different versions of the data
+03:21 - perturbed with increasingly large amounts of noise,
+03:23 - you have an infinite number of data densities
+03:28 - that have been perturbed with increasingly
+03:31 - large amounts of noise.
+03:32 -
+03:35 - And so you can think of what we were doing before as kind
+03:38 - of selecting 1,000 different slices here and modeling
+03:43 - those data distributions.
+03:45 - But really there is an infinite number of them.
+03:49 - And that perspective is actually quite useful as we'll see.
+03:54 - And so you have this kind of sequence of distributions.
+04:02 - p0 is just the clean data.
+04:04 - And pt, on the other extreme, is what
+04:07 - you got if you add the maximum amount of noise, which you can
+04:10 - think of as some kind of noise distribution
+04:12 - where the structure in the data is completely lost.
+04:15 - And that corresponds to basically pure noise.
+04:19 - So as you go from left to right, you
+04:22 - are increasing the amount of noise that you add to the data
+04:25 - as you go from pure data to pure noise at the other extreme.
+04:28 -
+04:31 - And now you can imagine what happens
+04:35 - if you perturb data with increasingly large amounts
+04:39 - of noise.
+04:40 - What happens is that you start with points
+04:44 - that are distributed according to p0 that are distributed
+04:46 - according to the data density.
+04:48 - For example, you start with these 4 images.
+04:50 - And then as you go from left to right,
+04:53 - you are increasingly adding noise to these data samples
+04:58 - until you are left with pure noise.
+05:00 -
+05:03 - And so you can think of having a collection of random variables
+05:09 - xT, 1 for each time step, which is basically
+05:14 - describing what happens as you go from
+05:16 - left to right, as you go from pure data to pure noise.
+05:20 - And all these random variables, which
+05:22 - you can think of as a stochastic process,
+05:24 - is just a collection of an infinite number
+05:26 - of random variables, they all have densities,
+05:28 - pt's which are just these data densities,
+05:32 - plus noise, that we've been talking about for a while.
+05:36 - And we can describe the evolution of this--
+05:39 - Or how these random variables change over time,
+05:43 - if you think of this axis as a time slide--
+05:46 - dimension, then all these random variables
+05:49 - are related to each other.
+05:50 - And we can describe their relationship
+05:52 - using something called a stochastic differential
+05:54 - equation.
+05:56 - It's not super important what it is,
+05:57 - but it's basically a simple formula
+05:59 - that relates the values of these random variables take.
+06:04 - And it's similar to an ordinary differential equation, which
+06:08 - would just be some kind of deterministic evolution,
+06:11 - where the difference is that we add
+06:13 - basically noise at every step.
+06:16 - So you can imagine particles that
+06:18 - evolve from left to right following
+06:21 - some kind of deterministic dynamics,
+06:26 - where we add a little bit of noise at every step.
+06:30 - And in particular, it turns out that if all you want to do
+06:33 - is to go from data to pure noise, all you have to do
+06:38 - is you have to--
+06:39 - You can describe this process very
+06:40 - simply with a stochastic differential equation, where
+06:43 - you're basically just--
+06:45 - The way xt changes infinitesimally
+06:49 - is by adding a little bit of noise at every step.
+06:52 - You can think of this as some kind of random walk,
+06:54 - where every step you add a little bit of noise.
+06:57 - And if you keep running this random walk
+06:59 - for a sufficiently large amount of time,
+07:01 - you end up with a pure noise kind of distribution.
+07:07 - And not super important, but what's interesting
+07:10 - is that we can start thinking about what happens if we reverse
+07:14 - the direction of time.
+07:16 - Now we have this kind of stochastic process
+07:17 - that evolves over time going from left to right here,
+07:21 - you go from data to noise.
+07:23 - Now you can start thinking about what
+07:24 - happens if you were to reverse the direction of time
+07:27 - and you go from capital T to 0.
+07:30 - And so you go from pure noise to data.
+07:34 -
+07:38 - That's what we want to do if we want to generate samples.
+07:40 - If you want to generate samples, you
+07:42 - want to basically invert this process.
+07:44 - You want to change the direction of time.
+07:48 - And it turns out that there is a simple stochastic differential
+07:53 - equation that describes the process in reverse time.
+07:59 - And the interesting thing is that you
+08:02 - can describe this process with a stochastic differential
+08:06 - equation, which is relatively simple.
+08:08 - And really, the only thing that you
+08:09 - need is the score functions of these noise
+08:14 - perturbed data densities.
+08:17 - So if you somehow have access to the score functions
+08:21 - of this densities pt, corresponding to data
+08:23 - plus noise, corresponding to at, then there
+08:27 - is a simple stochastic differential equation
+08:29 - that you can use to describe this process of going
+08:32 - from noise to data.
+08:33 -
+08:36 - And so if you somehow knew this score function, which
+08:41 - to some extent we can approximate with a score based
+08:46 - model, we can build a generative model out
+08:50 - of this interpretation.
+08:52 - And so the idea is that we're going to train a neural network,
+08:56 - just like before, to estimate all these score models
+09:03 - or these ground truth scores.
+09:05 - These are scores of data plus noise,
+09:07 - where there is an infinite number of noise levels now.
+09:09 - So this is exactly what we're doing before,
+09:12 - except that now t doesn't take 1,000 different possible values.
+09:17 - t can take an infinite number of different values,
+09:19 - but it's exactly the same thing.
+09:21 - Before we were just estimating the score,
+09:23 - so pt for 1,000 different chosen noise levels.
+09:29 - Now we do it for an infinite number of them.
+09:33 - And we do that by doing the usual mixture
+09:37 - of de-noising score-matching objectives.
+09:40 - So we want to be able to train a single neural network as theta
+09:44 - that jointly estimates all these infinite number of scores.
+09:49 - And so it's exactly what we had before,
+09:51 - except that instead of being a sum over 1,000 different noise
+09:54 - levels, now it's kind of an integral over an infinite number
+09:59 - of different t's, all the time steps that we have in that plot.
+10:06 - And if you can somehow train this model well,
+10:11 - you can derive this loss to a small number, which
+10:16 - means that this score model approximates
+10:19 - the true score accurately.
+10:23 - Then you can basically plug in your score model
+10:28 - in that reverse time stochastic differential equation.
+10:32 - So recall we had this SDE here, such
+10:36 - that if you knew this score, then you could just
+10:38 - solve this stochastic differential equation
+10:40 - and you would go from noise to data.
+10:42 - You take this exact equation.
+10:44 - You replace the true score with the estimated score
+10:48 - and you get that.
+10:50 - And the advantage of this is that now this
+10:52 - is a well-studied problem, you just
+10:54 - have a stochastic differential equation,
+10:56 - you just need to solve it.
+10:57 - And there is a lot of numerical methods
+10:59 - that you can use to solve a stochastic differential
+11:02 - equation.
+11:02 - The simplest one is basically something similar to Euler
+11:05 - method for ODEs, where you basically just discretize time
+11:10 - and you just step through this equation.
+11:13 - So this is a continuous time kind of evolution.
+11:17 - You can just take increments of delta t.
+11:21 - And you just basically discretize this.
+11:24 - So I guess delta t here is negative, so you decrease time.
+11:29 - And then you take a step here following
+11:32 - the deterministic part, which is given by the score.
+11:35 - And then you add a little bit of noise at every step.
+11:39 - So you see how this is basically the same as Langevin dynamics.
+11:42 - It's always some kind of follow the gradient
+11:45 - and add a little bit of noise at every step.
+11:49 - And so you can interpret that as being just a discretization
+11:52 - of this stochastic differential equation that tells you
+11:55 - exactly what you should do if you
+11:58 - want to go from noise to data.
+12:01 - So there is a continuous number of them.
+12:04 - So t is a uniform continuous random variable between 0 and t,
+12:08 - so there is an infinite number of--
+12:10 - Let me see if I have it here.
+12:12 - So there is an infinite number of noise levels.
+12:18 - And what we do is we're basically numerically
+12:21 - integrating these stochastic differential equation that
+12:24 - goes from noise to data.
+12:25 - So you start out here by basically sampling
+12:29 - from a pure noise distribution.
+12:31 - So then you take small steps.
+12:34 - You still need to--
+12:35 - But you have a freedom to choose.
+12:37 - At that point, you don't necessarily have to take always
+12:40 - 1,000th of the length, you can apply whatever.
+12:44 - And there are many more advanced kind
+12:46 - of numerical schemes for solving stochastic differential
+12:49 - equations.
+12:50 - The moment you managed to formulate
+12:52 - the problem of sampling to solving
+12:54 - a stochastic differential equation,
+12:55 - then you can use a lot of advanced numerical methods
+12:58 - for solving stochastic differential equations.
+13:01 -
+13:05 - And so you step through time and you discretize.
+13:08 - You try to find a solution to this trajectory that goes
+13:11 - from noise to data basically.
+13:16 - And that's sort of the main idea of this core base diffusion
+13:23 - models.
+13:24 - And there is actually a connection
+13:26 - with what we were seeing before we were doing Langevin dynamics,
+13:31 - how is that related to this numerical SDE solver.
+13:35 - You can think of it as kind of the numerical SDE solver
+13:40 - will take a step.
+13:42 - It's kind of trying to approximate the true solution
+13:45 - of the SDE, which is kind of this red trajectory
+13:49 - that I'm showing here.
+13:50 - You can use a numerical SDE solver,
+13:53 - and you can help it basically at every step
+13:56 - by doing Langevin dynamics.
+13:58 - So Langevin dynamics is kind of a procedure that would allow you
+14:02 - to sample from this slice.
+14:06 - And so what you can do is you can combine
+14:09 - or you can either just use character steps, in which case
+14:15 - basically you get the procedure that I talked about before,
+14:17 - where you do annealed Langevin dynamics.
+14:19 - You just follow Langevin for a little bit,
+14:21 - and then you follow the Langevin corresponding to the next slice.
+14:25 - And you follow the Langevin corresponding
+14:27 - to the next slide and so forth.
+14:28 - Or you can apply these numerical methods
+14:30 - to try to jump across time.
+14:34 - And you can kind of combine the two of them
+14:36 - to eventually end up with something
+14:38 - that can generate samples.
+14:41 - So you can think of it as--
+14:43 - Once you view it from this perspective,
+14:45 - there is, again, many different ways
+14:47 - of solving the SDE, including using Langevin dynamics to kind
+14:51 - of sample from these intermediate densities
+14:56 - that you get as you change the time dimension.
+14:59 -
+15:02 - And yeah, this is the kind of thing
+15:05 - that really works extremely well.
+15:08 - This was this kind of model again.
+15:11 - I guess we haven't talked exactly about the metrics,
+15:14 - but it achieves state of the art results
+15:17 - on a variety of image benchmarks.
+15:20 - And you can see some of the high resolution images that
+15:24 - can be generated by this model.
+15:28 - These are fake samples.
+15:30 - These people don't exist, but you
+15:32 - can see that the model is able to generate very high quality
+15:36 - data by basically solving this stochastic differential equation
+15:41 - and mapping pure noise to images that have the right structure.
+15:47 - They're almost indistinguishable from real samples.
+15:51 - Oh, yeah, fingers are a hard one to do.
+15:54 - It's a hard problem for these models
+15:56 - to learn how to make hands.
+15:59 - I guess in this data sets it's typically just the face,
+16:01 - so you don't have to worry about it.
+16:05 - I think people have made progress on that as well
+16:08 - with more training data.
+16:09 - I think people have been able to do specialized--
+16:11 - You show a lot of hands in the training set,
+16:14 - the model kind of learns how to do that.
+16:16 - How do you prevent overfitting?
+16:18 - You can look at it from the perspective of the loss,
+16:20 - like if you believe the square matching
+16:22 - loss, like you can kind of see how well it generalizes
+16:25 - to validation or test kind of data.
+16:28 - We also did extensive tests on trying to find the nearest
+16:31 - neighbor in the data set.
+16:33 - And we're pretty confident that it's often
+16:37 - able to generate new images that you haven't seen before.
+16:42 - There are certainly cases, especially text to image
+16:46 - diffusion models can actually memorize, which might be OK.
+16:51 - I mean, I don't think it's necessarily wrong behavior
+16:54 - to memorize some of the data points.
+16:58 - But yeah, people have been able to craft captions,
+17:01 - such that if you ask the model to generate
+17:04 - you an image with that caption, it produces exactly an image
+17:08 - from the training set.
+17:09 - So memorization does happen, but not to the extent
+17:13 - that it's only replicating images in the training set.
+17:15 - It's certainly able to generate new images,
+17:19 - including composing things in interesting ways that cannot
+17:23 - possibly have been seen, I think, even on the internet.
+17:26 - So it's certainly showing some generalization capabilities.
+17:30 - And I think looking at the loss is a pretty good way
+17:32 - to kind of see that indeed it's not overfitting.
+17:35 - Like the score matching loss that you
+17:36 - see in a training set is pretty close to the one
+17:38 - you see on the validation unseen data.
+17:41 - So it's not overfitting at least.
+17:45 - We're not yet at that level.
+17:48 - It's a mix.
+17:48 - I think it goes back to what we were saying before,
+17:51 - like the models are trained by score matching,
+17:54 - so it's a much more stable kind of training objective.
+17:57 - From the perspective of the computation graph,
+17:59 - like if you think about what happens
+18:01 - if you solve an SDE, that's kind of an infinitely
+18:05 - deep-computation graph.
+18:07 - Because at this point like you have a--
+18:09 - I mean, you are discretizing it, of course,
+18:11 - but, in principle, you can make it as deep as you want,
+18:14 - because you're choosing increasingly small kind of time
+18:17 - steps.
+18:18 - This can become a very deep kind of computation graph
+18:21 - that you can use at inference time.
+18:23 - So again, that's kind of the key advantage
+18:26 - that you can have a very deep--
+18:27 - You can use a lot of computation at inference time
+18:29 - to generate images without having
+18:31 - to pay a huge price at training time
+18:34 - because the models are trained through this score-matching kind
+18:37 - of working at the level of small changes, kind of figuring out
+18:43 - how to improve an image by a little bit.
+18:46 - And then you stack all these little improvements
+18:49 - and you get a very deep kind of computation graph that
+18:52 - can generate very high quality data sets.
+18:55 - Yeah.
+18:55 - So latent variables, I guess--
+18:57 - I don't have time to talk about it today, unfortunately,
+18:59 - but there is a way to think of it from the perspective of--
+19:04 - It turns out that there is a way to convert this model
+19:07 - into a normalizing flow, at which point
+19:10 - you would have latent variables.
+19:12 - And the machinery looks something like this.
+19:15 - We have this stochastic differential equation
+19:17 - that goes from data to noise.
+19:20 - It turns out that it's possible to describe a stochastic process
+19:24 - that has exactly the same marginals,
+19:27 - but it's purely deterministic.
+19:29 - So there is an ordinary differential equation,
+19:33 - the kind of things you probably have
+19:35 - seen in other classes, that has exactly
+19:38 - the same marginals over time.
+19:40 - And again, this ordinary differential equation
+19:43 - depends on the score.
+19:45 - So if you are able to estimate the score,
+19:49 - you can actually generate samples.
+19:51 - You can go from noise to data by solving an ordinary differential
+19:56 - equation, instead of solving a stochastic differential
+19:59 - equation.
+20:00 - And at that point, because you can
+20:04 - think of the ordinary differential equation
+20:07 - as basically defining a normalizing flow,
+20:11 - because the mapping from the initial condition
+20:14 - to the final condition of the ordinary differential equation
+20:19 - is invertible.
+20:21 - So you can go from left to right along these white trajectories
+20:26 - or from left to right, or right to left.
+20:30 - And that's an invertible mapping.
+20:33 - So essentially, this machinery defines a continuous time
+20:39 - normalizing flow, where the invertible mapping
+20:41 - is given by solving an ordinary differential equation.
+20:44 - Like these white trajectories that are the solutions of that
+20:49 - same ordinary differential equation with different initial
+20:52 - conditions, they cannot cross, because that's how ordinary
+20:56 - differential equation.
+20:57 - So the paths corresponding to different initial conditions,
+21:05 - they can never cross, which basically
+21:07 - means that the mapping is invertible,
+21:10 - which basically means that this is a normalizing flow.
+21:14 - And so that, I guess I don't have time
+21:17 - to talk about it, unfortunately, but if you're
+21:20 - willing to take the normalizing flow perspective,
+21:22 - then you can go from data to noise.
+21:26 - And the noise is kind of a latent vector
+21:29 - that is encoding the data.
+21:32 - And the latent vector has the same dimension,
+21:34 - because here it's clean image, image plus noise
+21:39 - has the same dimension.
+21:40 - It's really just a normalizing flow.
+21:41 - The latent variables indeed have a simple distribution,
+21:44 - because it's pure noise.
+21:46 - And it's just like--
+21:47 - The mapping from noise to data it's
+21:49 - given by a solving an ordinary differential equation, which
+21:53 - is defined by the score model.
+21:55 - So it's a flow model that is not being
+21:57 - trained by maximum likelihood.
+21:59 - It's trained by score matching.
+22:02 - You can think of it as a flow with an infinite depth.
+22:04 -
+22:06 - That's another way to think about it, which means that you
+22:10 - can also get likelihoods.
+22:11 - That's the other interesting bit that you can get
+22:15 - if you take that perspective.

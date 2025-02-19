@@ -1,1 +1,814 @@
 
+00:00 -
+00:05 - SPEAKER 1: So far we've seen autoregressive models.
+00:07 - We've seen variational autoencoders,
+00:10 - where the marginal probability, marginal likelihood is
+00:13 - given by this mixture model, this integral over the latent
+00:17 - variables.
+00:18 - And we've seen that autoregressive models
+00:21 - are nice because you don't have to use variational inference.
+00:24 - You directly have access to the probability of the data
+00:26 - and you don't have to deal with these encoders and decoders.
+00:31 - And VAEs are nice because, while you get the representation z
+00:36 - and you can actually define pretty
+00:41 - flexible marginal distributions, you can generate in one shot.
+00:44 - So they have some advantages the other autoregressive
+00:47 - models don't have.
+00:49 - But the challenge with a latent variable model was that, well,
+00:53 - we cannot evaluate this marginal probability,
+00:56 - and so training was a pain and we have to come up with
+00:59 - the ELBO.
+01:00 - And so what flow models do is, it's
+01:03 - a type of latent variable model, kind of a VAE
+01:06 - that has spatial structure so that you
+01:08 - don't need to do variational inference
+01:10 - and you can train them in a more direct way.
+01:13 - So it's actually very efficient to evaluate
+01:16 - the probability of observed data x
+01:19 - even though you have latent variables.
+01:21 - And so, which means that you can train them
+01:23 - by maximum likelihood.
+01:26 - And so the kind of idea is that we
+01:33 - would like to have a model distribution
+01:35 - over the visible data, over the observed
+01:37 - data that is easy to evaluate and easy to sample from,
+01:42 - right, because then we can generate
+01:44 - efficiently at inference time.
+01:46 - And we know that there is many simple distributions that
+01:49 - would satisfy these properties, like a Gaussian distribution
+01:53 - or a uniform distribution, but what
+01:57 - we want is some kind of distribution that
+01:59 - has a complicated shape, kind of the one you see here.
+02:02 - So here the colors represent probability, density, mass.
+02:07 - And so if you have a Gaussian, it
+02:09 - has this relatively simple shape,
+02:11 - where all the probability mass is centered around the mean.
+02:14 - And so if you think about modeling images
+02:16 - with something like a Gaussian, it's
+02:17 - not going to work very well because there's only
+02:19 - going to be a single point and all the probability
+02:21 - mass is shaped around it.
+02:24 - The think about a uniform distribution,
+02:25 - again, it's not going to be very practical to model real data.
+02:30 - And you want something much more multi-modal,
+02:32 - something that looks like this, where you can have a probability
+02:35 - mass somewhere and then have no--
+02:38 - The probability decreases a lot, and then goes up, and then
+02:42 - decreases like you want complicated shapes for this p
+02:46 - theta of x, which is the same reason we were using mixtures
+02:51 - as one way of achieving this kind of complicated shapes
+02:54 - by taking a mixture of many simple distributions.
+02:59 - The way flow models do is, they instead
+03:02 - try to transform essentially simple distribution into more
+03:08 - complicated ones by applying invertible transformations.
+03:13 - And that's essentially kind of a variational autoencoder.
+03:19 - So it's going to be a very-- the same kind of generative model,
+03:24 - where you have a latent variable z that you sample from.
+03:28 - And that's, again, sampled from a simple prior distribution,
+03:31 - like a unit Gaussian, fixed Gaussian with fixed mean,
+03:36 - and some kind of, let's say, identity covariance.
+03:40 - And then you transform it in a VAE.
+03:44 - What you would do is, you would compute
+03:48 - the conditional distribution of x
+03:50 - given z by passing z through some two neural networks.
+03:54 - And what we've seen is that this is
+03:58 - one way of getting a potentially complicated
+04:01 - marginal distribution because of this mixture in behavior.
+04:04 - But you have this issue that, when you want to evaluate
+04:07 - the probability of one x, you have to go through all possible
+04:11 - z's to figure out which ones are likely to produce that
+04:15 - particular image, let's say, x'z that you have access to, right?
+04:21 - And this enumeration over all possible z's is the tricky part,
+04:26 - is the hard part.
+04:27 - And there could be multiple z's that produce the image
+04:31 - or even just finding which z is producing the--
+04:35 - is likely to have produced the image x that you have access to
+04:38 - is not easy.
+04:39 - And the way the VAEs get around this
+04:41 - is by using the encoder that is essentially trying to guess,
+04:45 - given the x which z's are likely to have produced the image
+04:49 - that you have access to.
+04:51 - And one way to get--
+04:54 - to try to get around the problem by design
+04:58 - is to construct conditionals such that inverting
+05:02 - them is easy.
+05:05 - And one way to do that is to apply a deterministic invertible
+05:12 - function to the latent variable z.
+05:15 - So instead of passing the z through these two
+05:17 - neural networks and then sampling from a Gaussian defined
+05:22 - by the neural networks, we directly transform the latent
+05:25 - variable by applying a single deterministic invertible
+05:30 - function.
+05:31 - And the reason this is good is that, if we do this, then
+05:35 - it's trivial to figure out what was the z--
+05:38 - what was the z to produce that x because we
+05:40 - know there is only one.
+05:41 - And the only thing you have to do
+05:43 - is you have to be able to invert the mapping.
+05:46 - So to the extent that by design these functions that we use
+05:50 - are invertible, and they're easy to invert hopefully,
+05:55 - and deterministic so that there's always only one z that
+05:59 - could have produced any particular x then
+06:01 - that solves the problem at the root
+06:05 - that we had when we were dealing with variational autoencoders.
+06:09 - And that's really the whole idea of this class
+06:13 - of generative models, called flow models, which
+06:16 - you can think of it as a VAE where the mapping from z to x
+06:20 - is deterministic and invertible, which makes, as we'll see,
+06:27 - learning much easier.
+06:29 - So that's going to be one of--
+06:30 - one of the-- that will come up, but that's a great observation,
+06:34 - that if we want this mapping to be invertible, then
+06:37 - we're sort of requiring z and x to have the same dimensionality.
+06:42 - And so one of--
+06:44 - one of the things you lose if you
+06:46 - do this is that there is no longer this idea
+06:48 - of a compressed representation because now z and x
+06:51 - end up having the same number of dimensions.
+06:54 -
+06:59 - OK, so that's kind of the high level motivation, the high level
+07:02 - idea.
+07:02 - Now, let's see how it's actually done in practice.
+07:06 - So just as-- and let's start with a simple refresher
+07:10 - on what happens if you take random variables
+07:13 - and you transform them through, let's say, invertible functions.
+07:18 - And so just to start, let's say that we
+07:20 - have a single continuous random variable x.
+07:25 - And you might recall that one way
+07:28 - to describe the random variable is
+07:30 - through the CDF, the cumulative density function, which
+07:34 - basically tells you for every scalar a
+07:36 - what is the probability that the random variable is less than
+07:39 - or equal to a.
+07:41 - And then the other way to describe the random variable
+07:43 - is through the PDF, which is just the derivative of the CDF,
+07:49 - all right.
+07:50 - And typically we describe random variables
+07:54 - by specifying a kind of functional form for this PDF
+08:00 - or CDF.
+08:01 - In the case of a Gaussian, it might look something like this.
+08:04 - You have two parameters, the mean and the standard deviation.
+08:07 - And then you get the shape of the PDF
+08:12 - by applying the function.
+08:15 - And no-- or it could be uniform, in which case,
+08:18 - the PDF would have this kind of functional form, where it's--
+08:23 - if it's uniform between a and b, then
+08:26 - the PDF is 0 outside that interval
+08:30 - and it's 1 over the length of the interval when x is between a
+08:35 - and b.
+08:36 - And same thing holds when you have random vectors.
+08:42 - So if you have a collection of random variables,
+08:45 - we can describe this collection of random variables
+08:49 - through the joint probability density function.
+08:52 - And again, an example would be if these random variables are
+08:56 - jointly distributed as a Gaussian distribution,
+08:59 - then the PDF would have that kind of functional form.
+09:03 - So now, x is a vector, so it's a sequence of numbers.
+09:07 - And you can get the probability density at a particular point
+09:10 - by evaluating this function.
+09:13 - And again, the problem here is that this kind of simple PDFs,
+09:18 - they are easy to evaluate, they are easy to sample from,
+09:21 - but they are not very complicated.
+09:23 - The shape is pretty simple.
+09:25 - I mean, the probability only depends on how far
+09:28 - x is from this mean vector mu.
+09:32 - And that determines the shape, and you
+09:34 - don't have many parameters to change the shape of this--
+09:38 - of this function.
+09:38 -
+09:41 - OK, now, let's see what happens when
+09:44 - we transform random variables by applying functions to them.
+09:49 - So let's say that Z is a uniform random variable between 0 and 2
+09:55 - and PZ is the density of this random variable.
+09:59 - Now, what is the density PDF evaluated at 1?
+10:05 - Yeah, so 1/2, and it's a sanity check.
+10:08 - If you integrate over the PDF over the interval 0 to 2,
+10:11 - you get 1.
+10:12 - That's what you would want.
+10:15 - Now, let's say that we define a new random variable X
+10:19 - by multiplying it by 4.
+10:22 - And so now we have two random variables, X and Z.
+10:24 - And X is just 4X.
+10:27 - Now, let's say that we want to evaluate
+10:29 - the-- we want to figure out what is
+10:31 - the PDF of this new random variable
+10:33 - that we've constructed just by multiplying by 4.
+10:36 - And one thing you might be tempted to do
+10:38 - is to do something like this.
+10:41 - And this is going to be wrong.
+10:42 - So the probability, let's say, if you want to evaluate it at 4,
+10:46 - is the probability that X takes value 4.
+10:50 - And we know that X is 4Z.
+10:52 - And so this is kind of the probability
+10:54 - that Z takes value 1, which is what we had before,
+10:58 - which is 1/2.
+11:00 - And this is wrong.
+11:02 - This is not the right answer.
+11:03 - It's pretty clear that 4Z's is going
+11:06 - to be a uniform random variable between 0 and 8.
+11:09 - And so the density is actually 1/8
+11:12 - because it has to integrate to 1 over the integral--
+11:15 - over the interval, right?
+11:17 - So this replacing change of variables inside the PDF
+11:23 - calculation is not correct.
+11:26 - And what you have to do is you have
+11:28 - to use the change of variable formula, which you might
+11:31 - have seen in previous classes.
+11:34 - The idea is that when you apply some invertible transformation,
+11:40 - and so you define Z, X as f of Z.
+11:48 - F is invertible, and so equivalently you
+11:51 - can get Z by applying the inverse of f to X, which
+11:55 - we're going to denote h.
+11:57 - So h is the inverse of f, or h applied
+12:01 - to f is the identity-- is the identity function.
+12:05 - And if you want to get the density of this random variable
+12:09 - that we get by transforming Z through this invertible mapping,
+12:14 - it is a kind of p of z evaluated at h of X. So
+12:18 - that's the kind of thing we're doing before,
+12:20 - but you have to rescale by the absolute value of the derivative
+12:24 - of this function h.
+12:27 - And so in the previous example, let's say,
+12:31 - the function is just multiplying by 4.
+12:35 - And so if you were to apply the formula, in this case,
+12:38 - the inverse function is just dividing by 4.
+12:43 - And then the derivative of h is just 1/4.
+12:47 - It's just a constant.
+12:49 - And so if we want to evaluate the probability
+12:51 - of this transformed random variable evaluated at 4,
+12:54 - what you do is you evaluate the probability of Z at 4 over 4,
+13:00 - which is 1, but then you have to multiply by this scaling
+13:04 - factor, which is the derivative evaluated at 4, which is--
+13:08 - or the absolute value of the derivative.
+13:10 - And this is giving us the right answer, 1/8.
+13:15 - So this part here, Pz of 1, is kind of the naive thing
+13:21 - we try to do that was wrong.
+13:23 - And it becomes right if you account for this derivative of h
+13:28 - term that is rescaling things.
+13:32 - So then we get 1/8.
+13:34 - And a more interesting example could be something like,
+13:38 - if instead of multiplying by 4, we take the--
+13:41 - we apply an exponential function.
+13:44 - So we have Z, which again, is something simple,
+13:47 - a uniform random variable between 0 and 2.
+13:50 - But now we define X as the exponential of Z.
+13:54 - And now we can work out what is the density
+13:56 - of this new random variable that we get through this--
+13:59 - through this transformation.
+14:01 - What is the inverse of the exponential function?
+14:06 - The log, right?
+14:08 - So h of X is the log.
+14:10 - And then we can apply.
+14:12 - If you want to evaluate the density
+14:14 - of this random variable X at a particular point, what we do
+14:18 - is we evaluate the density of Z at the inverse,
+14:21 - and then we scale by the derivative.
+14:25 - So we take X, we invert it to get the corresponding Z.
+14:30 - And there is only one Z that maps to that
+14:32 - X. We evaluate the density of that Z
+14:35 - under the prior distribution p of z.
+14:38 - And then we always rescale by this--
+14:40 - by this derivative.
+14:43 - And so in this case, p of z is uniform,
+14:47 - so it's just the 1 1/2 everywhere because it's uniform
+14:54 - between 0 and 2.
+14:55 - And then the derivative of the logarithm
+14:58 - is 1/X. And so now we see that the PDF
+15:02 - of this random variable X has this more interesting shape.
+15:07 - It's 1/2 X.
+15:09 - So we started out with something pretty simple,
+15:11 - just a constant basically.
+15:13 - And by applying a invertible transformation,
+15:16 - we got a new random variable which
+15:17 - is a more interesting kind of shape.
+15:19 -
+15:23 - Again, hopefully this is just a recap of formulas
+15:27 - that you've seen before, but this
+15:29 - is kind of a change of variable that we're doing here.
+15:32 - And you have to account for this derivatives
+15:38 - when you apply a change of variables here.
+15:42 - Now, let's see.
+15:44 - This is the formula for the 1D case.
+15:47 - And you can see a proof actually.
+15:50 - It's actually pretty simple.
+15:53 - We can work out the level of the CDFs.
+15:55 - So the probability that this new transformed random variable
+15:58 - is less than a particular number is just
+16:00 - the CDF evaluated at one point.
+16:03 - Now, we know that X is just f of Z. So the probability
+16:07 - that X is less than or equal to some number is
+16:10 - the probability that f of Z is less than
+16:12 - or equal to that number.
+16:14 - Then if you apply the inverse of f
+16:17 - on both sides of this inequality, which
+16:19 - you can because it's monotonic, it's
+16:22 - a monotonic function, then you get
+16:24 - that expression, which is just the CDF of Z evaluated
+16:29 - at h of x.
+16:32 - And now, just we know that the PDF is
+16:35 - just the derivative of the CDF.
+16:39 - So if you want to get the density of this random variable,
+16:43 - you just take the derivative of the left-hand side
+16:45 - or equivalently you can take the derivative of this expression
+16:49 - that we have here.
+16:50 - And then you just use chain rule.
+16:52 - So you get exactly what we had before,
+16:54 - where you need to evaluate the original variable at h of x.
+17:00 - You take x you invert it, you evaluate the density
+17:03 - at the corresponding Z point.
+17:05 - But then because of the chain rule,
+17:08 - you have to multiply by h prime.
+17:10 -
+17:15 - That's where the format comes from.
+17:17 - And you can see, yeah, you need an absolute value because I
+17:20 - guess it could be decreasing.
+17:22 -
+17:25 - And now, there's an equivalent way
+17:31 - of writing the same expression, which will turn out
+17:34 - to be somewhat useful.
+17:37 - If you want to compute the derivative of the inverse
+17:39 - of a function, you can actually get it
+17:43 - in terms of the derivative of the original function.
+17:48 - There is this simple calculus formula
+17:52 - that you might have seen before.
+17:53 - So if you want to compute the derivative of the inverse
+17:56 - of a function, which is h prime, which is what we have here,
+17:58 - you can get it in terms of the derivative of f,
+18:01 - which is the original function evaluated at the inverse point.
+18:06 - So an equivalent way of writing what we have here
+18:10 - is that you can just evaluate the original PDF
+18:15 - at the inverse point.
+18:17 - And then you can multiply by 1 over f prime of z,
+18:20 - where f is the forward map.
+18:23 - So you can basically either write it
+18:25 - in terms of the derivative of the inverse or you can write it
+18:28 - in terms of the derivative of the forward map
+18:30 - and you just do one over instead of--
+18:33 - these two things are the same.
+18:35 - OK, so that's the easy thing.
+18:37 - And now let's see what happens when we transform random vectors
+18:42 - because if you think about VAE, we
+18:45 - want to transform random vectors into random vectors
+18:48 - so we need to understand what happens if we apply
+18:52 - an invertible transformation to a random variable that
+18:55 - has a simple distribution.
+18:57 - So let's say our random variable is a--
+19:00 - our random vector Z is now uniform over this unit
+19:06 - hypercube.
+19:07 - So we have n dimensions, and each one of them is uniform.
+19:14 - And we want to understand what happens if we
+19:16 - transform that random variable.
+19:19 - And as the-- just to get some intuition,
+19:22 - we can start with linear transformations
+19:24 - just like before.
+19:25 - We started by saying multiply by 4 and see what happens.
+19:30 - We can do the same thing, and instead
+19:32 - look at what happens if we linearly
+19:33 - transform a random vector, which means that we basically
+19:37 - just multiply it by a matrix A.
+19:41 - And we want this transformation to be invertible,
+19:44 - which in this case just means that the matrix itself
+19:47 - has to be invertible so that you can go-- there
+19:50 - is a unique correspondence between X and Z.
+19:54 - And we're going to denote the inverse of h with W.
+20:02 - And the question is, how is X distributed?
+20:05 -
+20:08 - And what happens if you start with basically uniform
+20:14 - and then you pass it through a matrix?
+20:16 - You multiply it by a matrix, you get another random variable.
+20:19 - How is that distributed?
+20:21 - You see that A is linear.
+20:23 - It's going to stretch things somehow.
+20:27 - And essentially what happens is that it's mapping the hypercube
+20:33 - to a parallelotope, which is just
+20:37 - kind of like a parallelogram.
+20:39 - And so in 2D it would look something like this.
+20:42 - So you have a uniform.
+20:44 - So if n is 2, then you have a Z is
+20:47 - distributed uniformly between 0 and 1 in both directions.
+20:51 - So it's less uniform in this square.
+20:54 - And then what happens if you multiply it
+20:55 - by this matrix A, which is just a, b, c, d?
+20:58 - You're going to get this parallel-- you're
+21:00 - going to get a uniform distribution
+21:02 - over that parallelogram.
+21:04 - You can see that the vertices correspond
+21:07 - to what you would get.
+21:08 - If you were to multiply the matrix by 0, 0,
+21:11 - you're going to get zero 0, 0.
+21:12 - If you multiply this matrix by 1, 0, this corner,
+21:16 - you're going to get this corner a, b.
+21:17 - And if you multiply by 0, 1, you get this corner c, d.
+21:21 - And if you multiply by 1, 1, you get this corner up here,
+21:24 - and then it's all the other points.
+21:27 - OK.
+21:27 - So now we have some intuition for what happens here, Z, X,
+21:33 - which is what we got in multipl-- while multiplying
+21:36 - A by Z. It should be a uniform random variable
+21:39 - over this red area essentially.
+21:43 - And so what is the density?
+21:46 - Well, we need to figure out what is the area
+21:48 - or the volume of that--
+21:51 - of that object, because if it's uniform,
+21:53 - then it's just going to be 1 over the total area of that--
+21:57 - of that parallelogram, of this red thing here.
+22:01 - And I don't know if you might have seen this,
+22:04 - but you can get the area of the parallelogram
+22:07 - by basically computing the determinant of the matrix.
+22:12 - And here, there is a geometric proof
+22:15 - showing that indeed if you can get
+22:18 - the area of the parallelogram by taking
+22:20 - the area of this rectangle and subtracting off
+22:25 - a bunch of parts, you get the that expression.
+22:28 - So this is the determinant, a, d minus c, b.
+22:32 - And that's the area of the parallelogram.
+22:36 - And so what this means is that X is
+22:40 - going to be uniformly distributed
+22:42 - over this parallelotope of area absolute value
+22:46 - of the determinant of A, which means that the density of X
+22:52 - is going to be the density of the original variable evaluated
+22:56 - at the inverse.
+22:57 - And then, again, we have to basically divide
+23:00 - by the total area, which is the determinant of--
+23:05 - the absolute value of the determinant of this matrix.
+23:09 - All right, and so what equivalently because--
+23:13 -
+23:16 - if W is the inverse of A, then the determinant of W
+23:20 - is going to be 1 over the determinant of A.
+23:22 - And so you can equivalently, just like before,
+23:25 - write it in terms of the derivative of the inverse
+23:28 - of the mapping defined by A, which is
+23:33 - just the determinant of W here.
+23:36 - And so you take X, you map-- you should take a point in here,
+23:40 - you map it back to the unit cube by multiplying it by W,
+23:46 - which gives you the corresponding X--
+23:48 - the corresponding Z, sorry, you evaluate the density.
+23:51 - And then you have to take into account
+23:53 - the fact that basically the volume is stretched by applying
+23:57 - this linear transformation.
+23:59 - And so things have to be normalized,
+24:01 - and so you have to divide by the total area
+24:04 - to get a uniform random variable.
+24:06 - And just like before, you have to account by basically
+24:11 - by how much the volume is shrinked or stretched when you
+24:15 - apply a linear transformation.
+24:17 - The question is, does it only apply to a unit hypercube?
+24:20 - No.
+24:20 - It applies for this formula here as general.
+24:24 - Whatever is the density you begin with,
+24:27 - as long as you apply an invertible transformation,
+24:30 - you can get the density of the Wx--
+24:34 - or WZ, sorry, I think I have here--
+24:36 - yeah, or AZ.
+24:38 - So if Z has an arbitrary density Pz, you can get the density of X
+24:43 - through this Formula.
+24:45 - And in which case Pz might not be uniform,
+24:48 - it could be a Gaussian or something,
+24:50 - this still can still be used.
+24:52 -
+24:56 - So again, we are getting towards this idea
+24:58 - of starting from something simple, the Z, transforming it,
+25:02 - and then being able to somehow evaluate
+25:05 - the density of the transformed random variable.
+25:09 - So recall, this is kind of a VAE.
+25:12 - We have a latent variable Z. We have the observed variable X.
+25:15 - But now through these formulas, we
+25:17 - are able to evaluate the marginal probability of a data
+25:21 - point without having to compute integrals,
+25:23 - without having to do variational inference.
+25:25 - We get it through this calculus formula--
+25:29 - by these formulas basically.
+25:32 - And the key idea is that given an X,
+25:35 - there is only one corresponding Z.
+25:37 - And so it's just a matter of finding it by multiplying it
+25:40 - by X, by W in this case, and then taking
+25:43 - into account the fact that the geometry changes a little bit.
+25:47 -
+25:51 - And now, and notice, yeah, this is the same--
+25:57 - not surprisingly, this is strictly
+26:00 - more general than what we had before in the 1D case,
+26:03 - but it's kind of the same thing.
+26:05 - Yeah, so the question is, is this P of x, is this a PDF?
+26:10 - If you integrate over all possible values of X,
+26:12 - do you get 1?
+26:13 - And you have-- basically the reason you have to apply--
+26:17 - you have to divide by the determinant is to make sure that
+26:20 - it is indeed uniform because if you were not to do that,
+26:25 - then you would--
+26:26 - it's kind of like the wrong calculation
+26:29 - that we did at the beginning, where you just map it back
+26:31 - and you evaluate.
+26:32 - But to make sure that things are normalized,
+26:34 - you have to take into account the fact
+26:36 - that the area of that parallelogram
+26:38 - might grow a lot by applying certain kinds of A's or it
+26:42 - might shrink a lot if you apply very small coefficients.
+26:47 - And so you have to renormalize everything
+26:49 - through this determinant.
+26:51 - That's why they are called normalizing flows
+26:53 - because this change of variable formula
+26:55 - takes care of the normalization for you
+26:57 - and guarantees that what you get is indeed a valid PDF.
+27:01 -
+27:07 - Cool.
+27:07 - Now, we know how to do these things
+27:12 - for linear transformations.
+27:15 - What we want to do is we want to use deep neural networks.
+27:18 - So we need to understand what happens if we apply nonlinear
+27:25 - transformations--
+27:26 - invertible nonlinear transformations.
+27:30 - So now, instead of just multiplying by a matrix,
+27:34 - we want to feed X into some kind of neural network
+27:37 - and get an output Z. And assuming
+27:40 - that somehow we are able to construct a neural network that
+27:43 - is invertible, we still need to understand
+27:45 - how that changes the distribution of the variables.
+27:48 - So if you have a simple random variable Z,
+27:51 - you feed it through a neural network f,
+27:54 - the output is some other random variable X.
+27:57 - And we need to somehow understand
+27:59 - what is the PDF of that object.
+28:03 - And it turns out that it's basically the same thing,
+28:06 - that if you understand what happens in the linear case,
+28:10 - all you have to do is to basically linearize
+28:12 - the function by doing essentially
+28:14 - a Taylor approximation.
+28:15 - So you compute the Jacobian of the function,
+28:18 - and then it's the same formula.
+28:20 - It's the determinant of the Jacobian,
+28:21 - which is a linearized approximation to the function.
+28:26 - And so, again, this is probably something
+28:28 - you might have seen in some calculus class,
+28:31 - but it's essentially the same formula.
+28:34 - So if you have, again, a random variable X that
+28:39 - is obtained by feeding a simple random variable
+28:42 - through some kind of invertible neural network f,
+28:45 - you can work out the density of the output
+28:48 - of the neural network, which is X, by basically computing--
+28:52 - by inverting it and computing the density of the input that
+28:56 - generated that particular output.
+28:59 - And as usual, you have to account
+29:01 - for how much the volume is stretched locally,
+29:07 - which is just the determinant of the Jacobian
+29:12 - of the inverse mapping.
+29:15 - Just like before, we were always looking at the derivative
+29:19 - of the inverse mapping.
+29:20 - In the 1D case, the multivariate extension
+29:25 - is the determinant of the Jacobian.
+29:28 -
+29:30 - And so just, again, as a sanity check,
+29:35 - recall the simple formula that we
+29:36 - proved was something like this, which
+29:39 - is exactly what you would get if f is just a scalar function.
+29:46 - So instead of having determinant of Jacobian, you just have--
+29:51 - or absolute value of the determinant of the Jacobian,
+29:53 - you just have absolute value of the derivative
+29:56 - of the inverse of the function.
+29:57 -
+30:02 - And let's see.
+30:05 - And just like before, if you have an invertible matrix,
+30:10 - the determinant of the inverse is the--
+30:14 - it's one over the determinant of the original matrix.
+30:19 - And so you can equivalently write things,
+30:22 - just like before, in terms of the Jacobian
+30:24 - of the forward mapping.
+30:26 - So here things are--
+30:28 - if you go from Z to X, then the formula basically
+30:33 - involves the Jacobian of the mapping from X
+30:37 - to Z. You can also write things in terms
+30:43 - of the Jacobian of the mapping and, just like before,
+30:48 - you just do one over instead.
+30:52 - You can also compute directly the Jacobian of f,
+30:55 - and then you compute the determinant of that,
+30:58 - and then you do one over.
+30:59 - And that's the same thing, just like before.
+31:02 -
+31:05 - Remember, before we had the formula where you could write
+31:07 - things in terms of h or you could write things
+31:10 - in terms of f, and this is the same thing.
+31:14 - But this might be computationally, as we'll see,
+31:18 - sometimes it's easier depending on whether you model--
+31:23 - when you start using neural networks to model f,
+31:26 - it might be more convenient to use one or the other.
+31:28 - And that's the reason these formulas are handy.
+31:33 - This is just math so far.
+31:35 - We haven't really built a generative model.
+31:36 - But yeah, you should think of the Z
+31:38 - as having some simple distribution
+31:41 - and then you pass them through a decoder f, which is now
+31:45 - an invertible transformation, and then
+31:47 - you get your samples, X images out.
+31:51 -
+31:55 - And now you can evaluate the density
+31:58 - over the images, which is what you
+31:59 - need if you want to do maximum likelihood through this formula.
+32:05 - So you don't have to do variational inference,
+32:06 - you don't have to compute elbows,
+32:08 - you don't have to use an encoder to the extent
+32:11 - that you can invert the mapping by construction.
+32:14 - Then you're done.
+32:17 - You just need to invert and take into account this changing
+32:22 - volume essentially given by the linearized transformation.
+32:27 - The question is, do they have to have the same dimension?
+32:29 - Are they-- do they need to be continuous?
+32:31 - So yeah, they need to be to have the same dimension, which
+32:33 - is what we were discussing before if you
+32:35 - want things to be invertible.
+32:37 - How does it apply to images?
+32:39 - Well, you can think of images as being continuous.
+32:41 - I guess the kind of measurements that you
+32:44 - get are often discrete because you have maybe
+32:47 - some kind of fixed resolution.
+32:50 - But you can pretend that things are continuous
+32:53 - or you can add a little bit of noise to the training data
+32:58 - if you want.
+33:00 - It's basically not a problem, and you can train these models
+33:03 - on images.
+33:04 - If f is not really invertible, then the formula doesn't quite
+33:08 - work and you're back in VAE land, which basically means
+33:12 - that there could be multiple Z's that map to the same X.
+33:16 - And so if you want to compute the probability of having
+33:18 - generated this particular X, you're no longer guaranteed
+33:22 - that there is only one Z, you just
+33:23 - have to compute it and apply the formula.
+33:25 - You would still have to work through all the possible Z's
+33:29 - that produced that X.
+33:32 - And people have looked at extensions
+33:33 - of these models, where maybe you're
+33:35 - guaranteed that there is only a up to K. It's almost invertible.
+33:40 - If you know all the possible-- all you have to know
+33:43 - is basically all the possible X's
+33:45 - that could have produced-- all the possible Z's that could
+33:47 - have produced any particular X.
+33:50 - As long as you construct things such
+33:52 - that that's always the case, then
+33:54 - you can still apply similar tricks.
+33:56 - But in general if there could be a lot, if it's
+33:59 - very-- it's highly non-invertible, then
+34:02 - you're back in VAE land.
+34:03 - And then you need some kind of encoder that guesses,
+34:05 - that inverts the function for you,
+34:08 - and you have to train them jointly so that the encoder is
+34:11 - doing a good job, but inverting the decoder.
+34:14 - And so then you might as well use the ELBO.
+34:17 -
+34:22 - Cool.
+34:23 - And just let's see one example just worked out
+34:27 - what that actually means, just to be a little bit
+34:29 - more concrete.
+34:30 - You might imagine that you have the prior.
+34:34 - That's just two random variables, Z1 and Z2,
+34:37 - with some kind of joint density.
+34:40 - Maybe it could be Gaussian.
+34:41 -
+34:44 - And then we have this invertible transformation.
+34:46 - And this is a multivariate function,
+34:50 - two inputs, two outputs.
+34:53 - So you can, for example, denote it
+34:54 - in terms of two scalar function U1 and U2.
+34:59 - So each one of them takes two inputs and map it to one scalar.
+35:04 - So it's multivariate, two inputs, two outputs.
+35:08 - And we're assuming that these things are invertible.
+35:11 - So there is an inverse mapping v, which always maps you back.
+35:15 - And again, it's two inputs, two outputs in this case.
+35:21 - And then we can define the outputs.
+35:24 - So if you take this simple random variables Z1 and Z2
+35:27 - and you feed them through this neural network, which
+35:30 - takes two inputs and produces two outputs,
+35:33 - you're going to get two random variable, X1
+35:36 - for the first output of the network
+35:38 - and X2 for the second output of the network
+35:41 - just by applying U1 and U2.
+35:45 - And similarly, you can go back.
+35:49 - Given the outputs, you can get the inputs
+35:52 - by using these v functions.
+35:55 - Two inputs, two outputs again.
+35:58 - And what you can try to do is, you
+36:00 - can try to get the density over the outputs
+36:03 - of this neural network U.
+36:06 - So how do you figure out what is the density at X1 and X2
+36:12 - when these random variables are obtained by transforming Z
+36:16 - through some neural network u?
+36:19 - And it's usually-- it's always the same thing, where
+36:23 - what you do is you take the outputs, which are X1 and X2,
+36:26 - you invert the network.
+36:28 - So you figure out which were the two inputs that produced
+36:31 - the outputs that we have.
+36:33 - And then you evaluate the density, the original density,
+36:36 - the input density at those points.
+36:39 - This is the same calculation that we did,
+36:43 - the wrong calculation that we did at the beginning.
+36:45 - Just invert and evaluate the original density
+36:49 - at the inverted points.
+36:50 - And then as usual, you have to fix things
+36:53 - by looking at how the volume is stretched essentially locally.
+37:00 - And what you would do in this case,
+37:01 - is you would get the absolute value
+37:04 - of the determinant of the Jacobian of the inverse mapping.
+37:09 - The inverse mapping is v. The Jacobian
+37:12 - is this matrix of partial derivatives.
+37:15 - So we have two outputs, two inputs.
+37:18 - So you have four partial derivatives
+37:23 - that you can get, first output with respect
+37:25 - to the first input, first output with respect
+37:28 - to the second input, second output with respect
+37:31 - to the first input, and so forth.
+37:35 - That's a matrix.
+37:36 - You get the determinant of that matrix,
+37:38 - you get the absolute value, and that gives you the density
+37:41 - that you want.
+37:41 -
+37:45 - To what extent you can compute that, you
+37:47 - have a way of evaluating densities for the outputs.
+37:52 - Or equivalently, you can do it in terms
+37:55 - of the Jacobian of u, which is the network that you
+37:58 - use to transform the simple variable.
+38:00 - And so, again, you can evaluate it directly at the--
+38:04 - at the Z's, the corresponding inputs, and then you
+38:08 - apply this--
+38:10 - the Jacobian of the other-- the mapping in the other direction.
+38:14 -
+38:18 - And we'll see that sometimes one versus the other
+38:21 - could be more convenient computation.
+38:24 - The question is, when are flow models suitable?
+38:26 - And flow models are pretty successful.
+38:28 - In fact, you can even think of diffusion models
+38:31 - as a certain kind of flow model.
+38:34 - And if you want to evaluate which diffusion models are state
+38:37 - of the art right now for images, video, speech,
+38:40 - there is an interpretation of diffusion models as flow models,
+38:44 - infinitely deep flow models.
+38:46 - And these formulas here are what you need-- what you use to--
+38:51 - or an extension of the formula is basically
+38:54 - what you use to evaluate likelihoods in diffusion models.
+38:58 - So there is going to be two interpretations of them.
+39:01 - And flow models help you if you want to evaluate likelihoods,
+39:05 - because if you have-- if you think of it as a stack VAE,
+39:07 - we don't have likelihoods.
+39:09 - If you want likelihoods, then you
+39:10 - can think of them as flow models.
+39:12 - And then you can get likelihoods through exactly this form.
+39:15 - So the question is, yeah, how do you--
+39:18 - I guess it seems like we need to do a bunch of things.
+39:21 - You need to be able to invert the function.
+39:23 - You need to be able to compute the Jacobian.
+39:27 - You need to get the determinant of the Jacobian, which
+39:29 - in general the determinant of a matrix
+39:31 - is kind of an n-cube operation.
+39:34 - So what's going to come next is how you parameterize functions
+39:40 - with neural networks that have the properties we
+39:42 - want so they're easy to invert and they give--
+39:47 - it's easy to compute Jacobians and it's
+39:48 - easy to compute determinant of Jacobians.
+39:52 - The pure version of a diffusion model
+39:54 - would be defining pixel space.
+39:55 - And the latent variables have the same dimension as the--
+39:59 - as the inputs.
+40:00 - And that's why you can think of it as a flow model.
+40:03 - Yeah, so the question is, can you still think of them
+40:05 - as latent variables?
+40:06 - Are-- you-- I mean, it is a latent variable to some extent,
+40:11 - but then it has the same dimensionality so it doesn't
+40:13 - really compress in any way.
+40:16 - It has a simple distribution.
+40:18 - It is distributed in a simple form which
+40:21 - is desirable to some extent.
+40:23 - But it's really more like a change of variables.
+40:25 - It's like you're measuring things in pixels or meters,
+40:31 - and then you change and you start measuring things in feet.
+40:35 - But it's not really changing anything.
+40:37 - You're just really changing the units of measure in some sense.
+40:41 - At least if you were to do just linear scaling,
+40:43 - that would just be changing the units of measure.
+40:45 - Here, you are doing nonlinear, so you're
+40:47 - changing the coordinate system in more complicated ways,
+40:51 - but there is no loss of information.
+40:53 - Everything is invertible.
+40:55 - And so it's really just looking at the data
+40:57 - from a different angle that makes things
+41:00 - more simpler to model, because if you start
+41:04 - looking at things through the lens of f inverse,
+41:10 - then things become Gaussian.
+41:11 - And so somehow by using the right units
+41:15 - of measure or by looking at the-- by changing
+41:18 - the axes in the right way and stretching them
+41:20 - in the right way, things become much easier to model.
+41:24 - And so that's a better way to probably think what
+41:26 - flow models are really doing.
+41:28 - The question I guess is whether this can be applied
+41:30 - to discrete or whether--
+41:32 - yeah, so there are extensions of this ideas to discrete,
+41:37 - but then you lose a lot of the mathematical-- a lot
+41:39 - of the mathematical and computational advantages
+41:42 - really rely on continuity.
+41:44 - So people have looked at--
+41:46 - I mean, the equivalent of an invertible mapping in a discrete
+41:50 - space would be some kind of permutation-- some kind of--
+41:54 - yeah, kind of a permutation essentially.
+41:56 - And so people have tried to discover ways to permute things
+42:03 - in a way that makes them easier to model,
+42:04 - but you lose a lot of the mathematical structure.
+42:07 - And so it's not easy to actually do.
+42:10 - After you've trained a model, then you
+42:12 - can certainly discretize.
+42:14 - But for training, you really want
+42:16 - to think of things as being continuous.

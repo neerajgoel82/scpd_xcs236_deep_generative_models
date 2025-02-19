@@ -1,1 +1,539 @@
-
+00:00 -
+00:05 - SPEAKER: So the plan for today is
+00:06 - to finish up the VAE slides that we didn't cover on Monday.
+00:12 - And then we'll start talking about flow models, which
+00:15 - are going to be yet another class of generative models
+00:18 - with a different sort of trade-offs.
+00:20 - So the thing that I really wanted to talk about
+00:25 - is this interpretation of a variational autoencoder
+00:29 - or a VAE as an autoencoder, right?
+00:32 - So we've derived it just from the perspective
+00:36 - of, OK, there is a latent variable model
+00:38 - and then there is this variational inference
+00:40 - technique for training the model, where you have
+00:46 - the decoder which defines the generative process p,
+00:49 - and then you have this encoder network
+00:52 - q that is used to essentially output
+00:57 - the variational parameters that are supposed to give you
+01:01 - a decent approximation of the posterior
+01:03 - under the true generative model.
+01:06 - And we've come up with this kind of training objective, where
+01:13 - for every data point, you kind of have a function that depends
+01:16 - on the parameters of the decoder,
+01:18 - the real generative model theta and the encoder phi.
+01:23 - And we've seen that this objective function
+01:27 - is a lower bound to the true marginal probability of a data
+01:30 - point.
+01:30 - And it kind of makes sense to try
+01:32 - to jointly optimize and jointly maximize this
+01:36 - as a function of both theta and phi.
+01:38 - And you can see intuitively what's going on here.
+01:41 - We're saying that for every data point x,
+01:43 - we're going to use q to try to guess
+01:46 - possible completions, possible values for the latent variables
+01:49 - z.
+01:49 - So that's why there's an expectation with respect
+01:52 - to this distribution.
+01:53 - And then we basically look at the log likelihood of the data
+01:58 - point after we've guessed what we
+02:01 - don't know using this inference distribution, this encoder,
+02:04 - this q distribution.
+02:06 - And if you were to just optimize these first two pieces,
+02:14 - essentially q would be incentivized
+02:17 - to try to find completions that are
+02:19 - most likely under the original generative model.
+02:23 - And instead, there is also kind of this regularizer,
+02:27 - this other term here where we also
+02:29 - look at the probability of the completions under q.
+02:33 - And this is basically corresponds to that entropy
+02:37 - of the variational distribution q
+02:39 - term that is kind of encouraging the distribution
+02:44 - q that the inference distribution to spread out
+02:46 - the probability mass.
+02:48 - So not just try to find the most likely z,
+02:52 - but also try to find all possible z's that
+02:55 - are consistent with the x that you have access to.
+03:00 - And we have seen that to some extent,
+03:03 - if your q is sufficiently flexible,
+03:06 - then you might be able to actually--
+03:08 - and it's actually able to be equal to the true conditional
+03:14 - distribution p of z given x, then this objective function
+03:19 - actually becomes exactly the log marginal probability over x,
+03:23 - which is the traditional maximum likelihood objective.
+03:27 - And so we've motivated it from that perspective.
+03:29 - And everything made sense.
+03:32 - We haven't really discussed why it's
+03:34 - called the variational autoencoder, like what's
+03:36 - the autoencoding flavor here?
+03:39 - And we can see it if you unpack this loss a little bit.
+03:45 - In particular, what you can do is you can add and subtract
+03:50 - the prior distribution over the latent
+03:54 - variables that you used in your generative model, which
+03:57 - recall usually is just a Gaussian distribution over z.
+04:00 - So when you sample--
+04:02 - in your variational autoencoder, you sample a latent variable
+04:05 - according to some prior p of z, then you
+04:08 - feed the z into the decoder, that
+04:11 - produces parameters for p of x given z,
+04:14 - and then you sample from p of x given z.
+04:16 - So if you add and subtract this quantity in here,
+04:20 - then you end up and then you look at the joint
+04:27 - over x and z divided by the marginal over z
+04:29 - is just the conditional distribution of x given z, which
+04:32 - is just the decoder.
+04:34 - And then you can see that you end up with another term
+04:37 - here, which is the KL divergence between the inference
+04:41 - distribution and the prior.
+04:42 -
+04:46 - And so what does this objective look like?
+04:51 - If you were to actually evaluate it and do
+04:54 - some kind of Monte Carlo approximation, what you would do
+04:57 - is you would have some data point, which
+05:00 - gives you the x component.
+05:02 - So it could be an image, like the one you see on the left.
+05:04 - That's the input.
+05:05 - That that's the ith data point.
+05:08 - Then when you want to compute this expectation with respect
+05:12 - to q, what you would do is you can approximate that
+05:16 - by Monte Carlo.
+05:17 - And so what you would do is you would draw
+05:18 - a sample from q of z given x.
+05:22 - And recall that q of z given x is just
+05:26 - some other neural network that basically takes xi as an input,
+05:30 - you feed it in.
+05:31 - And then as an output some variational parameters
+05:35 - over the distribution--
+05:39 - the distribution over the latent variables.
+05:42 - And so if q of z given x describes
+05:46 - Gaussian distributions, the output
+05:48 - of this first neural network, which is the encoder
+05:51 - might be a mu and a sigma, which basically defines
+05:55 - the kind of Gaussian you're going to use
+05:57 - to guess what are likely--
+06:00 - what are reasonable values of the latent variables
+06:03 - given what you know, given xi.
+06:05 - And then what you could do is you could
+06:07 - sample from this distribution.
+06:08 - So you sample with a Gaussian, with mean and variance
+06:13 - defined by what you get by fitting the image
+06:16 - through an encoder.
+06:18 - Then we can look at--
+06:20 - so yeah, this is what I just said.
+06:22 - So there is this encoder, one neural network
+06:24 - that would give you parameters.
+06:26 - And then you sample from that Gaussian distribution.
+06:29 - Then we can essentially look at the first term here
+06:32 - of the loss, which you can think of it as a reconstruction loss.
+06:36 - So essentially, what we're doing is we're evaluating p of xi
+06:43 - given this latent variable z that we've sampled.
+06:48 - And essentially, what we're saying is we are--
+06:53 - if you were to sample from this distribution,
+06:56 - you would sample a data point from a Gaussian
+07:00 - with parameters given by what you get from the decoder.
+07:04 - And that would essentially produce another image out.
+07:09 - And if you actually look at this likelihood term here,
+07:14 - it would essentially tell you how likely was the original data
+07:19 - point according to this scheme.
+07:21 - And so it's kind of if p of x given z is a Gaussian,
+07:24 - it's some kind of reconstruction loss
+07:26 - that tells you how well can you reconstruct the original image,
+07:31 - given this latent variable z?
+07:34 - And so the first term has some kind of autoencoding flavor.
+07:39 - And if you didn't have the second,
+07:41 - term it would essentially correspond
+07:43 - to an autoencoder that is a little bit stochastic.
+07:46 - So in a typical autoencoder, you would take an input,
+07:49 - you would map it to a vector in a deterministic way,
+07:52 - then you would try to go from the vector back to the input.
+07:55 - This is kind of a stochastic autoencoder, where
+07:58 - you take an input, you map it to a distribution over latent
+08:02 - variables, and then these latent variables that you
+08:05 - sample from the distribution should be useful,
+08:09 - should be good at reconstructing the original input.
+08:14 - And so yeah, the first term essentially
+08:18 - encourages that what you get by feeding these latent variables,
+08:25 - this autoencoding objective.
+08:27 - So the output that you get is similar to the input
+08:30 - that you feed in.
+08:32 - So this is just the first term.
+08:33 - So if you were to just do that, that's
+08:35 - a fine way of training a model.
+08:37 - And you would get some kind of autoencoder.
+08:40 - Now there is a second term here that is this KL divergence
+08:43 - term between q and the prior distribution
+08:49 - that we used to define the VAE.
+08:51 - That term, so that's the auto-encoding loss.
+08:55 - The second term is basically encouraging this latent
+08:58 - variables that you generate through the encoder
+09:01 - to be distributed similar as measured by KL divergence
+09:08 - to this Gaussian distribution that we
+09:12 - use in the generative process.
+09:15 - And so this is saying that not only you
+09:19 - should be able to reconstruct well,
+09:21 - but the kind of latent variables that you use to reconstruct
+09:25 - should be distributed as a Gaussian random variable.
+09:29 - And if that's the case, then you see
+09:33 - why we would get a generative model this way,
+09:35 - because if you just have the first piece,
+09:37 - you have an auto encoder, that's great.
+09:40 - But you don't know how to generate new data points.
+09:42 - But if you somehow have a way of generating
+09:46 - z's just by sampling from a Gaussian
+09:49 - or by sampling from a simple distribution,
+09:52 - then you can trick the decoder to generate reasonable samples,
+09:57 - because it has been trained to reconstruct images
+10:00 - when the z's came from the--
+10:03 - were produced by the encoder.
+10:04 - And now if these z's have some simple distribution,
+10:07 - and so you have some way of generating the z's yourself just
+10:10 - by sampling from a Gaussian, then you essentially
+10:13 - have a generative model.
+10:15 - And that's why it's called a variational autoencoder,
+10:17 - because you can think of it as an autoencoder that
+10:21 - is regularized so that the latent variables have
+10:24 - a specific shape, have a particular kind of distribution,
+10:28 - which is just the prior of your VAE.
+10:30 - So that you can also generate- you
+10:33 - can use it as a generative model, essentially.
+10:35 - Well, if you train an autoencoder,
+10:38 - you train it on a training set and then
+10:40 - you hope that it generalizes.
+10:42 - So you would hope that it might still
+10:44 - be able to reconstruct images that
+10:46 - are similar to the ones you've seen during training.
+10:49 - And that would still be achieved by this first term,
+10:53 - right, to the extent that the model generalizes,
+10:55 - which is always a bit tricky to quantify.
+10:58 - But to the extent that the autoencoder generalizes,
+11:00 - it's fine.
+11:01 - But you still don't have a way of generating fresh data
+11:04 - points right, because you don't have a way to start the process.
+11:08 - The process always starts from data and produces data out.
+11:11 - But somehow you have to hijack this process
+11:14 - and fit in latent variables by sampling
+11:17 - from this prior distribution.
+11:19 - And this term here--
+11:22 - this KL divergence term here encourages the fact
+11:26 - that, that is not going to cause a lot of trouble
+11:28 - because the z's that you get by sampling from the prior
+11:31 - are similar to the ones that you've seen
+11:33 - when you train the autoencoder.
+11:36 - So this is a stochastic autoencoder in the sense
+11:38 - that the mapping here q is stochastic.
+11:42 - I guess technically you could make it very almost
+11:45 - deterministic, like you're allowed to choose
+11:47 - any distribution you want.
+11:49 - But that might not be the optimal way
+11:51 - because there could be uncertainty over.
+11:55 - Recall that this q should be close to the true conditional
+11:57 - distribution of z given x under p.
+12:00 - And so to the extent that you believe that, that conditional
+12:04 - is not very concentrated, then you
+12:06 - might want to use a q that is also somehow capturing
+12:09 - that uncertainty.
+12:10 - So the reinforce algorithm is just a way to--
+12:13 - a different optimization algorithm
+12:15 - for this loss that works more generally,
+12:18 - like for an arbitrary q.
+12:20 - And it works for cases when the latent variable z for examples
+12:24 - are discrete.
+12:25 - There is some similarity to the RLHF thing in the sense
+12:28 - that, that one also has this flavor of optimizing a reward
+12:33 - subject to some KL constraint.
+12:36 - So it has that flavor of regularizing something.
+12:41 - And so yeah, if you were to just optimize the first piece,
+12:44 - it would not be useful as a generative model or not
+12:47 - necessarily.
+12:48 - And then you have to add this sort of regularization term
+12:50 - to allow you to do something.
+12:53 - But it's not the RLHF case where both p and q
+12:56 - are generative models.
+12:58 - This is slightly different in the sense
+13:00 - that we're just regularizing the latent space essentially
+13:03 - of an autoencoder.
+13:04 - So the reason we're doing this is to basically
+13:07 - be allowed to then essentially generate fresh latent
+13:12 - variables by sampling from the prior
+13:14 - without actually needing an x and feed it into the q.
+13:18 - So that's what allows us to basically use
+13:21 - this generative model.
+13:22 - I think what you are alluding to is
+13:23 - that it would seem like maybe it would make sense
+13:26 - to compare the marginal distribution of z
+13:29 - under q to the marginal distribution of z under p.
+13:33 - That would be a very reasonable objective to.
+13:35 - It's just not tractable.
+13:37 - And so meaning that again you end up with some kind of very
+13:45 - hard integral that you cannot necessarily evaluate.
+13:50 - But there are other ways to enforce this.
+13:52 - You can use discriminators to kind of-- there
+13:57 - are different flavors.
+13:59 - The VAE uses this particular kind of regularization.
+14:02 - It's not the only way to achieve this kind of behavior.
+14:06 - So for sampling, we don't have the axis.
+14:08 - So you cannot just use both the encoder and the decoder.
+14:12 - So to sample, recall we only have the decoder.
+14:14 - So to generate samples, you don't need the encoder anymore.
+14:17 - And the difference is that the zs--
+14:21 - during training, the zs are produced
+14:23 - by encoding real data points.
+14:25 - During sampling, during inference time,
+14:27 - the zs are produced just by sampling
+14:29 - from this prior distribution p of z.
+14:32 - P of z is something super simple.
+14:34 - In that VAE, it could be just a Gaussian distribution
+14:37 - with the zero mean and identity covariance.
+14:40 - That's kind of that simple prior that we always use.
+14:44 - So the extent that this works depends again-- it's
+14:47 - kind of related to the KL divergence
+14:49 - between the true posterior and the approximate posterior.
+14:51 - Like if you believe that the approximate-- the true posterior
+14:54 - is not Gaussian, it's something complicated,
+14:57 - then you might want to use a more flexible distribution for q
+15:00 - or something with heavy tails.
+15:02 - So there is a lot of degrees of freedom in designing the model.
+15:07 - I think that understanding how the ELBO is derived
+15:09 - tells you what should work or shouldn't work.
+15:13 - But yeah, it doesn't have to be Gaussian.
+15:15 - That's just like the simplest instantiation.
+15:17 - But there's a lot of freedom in terms of choosing
+15:19 - the different pieces.
+15:20 - The first term is basically an autoencoding loss
+15:23 - because it's saying that if you think about it,
+15:26 - you are saying you fit in an x, and then you check-- you produce
+15:30 - a z, and then you check how likely
+15:32 - is the original x given that z?
+15:34 - Which if p of x given z is a Gaussian,
+15:37 - it's basically some kind of L2 loss between the true--
+15:43 - basically between what you feed in
+15:45 - and what you get out essentially.
+15:50 - So in that sense it's an autoencoding loss.
+15:53 - But the true loss that we optimize is not just that.
+15:56 - It's this ELBO l which is the auto encoding
+15:59 - loss plus regularization, because we want to use it
+16:02 - as a generative model.
+16:04 - It's a pretty strong regularization.
+16:06 - And that is forcing it to try to do as well as it
+16:11 - can to generate the same.
+16:13 - Then there is also this other term
+16:15 - that is forcing you to try to find different representation
+16:18 - for different kinds of inputs.
+16:20 - So you can do a good job at reconstructing them.
+16:23 - So these two terms are fighting with each other.
+16:25 - And you try to find the best solution you can.
+16:28 - Yeah.
+16:29 - So if you want to interpret the meaning of this is,
+16:31 - what you could do is you could let's say start with an image
+16:35 - or even start with a random z, and then
+16:37 - see what you get as an output.
+16:38 - And then you can try to change one axis, one of the latent
+16:41 - variables, which recall z is a vector.
+16:43 - So there's multiple ones.
+16:44 - And you could try to see if I change one, do I get maybe
+16:47 - thicker digits or maybe I change the position of the digit,
+16:51 - if that was one of the factors of variation in the data.
+16:54 - And nothing guarantees that, that happens.
+16:56 - But we'll see in the next slide that it kind of has the right--
+17:00 - it's encouraging something similar.
+17:02 - So at generation time, the q can be ignored.
+17:05 - You can throw away the q and what
+17:07 - you do is you instead of generating the zs by sampling
+17:11 - from q, which is what you would do during training,
+17:13 - you generate the zs by sampling from p,
+17:17 - which is the prior for VAE.
+17:19 - So instead of going from kind of left
+17:22 - to right in this computational graph, you start in the middle.
+17:26 - And you generate the zs by sampling from the prior.
+17:30 - That's part of the generative model.
+17:32 - And this term here encourages the fact
+17:36 - that what you-- the zs that you get by going from left to right
+17:40 - versus just injecting them by sampling from the prior
+17:43 - are similar.
+17:44 - So you might expect similar behavior.
+17:47 - So that's like if the posterior here is too close to the prior,
+17:51 - then you're kind of ignoring the x, which might not
+17:56 - be what you want because recall that we're
+17:57 - trying to find good latent representations of the data.
+18:01 - And so if there is zero mutual information
+18:03 - between the z and the x, maybe that's not what you want.
+18:06 - On the other hand, you can only achieve that if somehow you're
+18:10 - not really leveraging the mixture, all
+18:14 - the kind of mixtures that you have access
+18:16 - to when modeling the data.
+18:19 - And so you can encourage-- you can avoid that kind of behavior
+18:22 - by choosing simple p of x given z, because then you're
+18:26 - forced to use the z's to model different data points.
+18:31 - If p of x given z is already a very powerful autoregressive
+18:35 - model, then you don't need a mixture
+18:37 - of complicated autoregressive models.
+18:39 - You can use the same zs to model the entire data set.
+18:42 - And then you're not going to use the latent variables.
+18:46 - And you're going to have exactly that problem where you can just
+18:49 - choose this q to be just the prior, ignore the x completely.
+18:54 - And everything would work because you're ignoring the z,
+18:57 - you're not using it at all.
+18:59 - And there are ways to try to encourage the VAE to have
+19:04 - more or less mutual information with respect between the x
+19:07 - and the z.
+19:08 - Sometimes you want more mutual information.
+19:11 - You want the latent variables to be highly
+19:13 - informative about the inputs.
+19:15 - Sometimes you want to discard information.
+19:17 - Maybe you have sensitive attributes
+19:19 - and you don't want the latent representations
+19:21 - to capture sensitive attributes that you have in the data.
+19:25 - And so maybe you want to reduce the mutual information.
+19:27 - So there are flavors of this training objective
+19:30 - where you can encourage more or less mutual information
+19:34 - between the latent variables and the observers.
+19:38 - Maybe that's the kind of another way
+19:41 - of thinking about what a variational autoencoder is doing
+19:44 - that kind of gets at the compression kind of behavior
+19:48 - and why we're sort of discovering a latent structure
+19:51 - that might be meaningful.
+19:53 - You can imagine this kind of setup
+19:57 - where Alice is an astronaut and she goes on a space mission
+20:02 - and she needs to send images back to earth back to Bob.
+20:06 - And the images are too big.
+20:08 - And so maybe the only thing that she can do
+20:10 - is she can only send one bit of information
+20:12 - or just a single real number, something like that.
+20:16 - And so the way she does it is by using this encoder q.
+20:21 - And given an image, she basically compresses it
+20:26 - by obtaining a compact representation z.
+20:31 - And so if you imagine that z is just a single binary variable,
+20:37 - then you can either map an image to a zero or a one.
+20:40 - So you can only send one bit.
+20:42 - That's the only thing you can do.
+20:43 - If z is a real number, then you can map different images
+20:48 - to different real numbers.
+20:49 - But the only thing you can send to Bob is a single real number.
+20:54 - And then what Bob does is Bob tries to reconstruct
+20:58 - the original image.
+20:59 - And you do that through this decoder, this decompressor,
+21:03 - which tries to infer x given the message that he receives.
+21:10 - And if you think about this kind of scheme
+21:13 - will work well if this autoencoding loss--
+21:20 - well, if the loss is low.
+21:22 - If this term is large, then it means
+21:25 - that Bob is actually pretty--
+21:26 - is doing a pretty good job at assigning high probability
+21:30 - to the image that Alice was sending given
+21:34 - the message that he receives.
+21:36 - So there's not a lot of information
+21:38 - lost by sending the messages through by compressing down
+21:41 - to a single z variable.
+21:45 - And you can imagine that if you can only
+21:50 - send maybe one bit of information,
+21:53 - then there's going to be some loss of information.
+21:57 - But you can-- what you're going to try
+21:59 - to do is you're going to try to cluster together
+22:01 - images that look similar.
+22:02 - And you only have two groups of images.
+22:05 - And you take one group and you say, OK, these are the zero bit.
+22:08 - The other group is going to be the one bit.
+22:10 - And that's the best you can do with that kind of setup.
+22:13 - And so the fact that z is small, it's
+22:18 - kind of forcing you to maybe discover features.
+22:22 - You might say, OK, there is a dog.
+22:24 - It's running with a Frisbee.
+22:26 - There's grass.
+22:27 - That's a more compact representation
+22:30 - of the input that comes in.
+22:31 - And that's the z variable.
+22:34 - And the term-- this KL divergence term
+22:37 - is basically forcing the distribution of messages
+22:40 - to have a specific distribution.
+22:43 - And if this term is small, then it
+22:46 - means that basically Bob can generate messages
+22:50 - by himself without actually receiving them from Alice.
+22:55 - He can just sample from the prior,
+22:57 - generate a message that looks realistic,
+22:59 - because it's very close in distribution to what Alice
+23:02 - could have sent him.
+23:03 - And then by just decoding that, he generates images.
+23:07 - So instead of receiving the messages, the descriptions
+23:10 - from Alice, he just generates the description himself
+23:13 - by sampling from the prior.
+23:14 - And that's how you generate images.
+23:17 - And that's really what the objective is doing.
+23:20 - Yeah, how do you compute the divergence?
+23:22 - So recall that this is just the ELBO.
+23:24 - So I'm just rewriting the ELBO in a slightly different way.
+23:27 - But if you look at the first line, everything is computable.
+23:31 - Everything is tractable.
+23:32 - Everything is the same thing we derived before.
+23:35 - If you have a lot more data points belonging to some class,
+23:38 - you would pay more attention to those
+23:39 - because you're going to incur--
+23:41 - you're going to see them often.
+23:42 - And so you want to be able to encode them well.
+23:45 - So if something is very rare, you never see it.
+23:47 - You don't care about encoding in particularly well because you
+23:50 - just care about the average performance across the data set.
+23:53 - One is if you know what you care about,
+23:55 - you could try to change this reconstruction loss
+23:58 - to pay more attention to things that matters, because right now,
+24:01 - the reconstruction loss is just L2,
+24:04 - which might not be what you want.
+24:06 - Maybe you know there are some features you care more.
+24:08 - So you can change the reconstruction loss
+24:10 - to pay more attention to those things.
+24:12 - And that's the same thing as changing
+24:15 - the shape of this distribution essentially to say,
+24:18 - OK, I care more about certain things versus others.
+24:22 - The other thing you can do is if you have labels
+24:24 - and you know-- because right now, this is kind of made up.
+24:28 - There is no-- it discovered whatever it discovers.
+24:31 - There is no guarantee that it finds anything
+24:33 - semantically meaningful.
+24:35 - So the only way to force that is if you have somehow labeled data
+24:40 - and you know somebody is captioning the images for you
+24:43 - or something, then you can try to change the training objective
+24:46 - and make sure that sometime-- when
+24:49 - what the values of the z variables is,
+24:51 - then your life is easier.
+24:53 - You can just do maximum likelihood on those.
+24:55 - That's going to force the model to use them in a certain way.
+25:00 - So the question is whether we should always
+25:02 - choose the most likely z.
+25:03 - And if you think about the ELBO derivation, the answer is no.
+25:07 - You always want to sample according to the p of z given x.
+25:12 - So you would like to really invert the generative process
+25:16 - and try to find zs that are likely under that posterior,
+25:20 - which is intractable to compute.
+25:21 - But we know that will be the optimal choice.
+25:24 - The objective is you just to sample
+25:25 - from it because there could be many.
+25:28 - And it might be--
+25:29 - there might be many other possible explanations
+25:33 - or possible completions.
+25:35 - And you will really want to cover all of them.
+25:37 - So the question is should you get more than one?
+25:39 - Yes, in the sense that just like it's Monte Carlo.
+25:42 - So the more zs you get, the more samples you get,
+25:45 - recall you really want an expectation here.
+25:49 - We cannot do the expectation.
+25:50 - You can only approximate it with a sample average.
+25:53 - The more samples you have in your average,
+25:55 - the closer it is to the true expected value.
+25:58 - So the better, more accurate of an estimate
+26:01 - you have of the loss and the gradient.
+26:03 - But it's going to be more expensive.
+26:05 - So in practice, you might want to just choose one.
+26:09 - So you would augment the training data
+26:10 - with samples from the model, essentially.
+26:13 - And that's something that people are
+26:14 - starting to explore using synthetic data to train
+26:17 - generative models.
+26:18 - And there is some theoretical studies showing
+26:20 - what happens if you start using synthetic data
+26:26 - and put it in the training set.
+26:27 - And there are some theoretical results
+26:29 - showing that under some assumptions,
+26:32 - this procedure diverges.
+26:34 - And I think is called generative model going mad or something.
+26:38 - And meaning that bad things happens if you
+26:42 - start doing that kind of thing.
+26:43 - But it's under some assumptions that are not really in practice.
+26:47 - So it's unclear.

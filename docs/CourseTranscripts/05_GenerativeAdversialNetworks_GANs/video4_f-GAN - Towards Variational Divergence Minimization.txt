@@ -1,1 +1,420 @@
-
+00:00 -
+00:05 - SPEAKER: So the machinery for doing
+00:08 - this goes through something called
+00:11 - the Fenchel conjugate or the convex conjugate of a function.
+00:16 - Which is defined like this if you have a function f.
+00:21 - You can obtain another function f
+00:24 - star which is called the convex conjugate of f
+00:28 - by using the following expression.
+00:33 - So f star is not going to be a function of t.
+00:37 - And the value of f star at t is the solution
+00:41 - to basically this optimization problem where you're
+00:43 - taking the supremum over all the u's in the domain of f
+00:48 - and then you have this relatively simple objective
+00:52 - which is just ut minus f of u.
+00:55 -
+01:01 - Seems a little bit random.
+01:04 - But this convex conjugate has a bunch of useful properties.
+01:08 - In particular, it's a convex function.
+01:12 - Even when f is not.
+01:15 - And the reason is that the argument here in the supremum
+01:19 - as a function of t is just basically
+01:22 - a bunch of affine functions.
+01:24 - It's just linear in t.
+01:25 - And so the supremum of a bunch of convex functions
+01:30 - is also convex.
+01:32 - And so you can think of this as the supremum
+01:34 - of a collection of functions that are indexed by u.
+01:37 - And, but as a function of t, they are all very simple.
+01:40 - They're just linear functions.
+01:42 - And then when you take the supremum
+01:43 - of a bunch of convex functions, you get something convex.
+01:46 - The other interesting property that we're going to use
+01:51 - is that we can look at the conjugate of the conjugate.
+01:55 - Which we're going to denote as f star.
+01:58 - Which is just what you get if you
+02:00 - take the conjugate of the conjugate of a function f.
+02:04 - And again, you basically just apply the same definition.
+02:07 - But now the function f becomes f star.
+02:12 - And it turns out that this convex conjugate
+02:16 - is a lower bound to the original function f.
+02:20 -
+02:23 - So it's always less than or equal to f.
+02:27 - And so the proof is actually very simple.
+02:30 - You can kind of see that by the definition that we have up here.
+02:34 - We have that for every choice of t,
+02:35 - f star is at least as large as ut minus f of u.
+02:40 - Because it's the supremum.
+02:41 - So it has to be at least as large at all the possible values
+02:44 - that you can get for any choice of u.
+02:48 - And if you rearrange, you can move the f on the other side
+02:52 - and you can write it as f of u is at least as large as ut
+02:56 - minus f star.
+02:57 - If you just move this and this on the other side.
+03:01 - And now this definition means that f
+03:04 - of u, because this holds for any t and for every u.
+03:08 - Then it means that f of u is at least as large as the sup.
+03:11 - The supremum of ut minus f star of t.
+03:15 - The convex conjugate.
+03:17 - Which is exactly the definition that we want, right?
+03:19 - That's exactly the conjugate of the conjugate f double star.
+03:24 - And so we see that this conjugate of the conjugate
+03:31 - is always less than or equal to the original function
+03:34 - that we started with.
+03:37 - And it turns out that when f is convex, then this f,
+03:44 - the conjugate of the conjugate is actually
+03:47 - equal to the original function.
+03:49 - If you start with a function, you
+03:50 - can get the conjugate and then your conjugate again,
+03:52 - you go back to the original function when f is convex.
+03:57 -
+04:02 - Now the reason this is going to be useful
+04:04 - is that this is going to be similar to the ELBO
+04:09 - or the evidence lower bound.
+04:10 - What we're going to do is we're going
+04:12 - to try to write down f in our definition of the f divergence
+04:17 - in terms of the conjugate.
+04:19 - And we're going to get bounds on the value of the f divergence
+04:22 - by going through this characterization
+04:25 - of the f function and an f divergence in terms
+04:28 - of this convex conjugate.
+04:32 - And so that's basically kind of the idea that
+04:38 - underlies this framework for training generative models based
+04:43 - on f divergences through a GAN like objective.
+04:47 - So what we do is we have the original definition
+04:50 - of the f divergence which depends on this density ratio
+04:55 - that we don't have access to.
+04:58 - We can equivalently-- because f is convex,
+05:00 - we can equivalently rewrite this in terms of the conjugate.
+05:06 - Which is just the conjugate of the conjugate f double star.
+05:11 - Which by definition is just this supremum.
+05:14 -
+05:17 - Recall that we're evaluating f double star at the density
+05:22 - ratio.
+05:23 - So we can write f double star as the supremum of t argument
+05:28 - minus f star evaluated at t.
+05:31 -
+05:35 - That's just the definition of the conjugate of the conjugate.
+05:39 - And now this is starting to look like something a little bit more
+05:44 - manageable because we see that the density ratio that before
+05:47 - was inside the argument of this f
+05:50 - function that we didn't know how to handle.
+05:52 - Now it becomes a linear dependence on the density ratio.
+05:57 - Like now except for this annoying supremum.
+05:59 - Then the dependence on px or qx is outside the argument of f.
+06:07 - Which will allow us to basically simplify things.
+06:10 -
+06:13 - Now what you can see is that for every value of x,
+06:19 - there is going to be a different value of the density ratio
+06:22 - and that is going to be a different value of t that
+06:25 - achieves the supremum.
+06:28 - And we can denote that supremum that you get for any--
+06:34 - for any particular x as t star of x.
+06:39 - So this is just the value of the supremum
+06:42 - when we're looking at data point x.
+06:47 - And this is going to be what the discriminator is
+06:52 - going to do later on.
+06:54 - But you see that now we have an expression that is not too bad.
+06:58 - It's an expectation with respect to q that we know how
+07:01 - to approximate using samples.
+07:03 - And now we have the density ratio
+07:06 - is outside the argument of this f function
+07:10 - that we use to score them.
+07:12 - And what this means is that basically, if you expand it,
+07:17 - it will look something like this.
+07:18 - The expectation with respect to q
+07:20 - is just an integral where every x is weighted using q of x.
+07:24 - And now if you simplify it further
+07:29 - and you notice that this q of x simplifies with this q of x.
+07:34 - This whole expression basically just
+07:37 - looks like the difference of two expectations.
+07:39 - That is an expectation with respect to p
+07:42 - and there is an expectation with respect to q.
+07:45 - But that's similar to what we had in the GAN framework
+07:50 - where we had an expectation of something with respect
+07:53 - to the data distribution.
+07:54 - An expectation of something else with respect
+07:57 - to the model distribution.
+07:58 - And that was giving us our estimate
+08:02 - of the Jensen-Shannon divergence in that case.
+08:05 - You can see that the same sort of idea
+08:08 - holds more generally for different choices of f.
+08:12 - Supremum is the same as the max basically.
+08:15 - It's just like, yeah, it's-- the domain does not necessarily
+08:21 - exist the max.
+08:21 - So it's a little bit of a technicality
+08:23 - but think of it as the max basically.
+08:27 - I'm just denoting it to star because this is basically the--
+08:31 - but it's just a way of denoting the value.
+08:36 - What this supremum over t evaluates to
+08:40 - for any particular x.
+08:43 - There's going to be a value of t that achieves the supremum.
+08:48 - I'm just going to denote it, t star.
+08:51 - So the good thing is that this is an expectation--
+08:54 - I mean, it still--
+08:55 - it looks like yeah, it still depends on p of x.
+08:57 - But if you look at the formula, this
+08:59 - is basically the way I have it.
+09:02 - OK.
+09:03 - Maybe it comes up later.
+09:04 - But it's an expectation with respect to p of x.
+09:06 - OK.
+09:07 - And that you can approximate by taking samples which we have
+09:10 - because you have a training set.
+09:13 - Then the next step is that basically, equivalently, you
+09:17 - can just say, well, there's going
+09:18 - to be some function that we're going to call t.
+09:21 - That gives you this optimal value of t star for every x.
+09:26 -
+09:29 - This doesn't change anything.
+09:30 - Basically for every x there is an optimal choice of t
+09:34 - which comes from the supremum.
+09:36 - Here I'm denoting it t star.
+09:38 - Equivalently, you can say, OK, there is a function
+09:41 - t that takes x as an input.
+09:43 - And gives you as an output.
+09:45 - The supremum of that--
+09:46 - of that definition of the convex conjugate.
+09:52 - And then that's where you get the bound is you can say, well,
+09:58 - I cannot--
+10:00 - this would require you an arbitrarily, flexible function
+10:03 - t that can take any x and map it to the solution
+10:07 - to this optimization problem.
+10:09 - Recall this has a little bit of the flavor of a VAE,
+10:12 - amortized inference in a VAE, where
+10:14 - you have this encoder that is supposed to take x as an input.
+10:19 - And then map it to the optimal variational parameters,
+10:22 - solving an optimization problem for you.
+10:24 - This kind of has the same flavor.
+10:26 - But we can say is well you can always optimize over
+10:30 - a set of functions--
+10:33 - an arbitrary set of functions a set of neural networks and that
+10:37 - would give you a lower bound on this f divergence.
+10:42 - So if instead of optimizing over all possible functions,
+10:46 - you optimize over a set of neural network architectures
+10:49 - that you're willing to consider.
+10:51 - You're always going to get something that is less than
+10:56 - or equal.
+10:58 - Because you might not have sufficient flexibility
+11:00 - for mapping x to the corresponding value
+11:03 - t star of x that you would have gotten
+11:05 - if you could actually solve this optimization problem exactly.
+11:10 - But you definitely get a lower bound
+11:12 - for any choice of this family of mappings
+11:16 - that you use to map data points to essentially,
+11:20 - something that looks like an estimate of the density ratio.
+11:25 - And the more flexible, this family
+11:27 - script to t of neural networks.
+11:30 - You can choose then the tighter, this inequality is.
+11:34 - So the better of an approximation
+11:36 - you get to the true value of the f divergence
+11:40 - that you started with.
+11:44 - And back to your question.
+11:45 - OK.
+11:46 - Does this depend, it looks like this still depends on p
+11:49 - and this one still depends on q.
+11:51 - You notice that these two are just expectations
+11:54 - with respect to p and q.
+11:56 - Which in our case will be the data distribution and the model
+12:00 - distribution.
+12:01 - And so this is essentially the same as a GAN
+12:05 - generative adversarial network training objective.
+12:08 - Remember when you-- the objective
+12:11 - that we were using for training a GAN, is the min over g.
+12:14 - And then we had the max over the discriminator of something
+12:18 - that looked a lot like this.
+12:20 - So you were evaluating the discriminator
+12:23 - on the data samples.
+12:25 - You were evaluating the discriminator
+12:26 - on the fake samples.
+12:28 - And you were trying to kind of distinguish them, contrast them
+12:32 - through the cross-entropy loss.
+12:34 - And here we get something that has a very similar flavor where
+12:39 - we're sort of evaluating this discriminator t over data
+12:44 - samples, over model samples and we're
+12:47 - trying to essentially distinguish them
+12:49 - by maximizing that quantity.
+12:53 - When we do this optimization over t in this script t,
+12:57 - that's going to be where we optimize
+12:59 - the discriminator or a critic.
+13:00 -
+13:03 - And this script t is going to be a family of neural networks
+13:06 - that we're going to use to choose t from.
+13:11 - If you want to have an exact estimate of the f divergence,
+13:15 - then the discriminator has to be optimal.
+13:18 - But if you don't then that you're going to get at least a
+13:21 - lower bound.
+13:22 - So the lower bound part holds even if the discriminator is not
+13:27 - necessarily optimal.
+13:28 - Yeah.
+13:29 - It's a problem and it says that you're optimizing a bound.
+13:31 - So it might or might not be the right thing to do.
+13:37 - And this is a lower bound.
+13:38 - So minimizing a lower bound might not
+13:40 - be-- might not be going in the right direction.
+13:44 - And so yeah, you still have those problems.
+13:47 - So in that sense, it's approximately
+13:49 - optimizing an f divergence.
+13:51 - If you could somehow optimize over all possible
+13:54 - discriminators.
+13:55 - Then I guess you had infinite data
+13:57 - and you were able to actually solve this optimization
+13:59 - problem perfectly.
+14:00 - Then you could really optimize an f divergence.
+14:03 - But in practice no, there is always approximations.
+14:07 - It's essentially computing the conjugate of the conjugate of f.
+14:13 - And it corresponds to finding supporting hyperplanes.
+14:17 - Which are encoding the graph of the function as a convex hull.
+14:22 - And that optimization problem is trying
+14:24 - to find essentially tangent to the graph of the function.
+14:30 - So that's essentially what's going on
+14:32 - in that optimization problem.
+14:35 - That's what I was saying that in the outer optimization problem,
+14:37 - you're going to be minimizing this.
+14:39 - And then this is a bound that goes in the wrong direction.
+14:42 - And unfortunately, getting upper bounds is much harder.
+14:46 - There is work where people have tried to come up with bounds,
+14:51 - especially, as it relates to--
+14:53 - it turns out that you need to do something similar
+14:55 - if you want to estimate mutual information between--
+14:59 - between random variables.
+15:01 - Which are also basically involves some estimating density
+15:04 - ratios.
+15:05 - And there is literature and trying to get bounds there.
+15:09 - But nothing that works particularly well.
+15:12 - It doesn't meet likelihood.
+15:13 - And it achieves-- as we know, divergence
+15:16 - is all based on compression.
+15:18 - Which might or might not be what you want.
+15:22 - These other f divergences are not necessarily
+15:25 - capturing a compression like objective.
+15:28 - Because you're evaluating the density ratios
+15:30 - in a different way.
+15:31 - You don't just care about the log of the density ratios.
+15:34 - You can plug-in different sort of f's that
+15:37 - captures different preferences for how
+15:40 - close is the model density ratios to the true density
+15:43 - ratio.
+15:44 - That's kind of captured through f and that gives you
+15:46 - more flexibility basically in defining a loss function
+15:50 - for training your model.
+15:51 - Depends what you want to choose.
+15:53 - So it could either be p is data and q is model
+15:57 - or it could be vice versa.
+15:58 - In both cases, you would end up with something
+16:00 - that you can handle in the sense that it's a different of two
+16:03 - expectations.
+16:04 - And depending, do you want a KL data model
+16:07 - or do you want KL model data.
+16:09 - Depending on what you want, you need to choose the right order.
+16:13 - And the right f that gives you the right thing.
+16:16 - So it could be-- it could be both-- it doesn't matter
+16:18 - for the perspective of this.
+16:19 - It's just the difference of two expectations.
+16:21 - You have samples from both and you can estimate both of them.
+16:24 - Yeah.
+16:25 - Monte Carlo.
+16:26 - Yeah.
+16:27 - So this one is basically saying that there's
+16:29 - going to be an optimal t star for every x.
+16:32 - And if you are allowed to have an arbitrary function--
+16:36 - an arbitrarily complicated function
+16:39 - that basically just maps every x to the corresponding t
+16:42 - star of x.
+16:43 - Then you get the same result. So you could say for every x,
+16:49 - I'm going to choose a t star.
+16:51 - Or you could say I'm going to first choose a function
+16:54 - that maps x's to t stars.
+16:57 - And to the extent that this function
+16:59 - can do whatever you want, then there is no difference.
+17:03 - You can kind of memorize all the t stars into a table
+17:06 - and then encode that table into the function t.
+17:09 - And so choosing the function or choosing the individual that
+17:13 - basically outputs of the functions
+17:15 - across the different x's is actually the same thing.
+17:18 - This is a generalization.
+17:20 - Like in the GAN framework, the original simple thing,
+17:22 - we started from an expression that looked like this.
+17:26 - And then we showed the, oh, by the way,
+17:28 - it gives you the Jensen-Shannon divergence.
+17:31 - This is kind of showing how you can actually
+17:33 - start for any f divergence you want
+17:35 - and you can get a loss that kind of looks like a GAN.
+17:39 - And by the way, if you were to start
+17:40 - from Jensen-Shannon divergence, you
+17:42 - would get exactly the GAN loss that we--
+17:45 - that we started with right up to shifts in scales.
+17:47 -
+17:52 - Cool.
+17:52 - And so yeah, then thing to note is that the lower bound is
+17:58 - likelihood free, in the sense that you can evaluate just
+18:00 - based on samples.
+18:02 - And once you have this kind of lower bound on the f divergence,
+18:09 - you can get a GAN like objective as follows.
+18:12 - You can choose an f divergence of your choice.
+18:15 - You let, let's say p to be the data distribution.
+18:18 - Q to be the model distribution defined implicitly
+18:23 - through some--
+18:24 - through some generator g.
+18:27 - And then you parameterize both using neural networks.
+18:30 - So let's say you have a set of neural networks
+18:33 - with weights phi that define this function
+18:36 - t that you have on the outside.
+18:38 - The discriminator basically.
+18:40 - And then you have some parameters
+18:41 - that define the generator g.
+18:45 - And then you have an f-GAN training objective
+18:49 - which is very similar to what we had before.
+18:52 - It's again a minimax kind of optimization problem
+18:55 - where there is the inner maximization problem over phi.
+18:58 - Where you're trying to find a good approximation
+19:01 - to the f divergence.
+19:03 - By maximizing trying to solve this optimization problem as
+19:07 - well as you can.
+19:09 - By trying to find weights phi that
+19:12 - makes this expression as big as possible.
+19:15 - And again, this is no longer cross entropy.
+19:18 - But it's something quite similar.
+19:22 - And then on the outside, you have a minimization over theta
+19:25 - because you're trying to minimize
+19:27 - the divergence between the model and the data distribution.
+19:31 - So just like in the GAN setting, we
+19:33 - have this the fake samples that are
+19:35 - coming from this implicit distribution defined
+19:37 - by a generator with parameters theta.
+19:39 - And you can try to minimize-- choose the parameters theta that
+19:44 - minimize this expression.
+19:48 - And this-- it's basically the same as what we had in the--
+19:53 - if you were to choose the Jensen-Shannon divergence,
+19:56 - this would correspond to what we had before.
+19:58 - But fundamentally, what's going on here
+20:00 - is that there is a generator that's
+20:01 - trying to minimize the divergence estimate.
+20:03 - And there is a discriminator is trying
+20:05 - to come up with the best possible sort of bound on that f
+20:10 - divergence.
+20:12 - So it's not going to give you exactly maximum likelihood.
+20:14 - Because it's an approximation unless you
+20:16 - have infinitely flexible kind of discriminators.
+20:20 - What people have shown is that, if you were to--
+20:23 - in the original f-GAN paper, they basically
+20:26 - tested a bunch of different f's for f divergences.
+20:28 - And what they've shown is that if you
+20:30 - choose the f corresponding to KL divergence, then
+20:33 - you tend to get the samples that indeed give you
+20:36 - better likelihoods as you would expect.
+20:38 - Because you're approximating the KL divergence.
+20:41 - But as we kind of discussed, that's
+20:43 - not necessarily the one that gives you the best sample
+20:45 - quality.
+20:46 - And you might be getting better sample quality
+20:48 - if you were to choose different f's in that paper.
+20:51 -
+20:56 - Cool.
+20:56 - So that's the kind of high level takeaway.
+21:03 - You're not restricted to KL divergence-- exact KL divergence
+21:07 - or Jensen-Shannon divergence.
+21:09 - You can actually plug-in other f divergences
+21:12 - and using the f-GAN training objective.
+21:14 - You can still approximately optimize
+21:17 - that notion of that divergence.

@@ -1,1 +1,301 @@
-
+00:00 -
+00:04 - SPEAKER: Yeah.
+00:05 - So now that we have our generation quality,
+00:07 - the last thing that we need to look at is,
+00:09 - how do we actually evaluate likelihoods
+00:11 - of this generative process?
+00:13 - So we've shown how we can learn.
+00:14 - We've shown how we can generate, how can we
+00:16 - evaluate for likelihoods.
+00:19 - So the typical metric that people
+00:21 - use for evaluating likelihoods is perplexity.
+00:24 - The perplexity of an input sequence x
+00:26 - is basically just this e to the power of negative one
+00:28 - over d times the log probability of x 1 to x d.
+00:31 - So this is a very typical metric for use
+00:35 - for autoregressive modeling.
+00:36 - The reason why is because it's a relatively principled way
+00:40 - of measuring the model ability.
+00:41 - So if we can have a very low perplexity on some other data
+00:44 - set, it means that we're generalizing pretty well,
+00:48 - we're compressing things, which is typically a good sign.
+00:51 - Also, we can directly compare-- this
+00:53 - is directly computable for autoregressive modeling
+00:55 - because we can compute this p theta directly.
+01:00 - And finally, we also tend to optimize with respect
+01:03 - to something like this because at least
+01:04 - for autoregressive modeling, we optimize
+01:06 - with respect to this negative log probability
+01:08 - and just take an exponential or effectively
+01:11 - optimizing this something similar,
+01:13 - so which is why we can report something like this, basically.
+01:16 - Yeah, and so for diffusion models,
+01:20 - you know, long story short, we can also do something similar.
+01:23 - The math actually tends to be kind of a bit involved.
+01:26 - But the key insight here is that we can take this
+01:29 - under some mild conditions, like some very mild conditions
+01:31 - on our base distribution, how long we like diffuse for.
+01:35 - Our generative process has the following likelihood
+01:38 - bound, basically.
+01:38 - So our negative log likelihood is
+01:41 - bounded above by this integral, and with this expected value,
+01:44 - and all this stuff, when we also add some known constant C. The C
+01:49 - constant is known a priori.
+01:51 - And what's interesting here is that this integral, or whatnot,
+01:55 - this is exactly our denoising score entropy loss,
+01:59 - if we recall back to a couple of slides ago.
+02:02 - And yeah, the only new thing is that we
+02:04 - have to wait about this Q t of x t y, which
+02:08 - is kind of this other waiting.
+02:09 - It doesn't really affect anything
+02:11 - and for any of the computations, basically.
+02:13 - It's just this other weighting, but yeah, we can just--
+02:16 - yeah, which means we can basically train with respect
+02:19 - to this loss, this upper--
+02:21 - this log likelihood bound loss.
+02:22 -
+02:25 - And so yeah, we end up getting a perplexity bound
+02:28 - because we can just take the perplexity of the input
+02:29 - sequence.
+02:30 - We just feed it through this denoising score entropy
+02:32 - loss with this weighting.
+02:34 - And yeah, we basically get an upper bound just by the fact
+02:36 - that things are--
+02:38 - the e is monotonic, basically, which
+02:41 - allows us to report like perplexity values as well.
+02:44 - How does it work in practice?
+02:46 - Well, across these different models,
+02:49 - we do this whole GPT-2 train on open web text,
+02:52 - evaluate on other types of data sets type of setup.
+02:56 - And what we see here pretty consistently
+02:58 - is that our GPT-2 model does tend to produce the best
+03:03 - likelihood values.
+03:04 - But SEDD with the absorbing-- masking transition,
+03:09 - it tends to be very close, basically.
+03:12 - So for most of these data sets, if we
+03:14 - have a pretty close value within plus 10% or so, we underline it.
+03:19 - And the reason why we have this plus 10% cut off
+03:21 - is because of the fact that we're only
+03:23 - reporting a bound and not the true ground
+03:26 - truth non-bound likelihood perplexity.
+03:29 - But yeah, we have this underline here,
+03:32 - and we also have the best results bolded.
+03:35 - And what we consistently see is that our SEDD model,
+03:38 - it can basically match on WikiText2 to WikiText103.
+03:42 - It has to fall within this perplexity bound.
+03:44 - And for something like PTB, it actually
+03:46 - outperforms the existing model, an existing GPT-2 pretrained
+03:50 - model, and sometimes by a pretty considerable margin,
+03:53 - as shown in this middle bar here, basically,
+03:56 - this middle line here.
+03:58 - And yeah, so this is great because now we
+04:00 - can show that basically we can challenge
+04:02 - autoregressive modeling not only on generation quality, which
+04:06 - is a bit more of--
+04:09 - there's more moving parts there, but also
+04:12 - on perplexity, which is a more streamlined,
+04:14 - more compact way of comparing between two
+04:18 - different autoregressive models.
+04:20 - Well, what you would do here is you would just generate up
+04:22 - to a end-of-text token, and you just like post-process it.
+04:27 - And typically for this open web text data,
+04:30 - sequences are pretty long, like 700 or so tokens
+04:33 - out of the 1024.
+04:34 - So it's pretty comparable, basically.
+04:36 - Yeah.
+04:39 - But yeah, OK, just to summarize, yeah,
+04:43 - so first thing is that-- yeah, it's
+04:45 - pretty hard to build probabilistic models
+04:47 - for discrete spaces.
+04:48 - We have GANs, VAEs, diffusion models.
+04:51 - A lot of these things are pretty hard to naively extend
+04:54 - from continuous space to discrete space, which
+04:57 - is why we only have, really have autoregressive modeling
+04:59 - as a way of doing things.
+05:03 - Basically, so autoregressive modeling
+05:05 - is the only really viable paradigm in this space.
+05:09 - The idea here is that we can extend score-based models
+05:12 - to discrete spaces, and we can do this by--
+05:15 - instead of modeling the gradients of the data
+05:18 - distribution, we model the ratios of the data distribution,
+05:21 - also known as a concrete score.
+05:24 - We optimize this new score-matching loss called score
+05:27 - entropy, which we can also have these denoising and implicit
+05:30 - variants of, which make it tractable.
+05:33 - And then we can sample from our process.
+05:36 - We can sample from our score-based model using
+05:38 - a diffusion process, using a forward and reverse diffusion
+05:41 - process.
+05:42 - So in particular, the forward diffusion process
+05:45 - synergizes with our denoising score entropy
+05:47 - loss, which makes everything pretty seamless
+05:48 - to integrate together.
+05:51 - We can make it fast and controllable
+05:53 - for our generation, which is nice.
+05:57 - And finally, our generation quality
+05:59 - can surpass autoregressive modeling because of the fact
+06:03 - that we don't have to worry about contacts.
+06:06 - We can just generate a whole sequence of parallel.
+06:08 - And this allows us allows us more information
+06:10 - during the generation process.
+06:13 - Finally, we also have a likelihood bound
+06:15 - based off of score entropy.
+06:16 - This basically lines up perfectly with our--
+06:21 - our score entropy loss basically lines up
+06:23 - perfectly with the likelihood bound
+06:25 - that one would hope to optimize or compare with.
+06:28 - And for this task, we basically challenge
+06:30 - autoregressive dominance for the first time
+06:34 - on any large enough sequence like GPT-2-level result.
+06:40 - For this case, we're computing a bound on the negative log
+06:43 - likelihood.
+06:44 - And the negative log likelihood, it goes into the perplexity
+06:49 - here.
+06:50 - So perplexity will kind of a forward KL divergence,
+06:53 - and this is like a reverse KL divergence,
+06:55 - will be the way that this model.
+06:58 - So basically, yeah, so GPT-2--
+07:01 - if we remove the fact that we're only reporting a bound,
+07:04 - it tends to outperform.
+07:06 - Really, it's much closer than that,
+07:09 - which means that it's covering the modes of the data
+07:12 - distribution sufficiently well.
+07:14 - But it also has like leakage, basically.
+07:17 - We can generate sequences that are low probability,
+07:19 - but it doesn't show up in our KL divergence loss.
+07:23 - So previously, you had this embedded into continuous space.
+07:26 - Generally, the issue that people have found
+07:28 - is that it doesn't really work as well.
+07:31 - The log likelihoods are--
+07:32 - I mean, so we had typically-- let's take a look at graph,
+07:36 - this thing here.
+07:38 - So for previous continuous diffusion models
+07:42 - would be like way worse, basically, much,
+07:45 - much worse, like 2.5 times worse, something like this.
+07:48 - This is typically the range for this discontinuous discrete
+07:51 - diffusion model, where we discretize the tokens.
+07:54 - And also the issue is that for generation quality,
+07:56 - it's like much slower.
+07:58 - Basically, when we try to generate the sequences,
+08:00 - it becomes like--
+08:02 - yeah, because it's so sparse, we have
+08:04 - to make sure we don't have much error, so we have to take
+08:07 - a lot of discretization steps.
+08:09 - So for example, for some models, we'd have to take 4,000 steps
+08:13 - in order to generate a 1,000-length sequence,
+08:15 - which is just too much, basically.
+08:19 - The idea is that hopefully the error isn't that much,
+08:21 - and you can jump between the two.
+08:23 - There is some principled way of doing it.
+08:25 - And it shows-- it's called tau leaping.
+08:26 - If you're familiar with the--
+08:29 - it's called tau leaping in the chemical engineering literature,
+08:34 - or whatever.
+08:34 - And it's it kind of works.
+08:36 - So if you take very small steps, it's
+08:39 - going to be like reasonably conditionally independent,
+08:41 - assuming your ratios don't change too much,
+08:44 - your model doesn't change too much.
+08:46 - So it's kind of-- it's a discretization scheme,
+08:47 - basically.
+08:48 - So diffusion models, we also have a similar discretization
+08:50 - scheme in Euler-Maruyama.
+08:51 - Presumably, you can learn any probability distribution
+08:56 - over your discrete space with both methods.
+08:59 - Yeah.
+09:00 - But the question here is about, which
+09:01 - one builds in a better inductive bias
+09:03 - and is more amenable for optimization?
+09:06 - Q t is kind of the transition rate.
+09:08 - But we exponentiate it.
+09:10 - So in particular, we have this--
+09:14 - so basically, the Q t is a transition rate,
+09:16 - and this exponentiated matrix is a transition kernel.
+09:18 - We can do it for many time steps,
+09:21 - but the issue here is that it's better to put in a time step,
+09:24 - so it becomes like easier.
+09:26 - Basically, the fundamental Q tends to stay the same,
+09:29 - but just we multiply it by some noise level.
+09:32 - So it's all built in.
+09:34 - Q is just a transition rate, so something like this basically
+09:39 - it would go from uniformly.
+09:41 - This is how we go other things uniformly, or in this case
+09:46 - where we go to the MASK token.
+09:49 - At each time step, the Q basically
+09:51 - is like scaled effectively.
+09:53 - So we have a scaling to how much noise
+09:55 - we add in at each time step.
+09:56 - Yeah, that's full scale is controlled by the sigma.
+09:59 - So this bound is basically a elbow bound from a VAE,
+10:02 - so you would assume that your diffusion model--
+10:05 - you have your forward diffusion process,
+10:06 - which is your encoding layer in your VAE.
+10:10 - And this is your--
+10:11 - and you're learning the reverse, real reverse diffusion
+10:15 - process, which is your decoder.
+10:17 - And then if you just work that out, you plug it in,
+10:20 - you get this-- this is the output that you get out,
+10:22 - basically.
+10:24 - Yeah, this architecture right here is the key idea here.
+10:27 - And the sequence-to-sequence neural network
+10:29 - is just like a transformer.
+10:31 - We basically make a transformer, but we have a non-causal MASK,
+10:35 - which allows us to go--
+10:36 - which allows the attention layer to go from--
+10:39 - to be completely from everything to everything, basically.
+10:44 - So it's like BART, basically.
+10:45 - Yeah, it would be like this--
+10:47 - for question-answering, it would be like this, basically.
+10:50 - You just fill it in.
+10:51 - You fill it in.
+10:53 - Yeah, we have-- separating out between the GPT-2-small,
+10:56 - the small models, and the medium models.
+10:58 - And between the medium models, we
+11:00 - have the absorbing a uniform state, basically.
+11:03 - So we have this uniform transition matrix,
+11:05 - and what is masking transition matrix, basically.
+11:08 - And typically, we see that the uniform
+11:10 - tends to produce worse results than the masking,
+11:15 - basically, so just randomly like flipping words.
+11:19 - And this makes sense because if you randomly flip words,
+11:21 - then you're going to end up with sequences that kind of don't
+11:24 - make sense, whereas if you just mask a word,
+11:27 - then the sequences still make sense broadly.
+11:29 - I mean, if you assume that we can fill in the MASKs.
+11:32 - In this case, this is our generative perplexity,
+11:35 - which is basically the--
+11:36 - we generate a new sequence, and then
+11:38 - we take like a GPT-2-large model,
+11:40 - and we evaluate the perplexity of this generated sequence
+11:43 - on our GPT-2-large.
+11:45 - It's a pretty common evaluation to use GPT-2-large to evaluate
+11:49 - the things.
+11:51 - There's a bunch of different metrics
+11:53 - that are built off of this.
+11:54 - We also took a look at Fréchet distance metric.
+11:57 - And it also tends to work.
+11:59 - It's an improvement there, basically.
+12:01 - So basically, yeah, you could take a larger model
+12:03 - and then try to extract some feature
+12:06 - representations or some values in order to mask--
+12:08 - view your smaller model outputs.
+12:12 - Yeah.
+12:12 - The issue here is that we need to compute
+12:14 - this exponential quickly.
+12:15 - And if our Q is, let's say, like a GPT-2 tokenizer size,
+12:19 - a total number of tokens is 50,000.
+12:22 - Well, if we want to compute this matrix exponential,
+12:24 - it takes way too long.
+12:26 - It will take like 10 seconds just
+12:28 - to compute this, or whatever, even on CUDA, even
+12:31 - on GPU because of how massive it is.
+12:34 - We tried experimenting with other more like complex Q
+12:38 - that would allow us to do computation easier.
+12:42 - But it just doesn't tend to work because of the fact
+12:45 - that it is too much of-- it is kind
+12:47 - of a fundamentally different architectural design
+12:51 - choice, basically.
+12:52 - It's not built for CUDA to do this matrix exponential.
+12:55 - Thanks, everyone for attending.
+12:57 - Thanks, everyone for listening.
+12:59 - I hope you learned something.
