@@ -1,2 +1,5 @@
+checkpoints
 submission.zip
 data/*
+*.png
+submission/*.pkl
