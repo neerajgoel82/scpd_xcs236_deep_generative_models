@@ -58,12 +58,32 @@ class GMVAE(nn.Module):
         # We provide the learnable prior for you. Familiarize yourself with
         # this object by checking its shape.
         prior = ut.gaussian_parameters(self.z_pre, dim=1)
+
         ### START CODE HERE ###
+        #compute reconstruction loss
+        q_phi = self.enc(x)
+        z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
+        x_pred_logits = self.dec(z_pred)
+        log_p_theta_image_wise = ut.log_bernoulli_with_logits(x, x_pred_logits)
+        rec = torch.mean(log_p_theta_image_wise) * -1
+
+        #compute kl divergence 
+        kl_image_wise = ut.log_normal(z_pred, q_phi[0], q_phi[1]) - ut.log_normal_mixture(z_pred,prior[0],prior[1])
+        kl = torch.mean(kl_image_wise)
+
+        #print some variables 
+        #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta_image_wise)
+
+        #compute nelbo
+        nelbo = kl + rec
+
+        #returning all the computed values
+        return nelbo,kl,rec
+
         ### END CODE HERE ###
         ################################################################################
         # End of code modification
         ################################################################################
-        raise NotImplementedError
 
     def negative_iwae_bound(self, x, iw):
         """
