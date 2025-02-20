@@ -6,6 +6,7 @@ import torch
 import os
 import pickle
 script_directory = os.path.dirname(os.path.abspath(__file__))
+import math
 
 if 'solution' in script_directory:
     from solution.models.gmvae import GMVAE
@@ -90,11 +91,15 @@ def log_normal(x, m, v):
     # the last dimension
     ################################################################################
     ### START CODE HERE ###
+    element_wise_probs = torch.exp(-0.5 * (x-m).pow(2) / v) / (torch.sqrt(v) * math.sqrt( 2 * math.pi))
+    element_wise_log_probs = torch.log(element_wise_probs)
+    log_normal_probs = element_wise_log_probs.sum(-1)
+    return log_normal_probs
     ### END CODE HERE ###
     ################################################################################
     # End of code modification
     ################################################################################
-    raise NotImplementedError
+    #raise NotImplementedError
 
 
 def log_normal_mixture(z, m, v):
