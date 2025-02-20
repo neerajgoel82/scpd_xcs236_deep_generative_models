@@ -27,7 +27,7 @@ def log_likelihood(model, text):
         ### START CODE HERE ###
         # Getting the log(softmax(logits)) which can be compared against the text
         logits, _ = model(text)
-        log_softmax = nn.LogSoftmax(dim=1)
+        log_softmax = nn.LogSoftmax(dim=2)
         log_softmax_values = log_softmax(logits)
 
         #computing the loss 
@@ -45,8 +45,9 @@ def log_likelihood(model, text):
         log_likelihood = nll_loss.item() * -1
 
         ce_loss = ce_loss_fn(logits[0][0:-1,:], target) * -1
-        return ce_loss
-        #return log_likelihood
+        #return ce_loss
+        
+        return log_likelihood
     
         ### END CODE HERE ###
         #raise NotImplementedError
