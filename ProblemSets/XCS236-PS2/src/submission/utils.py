@@ -64,7 +64,11 @@ def sample_gaussian(m, v):
     ################################################################################
     # End of code modification
     ################################################################################
-    
+
+
+def normal(x,m,v):
+    element_wise_probs = torch.exp(-0.5 * (x-m).pow(2) / v) / (torch.sqrt(v) * math.sqrt( 2 * math.pi))
+    return element_wise_probs
 
 def log_normal(x, m, v):
     """
@@ -92,7 +96,8 @@ def log_normal(x, m, v):
     # the last dimension
     ################################################################################
     ### START CODE HERE ###
-    element_wise_probs = torch.exp(-0.5 * (x-m).pow(2) / v) / (torch.sqrt(v) * math.sqrt( 2 * math.pi))
+    element_wise_probs = normal(x,m,v)
+    print(element_wise_probs)
     element_wise_log_probs = torch.log(element_wise_probs)
     log_normal_probs = element_wise_log_probs.sum(-1)
     return log_normal_probs
@@ -120,11 +125,19 @@ def log_normal_mixture(z, m, v):
     # in the batch
     ################################################################################
     ### START CODE HERE ###
-    z_stacked = torch.swapaxes(z.repeat(m.shape[1], 1, 1),0,1)
-    gaussian_wise_probs = torch.exp(-0.5 * (z_stacked-m).pow(2) / v) / (torch.sqrt(v) * math.sqrt( 2 * math.pi))
+    #first_gaussian_mean = m[:,0,:]
+    #first_gaussian_variance = v[:,0,:]
+    #print(normal(z, first_gaussian_mean, first_gaussian_variance))
+    z_repeated = torch.swapaxes(z.repeat(m.shape[1], 1, 1),0,1)
+    print(z_repeated)
+    gaussian_wise_probs = normal(z_repeated,m,v)
+    print(gaussian_wise_probs)
     element_wise_probs = gaussian_wise_probs.mean(dim=1)
+    print(element_wise_probs)
     element_wise_log_probs = torch.log(element_wise_probs)
+    print(element_wise_log_probs)
     log_normal_probs = element_wise_log_probs.sum(-1)
+    print(log_normal_probs)
     return log_normal_probs
 
     ### END CODE HERE ###
