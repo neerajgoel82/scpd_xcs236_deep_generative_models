@@ -92,8 +92,7 @@ def log_normal(x, m, v):
     # the last dimension
     ################################################################################
     ### START CODE HERE ###
-    element_wise_probs = torch.exp(-0.5 * (x-m).pow(2) / v) / (torch.sqrt(v) * math.sqrt( 2 * math.pi))
-    element_wise_log_probs = torch.log(element_wise_probs)
+    element_wise_log_probs = (-0.5 * (x-m).pow(2) / v) - torch.log(torch.sqrt(v) * math.sqrt( 2 * math.pi))
     log_normal_probs = element_wise_log_probs.sum(-1)
     return log_normal_probs
     ### END CODE HERE ###
@@ -121,6 +120,7 @@ def log_normal_mixture(z, m, v):
     ################################################################################
     ### START CODE HERE ###
     z_repeated = torch.swapaxes(z.repeat(m.shape[1], 1, 1),0,1)
+    #z_repeated = z.unsqueeze()
     gaussian_wise_probs = log_normal(z_repeated,m,v)
     log_normal_mixture_probs = log_mean_exp(gaussian_wise_probs, 1)
     return log_normal_mixture_probs

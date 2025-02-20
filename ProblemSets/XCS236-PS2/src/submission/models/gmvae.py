@@ -76,10 +76,10 @@ class GMVAE(nn.Module):
         nelbo = torch.mean((log_p_theta_image_wise * -1) + kl_image_wise)
 
         #print some variables 
-        random_num = random.randint(1, 200)
-        if (random_num % 100 == 0) :
-            print("nelbo: " + str(nelbo.item()) + " kl:" + str(kl.item()) + " rec:" + str(rec.item()))
-            
+        #random_num = random.randint(1, 200)
+        #if (random_num % 100 == 0) :
+        #    print("\nnelbo: " + str(nelbo.item()) + " kl:" + str(kl.item()) + " rec:" + str(rec.item()))
+
         #returning all the computed values
         return nelbo,kl,rec
 
