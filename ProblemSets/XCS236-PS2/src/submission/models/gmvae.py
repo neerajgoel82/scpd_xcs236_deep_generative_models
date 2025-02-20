@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import torch
 import os
 script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -71,12 +72,14 @@ class GMVAE(nn.Module):
         kl_image_wise = ut.log_normal(z_pred, q_phi[0], q_phi[1]) - ut.log_normal_mixture(z_pred,prior[0],prior[1])
         kl = torch.mean(kl_image_wise)
 
-        #print some variables 
-        #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta_image_wise)
-
         #compute nelbo
         nelbo = torch.mean((log_p_theta_image_wise * -1) + kl_image_wise)
 
+        #print some variables 
+        random_num = random.randint(1, 200)
+        if (random_num % 100 == 0) :
+            print("nelbo: " + str(nelbo.item()) + " kl:" + str(kl.item()) + " rec:" + str(rec.item()))
+            
         #returning all the computed values
         return nelbo,kl,rec
 
