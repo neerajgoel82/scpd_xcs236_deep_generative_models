@@ -75,7 +75,7 @@ class GMVAE(nn.Module):
         #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta_image_wise)
 
         #compute nelbo
-        nelbo = kl + rec
+        nelbo = torch.mean((log_p_theta_image_wise * -1) + kl_image_wise)
 
         #returning all the computed values
         return nelbo,kl,rec
