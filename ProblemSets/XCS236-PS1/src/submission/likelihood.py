@@ -45,9 +45,9 @@ def log_likelihood(model, text):
         log_likelihood = nll_loss.item() * -1
 
         ce_loss = ce_loss_fn(logits[0][0:-1,:], target) * -1
-        #return ce_loss
+        return ce_loss
         
-        return log_likelihood
+        #return log_likelihood
     
         ### END CODE HERE ###
         #raise NotImplementedError
