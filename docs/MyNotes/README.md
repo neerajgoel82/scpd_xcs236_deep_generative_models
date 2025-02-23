@@ -89,6 +89,7 @@ I have created a separate page for each kind of models. I'll be covering the fol
 - [Tutorial] [Diffusion and Score Based Models Tutorial by Dr. Yang Song](https://www.youtube.com/watch?v=wMmqCMwuM2Q)
 - [Book] [Generative Deep Learning](https://learning.oreilly.com/library/view/generative-deep-learning/9781098134174)
 - [Book] [Build a Large Language Model (From Scratch)](https://learning.oreilly.com/library/view/build-a-large/9781633437166/)
+- [Blog][SSVAE](https://gmanco.github.io/post/on-semisupervised-vae/)
 
 
 ### Students Questions 
