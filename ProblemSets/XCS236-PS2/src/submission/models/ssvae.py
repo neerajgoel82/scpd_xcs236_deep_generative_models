@@ -89,15 +89,25 @@ class SSVAE(nn.Module):
         
         ### START CODE HERE ###
 
-        #creating y_prior
+        #compute kl_y
         kl_y_image_wise = ut.kl_cat(y_prob, y_logprob, self.y_prior_pi)
-        kl = torch.mean(kl_y_image_wise)
+        kl_y = torch.mean(kl_y_image_wise)
 
+        #compute reconstruction loss
+        rec = torch.tensor(0)
+
+        #compute kl_z
+        kl_z = torch.tensor(0)
+
+        #compute nelbo
+        nelbo = torch.tensor(0)
+
+        return nelbo, kl_z, kl_y, rec 
+    
         ### END CODE HERE ###
         ################################################################################
         # End of code modification
         ################################################################################
-        raise NotImplementedError
 
     def classification_cross_entropy(self, x, y):
         y_logits = self.cls(x)
