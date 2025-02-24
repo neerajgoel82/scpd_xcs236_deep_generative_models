@@ -99,7 +99,8 @@ class SSVAE(nn.Module):
         z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
         x_pred_logits = self.dec(z_pred, y_prob_repeated)
         log_p_theta_image_wise = ut.log_bernoulli_with_logits(x, x_pred_logits)
-        rec = torch.mean(log_p_theta_image_wise) * -1
+        neg_log_p_theta_image_wise = log_p_theta_image_wise * -1
+        rec = torch.mean(neg_log_p_theta_image_wise)
 
         #compute kl_z
         kl_z = torch.tensor(0)
