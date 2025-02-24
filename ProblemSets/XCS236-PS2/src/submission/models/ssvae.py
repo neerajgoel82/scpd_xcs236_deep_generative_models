@@ -3,6 +3,7 @@ import torch
 import torch.utils.data
 import os
 script_directory = os.path.dirname(os.path.abspath(__file__))
+import random
 
 if 'solution' in script_directory:
     from solution import utils as ut
@@ -34,7 +35,7 @@ class SSVAE(nn.Module):
 
         #creating y_prior
         self.y_prior_pi = torch.nn.Parameter(torch.ones(self.y_dim) / self.y_dim, requires_grad=False)
-
+        self.y_prior_log_pi = torch.log(self.y_prior_pi)
 
     def negative_elbo_bound(self, x):
         """
@@ -90,7 +91,7 @@ class SSVAE(nn.Module):
         ### START CODE HERE ###
 
         #compute kl_y
-        kl_y_image_wise = ut.kl_cat(y_prob, y_logprob, self.y_prior_pi)
+        kl_y_image_wise = ut.kl_cat(y_prob, y_logprob, self.y_prior_log_pi)
         kl_y = torch.mean(kl_y_image_wise)
 
         #compute reconstruction loss
@@ -111,6 +112,14 @@ class SSVAE(nn.Module):
 
         #compute nelbo
         nelbo = kl_y + kl_z + rec
+
+        #printing outputs randomly 
+        print_val = random.randint(1, 200)
+        if (print_val % 100) == 0: 
+            print("\n NELBO: " + str(nelbo.item()) + 
+                  " KL_y: " + str(kl_y.item())  + 
+                  "KL_z: " +  str(kl_z.item()) + 
+                  "Rec: " + str(rec.item()))
 
         #return the required fields
         return nelbo, kl_z, kl_y, rec 
