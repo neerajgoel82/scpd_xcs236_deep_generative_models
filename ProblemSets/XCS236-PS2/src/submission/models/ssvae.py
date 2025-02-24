@@ -103,11 +103,16 @@ class SSVAE(nn.Module):
         rec = torch.mean(neg_log_p_theta_image_wise)
 
         #compute kl_z
-        kl_z = torch.tensor(0)
+        batch = x.shape[0]
+        z_prior_means = self.z_prior[0].expand(batch, self.z_dim)
+        z_prior_variances = self.z_prior[1].expand(batch, self.z_dim)
+        kl_z_image_wise = ut.kl_normal(q_phi[0], q_phi[1], z_prior_means, z_prior_variances)
+        kl_z = torch.mean(kl_z_image_wise)
 
         #compute nelbo
-        nelbo = torch.tensor(0)
+        nelbo = kl_y + kl_z + rec
 
+        #return the required fields
         return nelbo, kl_z, kl_y, rec 
     
         ### END CODE HERE ###
