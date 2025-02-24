@@ -114,11 +114,45 @@ class VAE(nn.Module):
         # calculating log_normal w.r.t prior and q
         ################################################################################
         ### START CODE HERE ###
+        print(x.shape)
+        print(iw)
+
+        batch = x.shape[0]
+        z_prior_means = self.z_prior[0].expand(batch, self.z_dim)
+        z_prior_variances = self.z_prior[1].expand(batch, self.z_dim)
+
+        #compute reconstruction loss
+        q_phi = self.enc(x)
+
+        #duplicating q_phi, iw times so that we can generate iw samples for each q_phi mean and variance
+        duplicated_means = ut.duplicate(q_phi[0], iw)
+        duplicated_variance= ut.duplicate(q_phi[1], iw)
+
+        #sampling iw samples for each q_phi mean and variance 
+        z_pred = ut.sample_gaussian(duplicated_means, duplicated_variance)
+        x_pred_logits = self.dec(z_pred)
+        log_p_theta_image_wise = ut.log_bernoulli_with_logits(ut.duplicate(x,iw), x_pred_logits)
+        rec = ut.log_mean_exp(log_p_theta_image_wise, 0) * -1
+
+        #compute kl divergence 
+        kl_image_wise = ut.kl_normal(q_phi[0], q_phi[1], z_prior_means, z_prior_variances)
+        kl = torch.mean(kl_image_wise)
+
+        #print some variables 
+        #self.print_1b_variables(q_phi, z_pred, x_pred_logits, log_p_theta_image_wise)
+
+        #compute nelbo
+        nelbo = kl + rec
+
+        #returning all the computed values
+        return nelbo,kl,rec
+    
+        
         ### END CODE HERE ###
         ################################################################################
         # End of code modification
         ################################################################################
-        raise NotImplementedError
+        #raise NotImplementedError
 
     def loss(self, x):
         nelbo, kl, rec = self.negative_elbo_bound(x)
