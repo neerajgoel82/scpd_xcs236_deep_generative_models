@@ -94,7 +94,12 @@ class SSVAE(nn.Module):
         kl_y = torch.mean(kl_y_image_wise)
 
         #compute reconstruction loss
-        rec = torch.tensor(0)
+        y_prob_repeated = ut.duplicate(y_prob, self.y_dim)
+        q_phi = self.enc(x, y_prob_repeated)
+        z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
+        x_pred_logits = self.dec(z_pred, y_prob_repeated)
+        log_p_theta_image_wise = ut.log_bernoulli_with_logits(x, x_pred_logits)
+        rec = torch.mean(log_p_theta_image_wise) * -1
 
         #compute kl_z
         kl_z = torch.tensor(0)
