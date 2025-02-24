@@ -32,6 +32,10 @@ class SSVAE(nn.Module):
         self.z_prior_v = torch.nn.Parameter(torch.ones(1), requires_grad=False)
         self.z_prior = (self.z_prior_m, self.z_prior_v)
 
+        #creating y_prior
+        self.y_prior_pi = torch.nn.Parameter(torch.ones(self.y_dim) / self.y_dim, requires_grad=False)
+
+
     def negative_elbo_bound(self, x):
         """
         Computes the Evidence Lower Bound, KL and, Reconstruction costs
@@ -82,7 +86,13 @@ class SSVAE(nn.Module):
         y = np.repeat(np.arange(self.y_dim), x.size(0))
         y = x.new(np.eye(self.y_dim)[y])
         x = ut.duplicate(x, self.y_dim)
+        
         ### START CODE HERE ###
+
+        #creating y_prior
+        kl_y_image_wise = ut.kl_cat(y_prob, y_logprob, self.y_prior_pi)
+        kl = torch.mean(kl_y_image_wise)
+
         ### END CODE HERE ###
         ################################################################################
         # End of code modification
