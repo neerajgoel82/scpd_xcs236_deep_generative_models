@@ -114,37 +114,31 @@ class VAE(nn.Module):
         # calculating log_normal w.r.t prior and q
         ################################################################################
         ### START CODE HERE ###
-        print(x.shape)
-        print(iw)
-
         batch = x.shape[0]
         z_prior_means = self.z_prior[0].expand(batch, self.z_dim)
         z_prior_variances = self.z_prior[1].expand(batch, self.z_dim)
         duplicated_z_prior_means = ut.duplicate(z_prior_means, iw)
         duplicated_z_prior_variances = ut.duplicate(z_prior_variances, iw)
 
-
         #compute reconstruction loss
-        q_phi = self.enc(x)
-
-        #duplicating q_phi, iw times so that we can generate iw samples for each q_phi mean and variance
-        duplicated_means = ut.duplicate(q_phi[0], iw)
-        duplicated_variance= ut.duplicate(q_phi[1], iw)
+        duplicated_x = ut.duplicate(x,iw)
+        q_phi = self.enc(duplicated_x)
 
         #sampling iw samples for each q_phi mean and variance 
-        z_pred = ut.sample_gaussian(duplicated_means, duplicated_variance)
+        z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
         x_pred_logits = self.dec(z_pred)
         log_p_theta_image_wise = ut.log_bernoulli_with_logits(ut.duplicate(x,iw), x_pred_logits)
-        rec = ut.log_mean_exp(log_p_theta_image_wise, 0) * -1
+        rec = torch.mean(log_p_theta_image_wise) * -1   
 
         #compute kl divergence 
-        kl_log_normal = ut.log_normal(z_pred, duplicated_means, duplicated_variance)
-        kl_log_normal_with_prior = ut.log_normal(z_pred,duplicated_z_prior_means,duplicated_z_prior_variances)
-        kl_image_wise = kl_log_normal - kl_log_normal_with_prior
-        kl = ut.log_mean_exp(kl_image_wise, 0)
+        kl_image_wise = ut.kl_normal(q_phi[0], q_phi[1], duplicated_z_prior_means, duplicated_z_prior_variances)
+        kl = torch.mean(kl_image_wise)
 
         #compute nelbo
-        nelbo = kl + rec
+        combined_nelbo = log_p_theta_image_wise - kl_image_wise 
+        combined_nelbo = combined_nelbo.reshape(iw, batch)
+        my_log_mean_exp = ut.log_mean_exp(combined_nelbo, 0)
+        nelbo = torch.mean(my_log_mean_exp)  * -1 
 
         #returning all the computed values
         return nelbo,kl,rec
