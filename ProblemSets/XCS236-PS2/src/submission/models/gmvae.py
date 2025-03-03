@@ -117,25 +117,25 @@ class GMVAE(nn.Module):
         prior = ut.gaussian_parameters(self.z_pre, dim=1)
 
         ### START CODE HERE ###
-        q_phi = self.enc(x)
-
-        #duplicating q_phi, iw times so that we can generate iw samples for each q_phi mean and variance
-        duplicated_means = ut.duplicate(q_phi[0], iw)
-        duplicated_variance= ut.duplicate(q_phi[1], iw)
+        batch = x.shape[0]
+        duplicated_x = ut.duplicate(x,iw)
+        q_phi = self.enc(duplicated_x)
 
         #sampling iw samples for each q_phi mean and variance 
-        z_pred = ut.sample_gaussian(duplicated_means, duplicated_variance)
+        z_pred = ut.sample_gaussian(q_phi[0], q_phi[1])
         x_pred_logits = self.dec(z_pred)
         log_p_theta_image_wise = ut.log_bernoulli_with_logits(ut.duplicate(x,iw), x_pred_logits)
-        rec = ut.log_mean_exp(log_p_theta_image_wise, 0) * -1
+        rec = torch.mean(log_p_theta_image_wise, 0) * -1
 
         #compute kl divergence 
-        kl_image_wise = ut.log_normal(z_pred, duplicated_means, duplicated_variance) - ut.log_normal_mixture(z_pred,prior[0],prior[1])
-        kl = ut.log_mean_exp(kl_image_wise, 0)
+        kl_image_wise = ut.log_normal(z_pred, q_phi[0], q_phi[1]) - ut.log_normal_mixture(z_pred,prior[0],prior[1])
+        kl = torch.mean(kl_image_wise, 0)
 
         #compute nelbo
-        nelbo = rec + kl
-
+        combined_nelbo = log_p_theta_image_wise - kl_image_wise 
+        combined_nelbo = combined_nelbo.reshape(iw, batch)
+        my_log_mean_exp = ut.log_mean_exp(combined_nelbo, 0)
+        nelbo = torch.mean(my_log_mean_exp)  * -1 
 
         #returning all the computed values
         return nelbo,kl,rec
