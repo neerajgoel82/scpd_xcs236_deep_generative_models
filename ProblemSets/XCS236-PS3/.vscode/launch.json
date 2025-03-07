@@ -1,0 +1,205 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Main",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src"
+        },
+        {
+            "name": "Flow Model Train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["--model", "flow"]
+
+        },
+        {
+            "name": "Basic Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+        },
+        {
+            "name": "1a-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["1a-0-basic"]
+        },
+        {
+            "name": "1a-1-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["1a-1-basic"]
+        },
+        {
+            "name": "1b-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["1b-0-basic"]
+        },
+        {
+            "name": "1b-1-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["1b-1-basic"]
+        },
+        {
+            "name": "1c-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["1c-0-basic"]
+        },
+        {
+            "name": "1c-1-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["1c-1-basic"]
+        },
+        {
+            "name": "2a-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["2a-0-basic"]
+        },
+        {
+            "name": "2b-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["2b-0-basic"]
+        },
+        {
+            "name": "2b-1-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["2b-1-basic"]
+        },
+        {
+            "name": "2b-2-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["2b-2-basic"]
+        },
+        {
+            "name": "2b-3-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["2b-3-basic"]
+        },
+        {
+            "name": "4b-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["4b-0-basic"]
+        },
+        {
+            "name": "4b-1-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["4b-1-basic"]
+        },
+        {
+            "name": "4b-2-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["4b-2-basic"]
+        },
+        {
+            "name": "4b-3-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["4b-3-basic"]
+        },
+        {
+            "name": "5e-0-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["5e-0-basic"]
+        },
+        {
+            "name": "5e-1-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["5e-1-basic"]
+        },
+        {
+            "name": "5e-2-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["5e-2-basic"]
+        },
+        {
+            "name": "5e-3-basic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "grader.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": ["5e-3-basic"]
+        }
+    ]
+}
