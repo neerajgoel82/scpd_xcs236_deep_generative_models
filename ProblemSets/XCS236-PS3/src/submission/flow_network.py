@@ -93,8 +93,13 @@ class MADE(nn.Module):
         x = torch.zeros_like(z)
         log_det = None
         ### START CODE HERE ### 
+        gaussian_params = self.net(z)
+        mu = gaussian_params[:,:self.input_size]
+        alpha = gaussian_params[:, self.input_size:]
+        x = mu + z * torch.exp(alpha)
+        log_det = torch.sum(alpha, -1)
+        return x,log_det
         ### END CODE HERE ###
-        raise NotImplementedError
 
     def inverse(self, x):
         """
