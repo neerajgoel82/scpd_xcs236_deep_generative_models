@@ -109,6 +109,12 @@ class MADE(nn.Module):
         """
         z, log_det = None, None
         ### START CODE HERE ###
+        gaussian_params = self.net(x)
+        mu = gaussian_params[:,:self.input_size]
+        alpha = gaussian_params[:, self.input_size:]
+        z = (x - mu) / torch.exp(alpha)
+        log_det = torch.sum(alpha, -1)
+        return z,log_det
         ### END CODE HERE ###
         raise NotImplementedError
 
