@@ -97,7 +97,8 @@ class MADE(nn.Module):
 
         ### START CODE HERE ### 
         for i in range(x.shape[0]):
-            gaussian_params = self.net(x[max(0,i-1)])
+            x_i = x[max(0,i-1)]
+            gaussian_params = self.net(x_i)
             mu[i] = gaussian_params[:self.input_size]
             alpha[i] = gaussian_params[self.input_size:]
             x[i] = mu[i] + z[i] * torch.exp( alpha[i])
@@ -120,7 +121,6 @@ class MADE(nn.Module):
         log_det = torch.sum(alpha, -1) * -1
         return z,log_det
         ### END CODE HERE ###
-        raise NotImplementedError
 
 
 class MAF(nn.Module):
