@@ -97,11 +97,11 @@ class MADE(nn.Module):
 
         ### START CODE HERE ### 
         for i in range(x.shape[0]):
-            gaussian_params = self.net(x[i])
+            gaussian_params = self.net(x[max(0,i-1)])
             mu[i] = gaussian_params[:self.input_size]
             alpha[i] = gaussian_params[self.input_size:]
             x[i] = mu[i] + z[i] * torch.exp( alpha[i])
-            log_det[i] = torch.sum(alpha[i])
+            log_det[i] = torch.sum(alpha[i]) * -1
         return x,log_det
         ### END CODE HERE ###
 
