@@ -91,13 +91,17 @@ class MADE(nn.Module):
         :return: (x, log_det). log_det should be 1-D (batch_size,)
         """
         x = torch.zeros_like(z)
-        log_det = None
+        mu = torch.zeros_like(z)
+        alpha = torch.zeros_like(z)
+        log_det = torch.zeros(z.shape[0])
+
         ### START CODE HERE ### 
-        gaussian_params = self.net(z)
-        mu = gaussian_params[:,:self.input_size]
-        alpha = gaussian_params[:, self.input_size:]
-        x = mu + z * torch.exp(alpha)
-        log_det = torch.sum(alpha, -1)
+        for i in range(x.shape[0]):
+            gaussian_params = self.net(x[i])
+            mu[i] = gaussian_params[:self.input_size]
+            alpha[i] = gaussian_params[self.input_size:]
+            x[i] = mu[i] + z[i] * torch.exp( alpha[i])
+            log_det[i] = torch.sum(alpha[i])
         return x,log_det
         ### END CODE HERE ###
 
@@ -113,7 +117,7 @@ class MADE(nn.Module):
         mu = gaussian_params[:,:self.input_size]
         alpha = gaussian_params[:, self.input_size:]
         z = (x - mu) / torch.exp(alpha)
-        log_det = torch.sum(alpha, -1)
+        log_det = torch.sum(alpha, -1) * -1
         return z,log_det
         ### END CODE HERE ###
         raise NotImplementedError
