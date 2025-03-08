@@ -91,9 +91,6 @@ class MADE(nn.Module):
         :return: (x, log_det). log_det should be 1-D (batch_size,)
         """
         x = torch.zeros_like(z)
-        mu = torch.zeros_like(z)
-        alpha = torch.zeros_like(z)
-        log_det = torch.zeros(z.shape[0])
 
         ### START CODE HERE ### 
         for i in range(x.shape[0]):
@@ -150,11 +147,19 @@ class MAF(nn.Module):
         :param x: Input data of size (batch_size, self.input_size)
         :return: log_prob. This should be a Tensor scalar.
         """
-        log_prob = None
+        log_prob = torch.zeros([x.shape[0]])
+        z = x
         ### START CODE HERE ###
-        z = self.inverse(x)
-        x = self.forward(z)
-        return sum
+        for flow in self.nf:
+            z, log_det = flow.inverse(z)
+            log_det = log_det.reshape([x.shape[0]])
+            log_prob = torch.add(log_prob,log_det)
+            
+        log_z_prob_2d = self.base_dist.log_prob(z)
+        log_z_prob = torch.sum(log_z_prob_2d,1)
+        log_probs_x = torch.add(log_prob,log_z_prob)
+        log_probs = torch.mean(log_probs_x)
+        return log_probs
 
 
         ### END CODE HERE ###
