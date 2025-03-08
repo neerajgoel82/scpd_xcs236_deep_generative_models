@@ -97,12 +97,12 @@ class MADE(nn.Module):
 
         ### START CODE HERE ### 
         for i in range(x.shape[0]):
-            x_i = x[max(0,i-1)]
-            gaussian_params = self.net(x_i)
-            mu[i] = gaussian_params[:self.input_size]
-            alpha[i] = gaussian_params[self.input_size:]
-            x[i] = mu[i] + z[i] * torch.exp( alpha[i])
-            log_det[i] = torch.sum(alpha[i]) * -1
+            gaussian_params = self.net(x)
+            mu = gaussian_params[:,:self.input_size]
+            alpha = gaussian_params[:,self.input_size:]
+            x = mu + z * torch.exp( alpha)
+            
+        log_det = torch.sum(alpha, -1) * -1
         return x,log_det
         ### END CODE HERE ###
 
@@ -152,8 +152,12 @@ class MAF(nn.Module):
         """
         log_prob = None
         ### START CODE HERE ###
+        z = self.inverse(x)
+        x = self.forward(z)
+        return sum
+
+
         ### END CODE HERE ###
-        raise NotImplementedError
 
     def loss(self, x):
         """
