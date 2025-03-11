@@ -15,14 +15,23 @@ def loss_nonsaturating_d(g, d, x_real, *, device):
     - d_loss (torch.Tensor): nonsaturating discriminator loss
     """
     batch_size = x_real.shape[0]
-    z = torch.randn(batch_size, g.dim_z, device=device)
-
+    z = torch.randn(batch_size, g.dim_z, device=device)    
     d_loss = None
     # You may find some or all of the below useful:
     #   - F.binary_cross_entropy_with_logits
     ### START CODE HERE ###
+    discriminator_x_real_logits = d(x_real)
+    d_loss_x_real = F.binary_cross_entropy_with_logits(discriminator_x_real_logits, 
+                                                          torch.ones(discriminator_x_real_logits.shape))
+    
+    x_generated = g(z)
+    discriminator_x_generated_logits = d(x_generated)
+    d_loss_x_generated = F.binary_cross_entropy_with_logits(discriminator_x_generated_logits, 
+                                                          torch.zeros(discriminator_x_generated_logits.shape))
+
+    d_loss = d_loss_x_real + d_loss_x_generated
+    return d_loss
     ### END CODE HERE ###
-    raise NotImplementedError
 
 def loss_nonsaturating_g(g, d, x_real, *, device):
     """
