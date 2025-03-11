@@ -52,8 +52,11 @@ def loss_nonsaturating_g(g, d, x_real, *, device):
     # You may find some or all of the below useful:
     #   - F.logsigmoid
     ### START CODE HERE ###
+    x_generated = g(z)
+    discriminator_x_generated_logits = d(x_generated)
+    g_loss = torch.mean(F.logsigmoid(discriminator_x_generated_logits)) * -1
+    return g_loss
     ### END CODE HERE ###
-    raise NotImplementedError
 
 
 def conditional_loss_nonsaturating_d(g, d, x_real, y_real, *, device):
