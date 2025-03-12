@@ -1,3 +1,7 @@
+src/data
+src/gan_nonsat
+src/maf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
