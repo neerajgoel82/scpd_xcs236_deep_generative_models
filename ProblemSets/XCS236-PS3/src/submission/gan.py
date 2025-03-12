@@ -79,14 +79,14 @@ def conditional_loss_nonsaturating_d(g, d, x_real, y_real, *, device):
     d_loss = None
 
     ### START CODE HERE ###
-    discriminator_x_real_logits = d(x_real, y_real)
-    d_loss_x_real = F.binary_cross_entropy_with_logits(discriminator_x_real_logits, 
-                                                          torch.ones(discriminator_x_real_logits.shape))
+    discriminator_real_logits = d(x_real, y_real)
+    d_loss_x_real = F.binary_cross_entropy_with_logits(discriminator_real_logits, 
+                                                          torch.ones(discriminator_real_logits.shape))
     
     x_generated = g(z, y_generated)
-    discriminator_x_generated_logits = d(x_generated, y_generated)
-    d_loss_x_generated = F.binary_cross_entropy_with_logits(discriminator_x_generated_logits, 
-                                                          torch.zeros(discriminator_x_generated_logits.shape))
+    discriminator_generated_logits = d(x_generated, y_generated)
+    d_loss_x_generated = F.binary_cross_entropy_with_logits(discriminator_generated_logits, 
+                                                          torch.zeros(discriminator_generated_logits.shape))
 
     d_loss = d_loss_x_real + d_loss_x_generated
     return d_loss
