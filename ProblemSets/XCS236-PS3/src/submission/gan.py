@@ -165,6 +165,8 @@ def loss_wasserstein_gp_d(g, d, x_real, *, device):
     gradients = torch.autograd.grad(discriminator_x_r_theta_logits_sum,  [x_r_theta], create_graph=True)
     norm = torch.flatten(torch.linalg.matrix_norm(gradients[0]))
     expectation_d_gradient = torch.mean(torch.square(norm - torch.ones(norm.shape)))
+
+    #computing the final loss 
     d_loss = expectation_d_generated - expectation_d_real + lambda_penalty_strength * expectation_d_gradient
     return d_loss
     ### END CODE HERE ###
