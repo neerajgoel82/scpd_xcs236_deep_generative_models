@@ -134,29 +134,38 @@ def loss_wasserstein_gp_d(g, d, x_real, *, device):
     batch_size = x_real.shape[0]
     z = torch.randn(batch_size, g.dim_z, device=device)
     d_loss = None
+    lambda_penalty_strength = 10
 
     # You may find some or all of the below useful:
     #   - torch.rand
     #   - torch.autograd.grad(..., create_graph=True)
     ### START CODE HERE ###
 
+    #computing D_phi_x for real samples 
     discriminator_x_real_logits = d(x_real)
     expectation_d_real = torch.mean(discriminator_x_real_logits)
     
+    #computing D_phi_x for generated samples 
     x_generated = g(z)
     discriminator_x_generated_logits = d(x_generated)
     expectation_d_generated = torch.mean(discriminator_x_generated_logits)
 
+    #computing gradient penalty 
+    #--------------------------
+    #generating samples from r_theta
     alpha = torch.rand(batch_size).reshape(-1, 1, 1, 1)
     ones = torch.ones(x_real.shape)
     x_r_theta = (alpha * x_generated) + (ones - alpha) * x_real
+
+    #computing D_phi_x for samples from r_theta 
     discriminator_x_r_theta_logits = d(x_r_theta)
     discriminator_x_r_theta_logits_sum = torch.sum(discriminator_x_r_theta_logits)
+
+    #computing the gradient 
     gradients = torch.autograd.grad(discriminator_x_r_theta_logits_sum,  [x_r_theta], create_graph=True)
-    norm = torch.norm(gradients[0])
-    lambda_param = 10
-    third_term = lambda_param * torch.square(norm - 1) 
-    d_loss = expectation_d_generated - expectation_d_real + third_term
+    norm = torch.flatten(torch.linalg.matrix_norm(gradients[0]))
+    expectation_d_gradient = torch.mean(torch.square(norm - torch.ones(norm.shape)))
+    d_loss = expectation_d_generated - expectation_d_real + lambda_penalty_strength * expectation_d_gradient
     return d_loss
     ### END CODE HERE ###
 
