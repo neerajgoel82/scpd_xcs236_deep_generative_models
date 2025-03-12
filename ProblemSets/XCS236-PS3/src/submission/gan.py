@@ -160,5 +160,8 @@ def loss_wasserstein_gp_g(g, d, x_real, *, device):
     g_loss = None
     
     ### START CODE HERE ###
+    x_generated = g(z)
+    discriminator_x_generated_logits = d(x_generated)
+    g_loss = torch.mean(discriminator_x_generated_logits) * -1
+    return g_loss
     ### END CODE HERE ###
-    raise NotImplementedError
