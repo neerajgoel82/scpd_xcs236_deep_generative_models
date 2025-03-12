@@ -139,8 +139,26 @@ def loss_wasserstein_gp_d(g, d, x_real, *, device):
     #   - torch.rand
     #   - torch.autograd.grad(..., create_graph=True)
     ### START CODE HERE ###
+
+    discriminator_x_real_logits = d(x_real)
+    expectation_d_real = torch.mean(discriminator_x_real_logits)
+    
+    x_generated = g(z)
+    discriminator_x_generated_logits = d(x_generated)
+    expectation_d_generated = torch.mean(discriminator_x_generated_logits)
+
+    alpha = torch.rand(batch_size).reshape(-1, 1, 1, 1)
+    ones = torch.ones(x_real.shape)
+    x_r_theta = (alpha * x_generated) + (ones - alpha) * x_real
+    discriminator_x_r_theta_logits = d(x_r_theta)
+    discriminator_x_r_theta_logits_sum = torch.sum(discriminator_x_r_theta_logits)
+    gradients = torch.autograd.grad(discriminator_x_r_theta_logits_sum,  [x_r_theta], create_graph=True)
+    norm = torch.norm(gradients[0])
+    lambda_param = 10
+    third_term = lambda_param * torch.square(norm - 1) 
+    d_loss = expectation_d_generated - expectation_d_real + third_term
+    return d_loss
     ### END CODE HERE ###
-    raise NotImplementedError
 
 
 def loss_wasserstein_gp_g(g, d, x_real, *, device):
