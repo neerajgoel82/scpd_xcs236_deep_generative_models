@@ -74,7 +74,7 @@ def conditional_loss_nonsaturating_d(g, d, x_real, y_real, *, device):
     """
     batch_size = x_real.shape[0]
     z = torch.randn(batch_size, g.dim_z, device=device)
-    y_generated = torch.randint(low=0, high=2, size=(batch_size,), dtype=torch.int64)
+    #y_generated = torch.randint(low=0, high=2, size=(batch_size,), dtype=torch.int64)
 
     d_loss = None
 
@@ -83,7 +83,7 @@ def conditional_loss_nonsaturating_d(g, d, x_real, y_real, *, device):
     d_loss_x_real = F.binary_cross_entropy_with_logits(discriminator_real_logits, 
                                                           torch.ones(discriminator_real_logits.shape))
     
-    x_generated = g(z, y_generated)
+    x_generated = g(z, y_real)
     discriminator_generated_logits = d(x_generated, y_real)
     d_loss_x_generated = F.binary_cross_entropy_with_logits(discriminator_generated_logits, 
                                                           torch.zeros(discriminator_generated_logits.shape))
@@ -108,11 +108,11 @@ def conditional_loss_nonsaturating_g(g, d, x_real, y_real, *, device):
     """
     batch_size = x_real.shape[0]
     z = torch.randn(batch_size, g.dim_z, device=device)
-    y_generated = torch.randint(low=0, high=2, size=(batch_size,), dtype=torch.int64)
+    #y_generated = torch.randint(low=0, high=2, size=(batch_size,), dtype=torch.int64)
     g_loss = None
 
     ### START CODE HERE ###
-    x_generated = g(z, y_generated)
+    x_generated = g(z, y_real)
     discriminator_x_generated_logits = d(x_generated, y_real)
     g_loss = torch.mean(F.logsigmoid(discriminator_x_generated_logits)) * -1
     return g_loss
