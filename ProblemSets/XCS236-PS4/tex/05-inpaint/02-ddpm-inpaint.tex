@@ -1,0 +1,30 @@
+\points{5b} \textbf{Implementing Inpainting through DDPM}
+
+From the \texttt{inpaint.py} file, implement the masking function \texttt{get\_mask} by retaining only a central square of the image of side half of the image and 
+the helper function \texttt{add\_forward\_tnoise}. Then update the noisy image $x_t$ to formulate the inpainting update in the \texttt{apply\_inpainting\_mask} function.
+
+Run the inpainting experiment using the following command:
+\begin{lstlisting}[language=bash]
+    python run_sampling.py --dataset faces --experiment inpaint --image_path /path/to/image/to/inpaint
+\end{lstlisting}
+
+\textbf{Note: }For this problem we recommend using the faces dataset to see results visually. 
+
+Below is the expected result from applying inpainting by specifying the DDIM image as the image to impaint using the \texttt{--image\_path} argument:
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.25\textwidth}
+        \includegraphics[width=\textwidth]{./figures/ddpm_steps1000_seed42_img_0}
+        \caption{Styling from this image to apply}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.25\textwidth}
+        \includegraphics[width=\textwidth]{./figures/ddim_steps10_seed42_img_0}
+        \caption{Original image without inpainting}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.25\textwidth}
+        \includegraphics[width=\textwidth]{./figures/inpaint_steps1000_seed42_img_0}
+        \caption{Image with inpainting from figure (a)}
+    \end{subfigure}
+    % \caption{Inpainting Output Images}
+\end{figure}
