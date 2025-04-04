@@ -1,4 +1,4 @@
-\section{Score-Basesd Diffusion Models}
+\section{Score-Based Diffusion Models}
 
 \textbf{Score-based diffusion models} are a class of generative models that train by aligning the model's score function with the true data 
 distribution's score function. The \textbf{score function} of a probability distribution $p(x)$ is defined as the gradient of the log-density, 
@@ -16,7 +16,7 @@ Through integration by parts, this objective can be simplified to a form that in
 respect to the input, along with a constant term. The simplified objective is given by:
 
 \begin{align}
-    \mathcal{J}(\theta) &= \mathbb{E}_{p_{\text{data}}(x)} \left[ \left\| s_\theta(x) \right\|^2 + 2 \, \text{Tr} \left( s_\theta(x) \right) \right] + C
+    \mathcal{J}(\theta) &= \mathbb{E}_{p_{\text{data}}(x)} \left[ \left\| s_\theta(x) \right\|^2 + 2 \, \text{Tr} \left( \nabla_x s_\theta(x) \right) \right] + C
 \end{align}
 
 where $C$ is a constant.

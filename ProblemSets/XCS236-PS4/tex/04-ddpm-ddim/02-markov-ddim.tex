@@ -1,4 +1,4 @@
-\points{4c} \textbf{DDIM as Markovian Process}
+\points{4b} \textbf{DDIM as Markovian Process}
 
 We wish to introduce a Markovian variant of DDIM, we can incorporate a noise term at each step to make it probabilistic. 
 Consider a parameter $\sigma_t$ that controls the amount of noise injected back into the process. By doing so, we can smoothly transition 
@@ -11,9 +11,9 @@ The Markovian variant of the DDIM update can be written as:
 
 \[
 x_{t-1} =
-\underbrace{\sqrt{\bar{\alpha}_{t-1}} x_0}_{\text{\texttt{predict\_sample\_direction}}} 
+\sqrt{\bar{\alpha}_{t-1}} x_0
 + 
-\underbrace{\sqrt{1 - \bar{\alpha}_{t-1} - \sigma_t^2}\,\epsilon}_{\text{\texttt{get\_stochasticity\_std}}} 
+\underbrace{\sqrt{1 - \bar{\alpha}_{t-1} - \sigma_t^2}\,\epsilon}_{\text{\texttt{predict\_sample\_direction}}} 
 + 
 \underbrace{\sigma_t z}_{\text{\texttt{stochasticity\_term}}}.
 \]

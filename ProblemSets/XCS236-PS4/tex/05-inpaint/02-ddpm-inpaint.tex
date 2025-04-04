@@ -8,23 +8,25 @@ Run the inpainting experiment using the following command:
     python run_sampling.py --dataset faces --experiment inpaint --image_path /path/to/image/to/inpaint
 \end{lstlisting}
 
-\textbf{Note: }For this problem we recommend using the faces dataset to see results visually. 
+\textbf{Note: }For this problem we recommend using the faces dataset to see results visually. So before running the previous command one can first generate an image using ddim using the faces dataset Before running the previous command, you should first generate an image using DDIM with the faces dataset. Here's how:
+\begin{lstlisting}[language=bash]
+    python run_sampling.py --dataset faces --experiment ddim 
+\end{lstlisting}
 
-Below is the expected result from applying inpainting by specifying the DDIM image as the image to impaint using the \texttt{--image\_path} argument:
+Below is the expected result from applying inpainting by specifying the DDIM image as the image to inpaint using the \texttt{--image\_path} argument:
 
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.25\textwidth}
-        \includegraphics[width=\textwidth]{./figures/ddpm_steps1000_seed42_img_0}
-        \caption{Styling from this image to apply}
+        \includegraphics[width=\textwidth]{./figures/ddim_steps10_seed42_img_0}
+        \caption{Original Image}
     \end{subfigure}
     \begin{subfigure}[b]{0.25\textwidth}
-        \includegraphics[width=\textwidth]{./figures/ddim_steps10_seed42_img_0}
-        \caption{Original image without inpainting}
+        \includegraphics[width=\textwidth]{./figures/masked_ddim_steps10_seed42_img_0}
+        \caption{Masked Image}
     \end{subfigure}
     \begin{subfigure}[b]{0.25\textwidth}
         \includegraphics[width=\textwidth]{./figures/inpaint_steps1000_seed42_img_0}
-        \caption{Image with inpainting from figure (a)}
+        \caption{Inpainted Image}
     \end{subfigure}
-    % \caption{Inpainting Output Images}
 \end{figure}

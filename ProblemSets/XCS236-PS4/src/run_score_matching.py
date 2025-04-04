@@ -1,4 +1,6 @@
+import argparse
 import gc
+import importlib.util
 import logging
 import os
 import time
@@ -7,14 +9,12 @@ from typing import Callable, Dict, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import torch
-from memory_profiler import memory_usage  # type: ignore
-import argparse
 import yaml
-import importlib.util
+from memory_profiler import memory_usage  # type: ignore
 
-use_submission = importlib.util.find_spec('submission') is not None
+use_submission = importlib.util.find_spec("submission") is not None
 if use_submission:
-  from submission import denoising_score_matching_objective, score_matching_objective
+    from submission import denoising_score_matching_objective, score_matching_objective
 
 
 # Set up logging
@@ -74,6 +74,7 @@ def run_track(run_goal: RunGoal, func: Callable, *args: Tuple, **kwargs: Dict) -
         logging.exception("Error during %s: %s", run_goal, str(e))
         raise
 
+
 # Run Experiments
 def run_experiment(
     dimensions: List[int],
@@ -82,8 +83,8 @@ def run_experiment(
     runs: Dict[str, int],
     output_file: str,
     experiment_name: str,
-    return_results: bool = False, 
-) -> Union[None,Dict]:
+    return_results: bool = False,
+) -> Union[None, Dict]:
     """Runs the specified experiment and collects results.
 
     Args:
@@ -99,10 +100,6 @@ def run_experiment(
     for run in runs.keys():
         for dim in dimensions:
             for batch_size in batch_sizes:
-                if (
-                    (experiment_name == "exact") and dim > 32 and batch_size > 24
-                ):  # Skip large cases for efficiency
-                    continue
 
                 x = torch.randn(batch_size, dim * dim, requires_grad=True)
                 theta = {
@@ -129,7 +126,11 @@ def run_experiment(
         return results
     else:
         plot_results(
-            results, dimensions, batch_sizes, output_file, experiment_name=experiment_name
+            results,
+            dimensions,
+            batch_sizes,
+            output_file,
+            experiment_name=experiment_name,
         )
 
 
@@ -154,11 +155,7 @@ def plot_results(
 
     plt.subplot(1, 2, 1)
     for dim in dimensions:
-        bz = (
-            batch_sizes
-            if (experiment_name == "denoising") or dim <= 32
-            else [8, 16, 24]
-        )
+        bz = batch_sizes
         plt.plot(bz, results[dim]["times"], marker="o", label=f"{dim}x{dim}")
     plt.xlabel("Batch Size")
     plt.ylabel("Time (seconds)")
@@ -168,11 +165,7 @@ def plot_results(
 
     plt.subplot(1, 2, 2)
     for dim in dimensions:
-        bz = (
-            batch_sizes
-            if (experiment_name == "denoising") or dim <= 32
-            else [8, 16, 24]
-        )
+        bz = batch_sizes
         plt.plot(bz, results[dim]["memory_usages"], marker="o", label=f"{dim}x{dim}")
     plt.xlabel("Batch Size")
     plt.ylabel("Memory Usage (MiB)")
@@ -189,16 +182,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Score Matching experiments.")
     parser.add_argument(
         "--denoise",
-        action='store_true',
+        action="store_true",
         help="If set, run the denoising score matching experiment.",
     )
     args = parser.parse_args()
 
     # Load configuration from YAML file
-    config_path = os.path.join(os.path.dirname(__file__), 'score_matching_config.yml')
-    with open(config_path, 'r') as file:
+    config_path = os.path.join(os.path.dirname(__file__), "score_matching_config.yml")
+    with open(config_path, "r") as file:
         config = yaml.safe_load(file)
-    
+
     # Create output directory if it doesn't exist
     os.makedirs(config["output_dir"], exist_ok=True)
 

@@ -1,13 +1,17 @@
 from typing import Dict
+
 import torch
+
 from .score_matching_utils import (
-    create_log_p_theta,
-    compute_score_function,
-    compute_trace_jacobian,
-    compute_frobenius_norm_squared,
     add_noise,
-    compute_score
+    compute_divergence,
+    compute_gaussian_score,
+    compute_l2norm_squared,
+    compute_score,
+    compute_target_score,
+    log_p_theta,
 )
+
 
 # Objective Function for Denoising Score Matching
 def denoising_score_matching_objective(
@@ -45,6 +49,7 @@ def score_matching_objective(
     """
     mean = theta["mean"]
     log_var = theta["log_var"]
+
     ### START CODE HERE ###
     pass
     ### END CODE HERE ###
