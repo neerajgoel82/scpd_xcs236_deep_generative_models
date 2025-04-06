@@ -89,7 +89,7 @@ def compute_forward_posterior_variance(
         Tensor: The computed variance of the forward posterior distribution.
     """
     ### START CODE HERE ###
-    variance = (1 - scheduler_params["alphas_bar"][t-1] * scheduler_params["betas"][t]) / (1 - scheduler_params["alphas_bar"][t])
+    variance = ((1 - scheduler_params["alphas_bar"][t-1]) / (1 - scheduler_params["alphas_bar"][t])) * scheduler_params["betas"][t]
     return variance 
     ### END CODE HERE ###
 
