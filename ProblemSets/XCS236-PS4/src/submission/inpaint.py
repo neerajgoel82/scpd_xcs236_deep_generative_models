@@ -47,7 +47,9 @@ def apply_inpainting_mask(
     HINT: use add_forward_tnoise to add noise to the original image.
     """
     ### START CODE HERE ###
-    pass
+    x_orig_noisy = add_forward_tnoise(original_image, timestep=timestep, scheduler_data=scheduler_data)
+    flipped_mask = torch.logical_not(mask) 
+    return x_orig_noisy * mask + noisy_image * flipped_mask
     ### END CODE HERE ###
 
 def get_mask(image: Tensor) -> Tensor:
