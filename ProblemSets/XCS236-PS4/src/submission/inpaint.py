@@ -22,7 +22,9 @@ def add_forward_tnoise(
     alpha_bar_at_t = scheduler_data["alphas_bar"][timestep]
     noise = torch.randn(image.shape, device=config.device)
     ### START CODE HERE ###
-    pass
+    epsilon = torch.normal(0, 1, size=image.shape)
+    x_t = torch.sqrt(scheduler_data["alphas_bar"][timestep - 1]) * image + torch.sqrt(scheduler_data["alphas_bar"][timestep ]) * epsilon
+    return x_t
     ### END CODE HERE ###
 
 def apply_inpainting_mask(
