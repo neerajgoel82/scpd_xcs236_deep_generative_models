@@ -45,7 +45,9 @@ def predict_x0(
         torch.Tensor: The predicted original image tensor.
     """
     ### START CODE HERE ###
-    pass
+
+    sample_0 = (sample_t - torch.sqrt(1 - scheduler_params["alphas_bar"][t]) * predicted_noise) / torch.sqrt(scheduler_params["alphas_bar"][t])
+    return sample_0
     ### END CODE HERE ###
 
 def compute_forward_posterior_mean(
