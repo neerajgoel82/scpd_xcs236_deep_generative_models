@@ -1,4 +1,4 @@
-name: XCS236
+name: XCS236PS4
 channels:
   - defaults
   - conda-forge
