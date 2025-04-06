@@ -70,7 +70,9 @@ def compute_forward_posterior_mean(
         Tensor: The computed mean of the forward posterior distribution.
     """
     ### START CODE HERE ###
-    pass
+    x_0_weight = (torch.sqrt(scheduler_params["alphas_bar"][t-1]) * scheduler_params["betas"][t])/ (1 - scheduler_params["alphas_bar"][t])
+    x_t_weight = (torch.sqrt(scheduler_params["alphas_bar"][t]) * (1 - scheduler_params["alphas_bar"][t-1]))/  (1 - scheduler_params["alphas_bar"][t])
+    return x_0_weight * predicted_x0 + x_t_weight * noisy_image
     ### END CODE HERE ###
 
 def compute_forward_posterior_variance(
