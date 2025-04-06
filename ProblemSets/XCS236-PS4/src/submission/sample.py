@@ -89,7 +89,8 @@ def compute_forward_posterior_variance(
         Tensor: The computed variance of the forward posterior distribution.
     """
     ### START CODE HERE ###
-    pass
+    variance = (1 - scheduler_params["alphas_bar"][t-1] * scheduler_params["betas"][t]) / (1 - scheduler_params["alphas_bar"][t])
+    return variance 
     ### END CODE HERE ###
 
 def get_stochasticity_std(
