@@ -142,5 +142,5 @@ def stochasticity_term(std: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
         Tensor: The stochasticity term to be added to the sample.
     """
     ### START CODE HERE ###
-    pass
+    return std * noise
     ### END CODE HERE ###
