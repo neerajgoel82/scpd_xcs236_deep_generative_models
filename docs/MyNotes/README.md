@@ -90,7 +90,9 @@ I have created a separate page for each kind of models. I'll be covering the fol
 - [Book] [Generative Deep Learning](https://learning.oreilly.com/library/view/generative-deep-learning/9781098134174)
 - [Book] [Build a Large Language Model (From Scratch)](https://learning.oreilly.com/library/view/build-a-large/9781633437166/)
 - [Blog][SSVAE](https://gmanco.github.io/post/on-semisupervised-vae/)
-
+- [Video][Diffusion Models - Yang Song](https://www.youtube.com/watch?v=wMmqCMwuM2Q)
+- [Video][Diffusion Models - DDPM](https://www.youtube.com/watch?v=H45lF4sUgiE)
+- [Video][Diffusion Models - DDIM](https://www.youtube.com/watch?v=n2P6EMbN0pc)
 
 ### Students Questions 
 ---
