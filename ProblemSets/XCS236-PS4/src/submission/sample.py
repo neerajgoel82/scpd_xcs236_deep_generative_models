@@ -108,7 +108,8 @@ def get_stochasticity_std(
         Tensor: The computed standard deviation.
     """
     ### START CODE HERE ###
-    pass
+    stochasticity_std = eta * (torch.sqrt((1- alphas_bar[t_prev])/(1-alphas_bar[t]))) * (torch.sqrt((1-alphas_bar[t])/alphas_bar[t_prev]))
+    return stochasticity_std
     ### END CODE HERE ###
 
 def predict_sample_direction(
