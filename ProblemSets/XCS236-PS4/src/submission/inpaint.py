@@ -60,5 +60,12 @@ def get_mask(image: Tensor) -> Tensor:
     # Suppose your image is [1, 3, H, W]
     config = get_config() # useful to get torch device details
     ### START CODE HERE ###
-    pass
+    start_row = int(image.shape[2] / 4)
+    start_col = int(image.shape[3] / 4)
+    mask_height = start_row * 2
+    mask_width = start_col * 2
+    overall_mask = torch.zeros(image.shape)
+    ones_mask = torch.ones(mask_height, mask_width)
+    overall_mask[:,:,start_row:start_row + mask_height, start_col:start_col + mask_width] = ones_mask
+    return overall_mask
     ### END CODE HERE ###
