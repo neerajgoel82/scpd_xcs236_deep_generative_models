@@ -21,7 +21,10 @@ def get_timesteps(training_timesteps: int, num_steps: int) -> Tuple[Tensor, Tens
     """
     config = get_config() # useful to get torch device details
     ### START CODE HERE ###
-    pass
+    timesteps_current = torch.arange(num_steps - 1, -1, -1)
+    timesteps_previous = torch.roll(timesteps_current, -1)
+    timesteps_previous[num_steps - 1]  = -1 
+    return (timesteps_current, timesteps_previous)
     ### END CODE HERE ###
 
 def predict_x0(
