@@ -126,7 +126,8 @@ def predict_sample_direction(
         Tensor: The predicted sample direction.
     """
     ### START CODE HERE ###
-    pass
+    return torch.sqrt(1 - alphas_bars_prev - torch.square(std)) * predicted_noise
+    
     ### END CODE HERE ###
 
 
